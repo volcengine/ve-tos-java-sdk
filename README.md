@@ -2,13 +2,21 @@
 The TOS Java SDK enables Java developers to easily work with TOS(Tinder Object Storage) service in the volcengine.
 You can get started in minutes using Maven or by downloading a single zip file.
 This document will show developers some basic examples about TOS bucket and object operation.
-More details can be found in [xxx]()
+More details can be found in [Volcengine TOS Java SDK Reference](https://www.volcengine.com/docs/6349/79895)
 
 ## Install
 ### Requirements
 - Java 1.8 or later
 - Maven
 ### Use Maven
+add repository source
+```xml
+<repository>
+    <id>Volcengine Release Repo</id>
+    <url>https://artifact.bytedance.com/repository/releases</url>
+</repository>
+```
+add dependency
 ```xml
 <dependency>
     <groupId>com.volcengine</groupId>
