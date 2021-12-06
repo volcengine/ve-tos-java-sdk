@@ -1,12 +1,20 @@
 # 火山引擎 TOS Java SDK
 ## 简介
-TOS Java SDK为Java开发者提供了访问火山引擎对象存储服务TOS（Tinder Object Storage）的系列接口。您可以通过Maven工具快速引入。本文档将给出TOS桶和对象的基本操作代码，供开发者参考，具体API文档请参考[xxx]()
+TOS Java SDK为Java开发者提供了访问火山引擎对象存储服务TOS（Tinder Object Storage）的系列接口。您可以通过Maven工具快速引入。本文档将给出TOS桶和对象的基本操作代码，供开发者参考，具体API文档请参考[火山引擎TOS Java SDK参考手册](https://www.volcengine.com/docs/6349/79895)
 
 ## 安装
 ### 最低依赖
 - Java 1.8或更高
 - Maven
 ### Maven引入
+添加仓库源
+```xml
+<repository>
+    <id>Volcengine Release Repo</id>
+    <url>https://artifact.bytedance.com/repository/releases</url>
+</repository>
+```
+添加依赖
 ```xml
 <dependency>
     <groupId>com.volcengine</groupId>
