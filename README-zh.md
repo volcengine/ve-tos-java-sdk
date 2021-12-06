@@ -1,14 +1,12 @@
-# Volcengine TOS SDK for Java
-The TOS Java SDK enables Java developers to easily work with TOS(Tinder Object Storage) service in the volcengine.
-You can get started in minutes using Maven or by downloading a single zip file.
-This document will show developers some basic examples about TOS bucket and object operation.
-More details can be found in [xxx]()
+# 火山引擎 TOS Java SDK
+## 简介
+TOS Java SDK为Java开发者提供了访问火山引擎对象存储服务TOS（Tinder Object Storage）的系列接口。您可以通过Maven工具快速引入。本文档将给出TOS桶和对象的基本操作代码，供开发者参考，具体API文档请参考[xxx]()
 
-## Install
-### Requirements
-- Java 1.8 or later
+## 安装
+### 最低依赖
+- Java 1.8或更高
 - Maven
-### Use Maven
+### Maven引入
 ```xml
 <dependency>
     <groupId>com.volcengine</groupId>
@@ -17,25 +15,24 @@ More details can be found in [xxx]()
 </dependency>
 ```
 
-## Get Started
-This section introduces how to create a bucket, upload/download/delete an object in TOS service through our SDK.
-### Init a TOSClient
-You can interact with TOS service after initiating a TOSClient instance.
-The accesskey and secretkey of your account, endpoint and region are required as params.
+## 快速入门
+本节介绍，如何通过TOS Java SDK来完成常见的操作，如创建桶，上传、下载和删除对象等。
+### 初始化TOS客户端
+初始化TOSClient实例之后，才可以向TOS服务发送HTTP/HTTPS请求。
+初始化客户端时，需要带上accesskey，secretkey，endpoint和region。初始化代码如下：
 
 ```java
 String endpoint = "your endpoint";
 String region = "your region";
 String accessKey = "Your Access Key";
 String secretKey = "Your Secret Key";
-
 TOSClient client = new TOSClient(endpoint, ClientOptions.withRegion(region),
         ClientOptions.withCredentials(new StaticCredentials(accessKey, secretKey)));
 ```
 
-### Creat a bucket
-The bucket is a kind of unique namespace in TOS, which is a container to store data.
-This example shows you how to create a bucket.
+### 创建桶
+桶是TOS的全局唯一的命名空间，相当于数据的容器，用来储存对象数据。如下代码展示如何创建一个新桶：
+
 ```java
 CreateBucketOutput createdBucket = client.createBucket(new CreateBucketInput(bucketName));
 LOG.info("bucket created: {}", createdBucket);
@@ -47,11 +44,11 @@ ListBucketsOutput output = client.listBuckets(new ListBucketsInput());
 LOG.info("list {} bukets.", output.getBuckets().length);
 ```
 
-### PutObject
-You can put your file as an object into your own bucket.
+### 上传对象
+新建桶成功后，可以往桶中上传对象，如下展示如何上传一个对象到已创建的桶中：
 
 ```java
-// data is what you want to upload, wrap it as an inputStream.
+// 需要上传的对象数据，以InputStream的形式上传
 String data = "1234567890abcdefghijklmnopqrstuvwxyz~!@#$%^&*()_+<>?,./   :'1234567890abcdefghijklmnopqrstuvwxyz~!@#$%^&*()_+<>?,./   :'";
 InputStream stream = new ByteArrayInputStream(data.getBytes());
 String key = "object-curd-"+System.currentTimeMillis();
@@ -63,8 +60,8 @@ try{
 }
 ```
 
-### GetObject
-You can download objects in the TOS bucket through our SDK.
+### 下载对象
+如下展示如何从桶中下载一个已经存在的对象：
 
 ```java
 String bucket = "your bucket name";
@@ -97,8 +94,8 @@ try (GetObjectOutput object = client.getObject(bucket, key)) {
 }
 ```
 
-### DeleteObject
-Your can delete your objects in the bucket.
+### 删除对象
+如下展示如何从桶中删除一个已经存在的对象：
 
 ```java
 String key = "object-curd-"+System.currentTimeMillis();
@@ -110,5 +107,5 @@ try{
 }
 ```
 
-## License
+## 开源许可
 [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0.html)
