@@ -16,6 +16,8 @@ import java.util.AbstractMap.SimpleEntry;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @FunctionalInterface
 interface signingHeader{
@@ -28,6 +30,8 @@ interface signKey{
 }
 
 public class SignV4 implements Signer {
+    private static final Logger LOG = LoggerFactory.getLogger(SignV4.class);
+
     static final String emptySHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
     static final String unsignedPayload = "UNSIGNED-PAYLOAD";
     static final String signPrefix = "TOS4-HMAC-SHA256";
@@ -287,6 +291,7 @@ public class SignV4 implements Signer {
 
         byte[] sum = sha256(req);
         buf.append(toHex(sum));
+        LOG.debug("string to sign:\n {}", buf.toString());
         byte[] signK = signKey(new SignKeyInfo(date, this.region, cred));
         byte[] sign = hmacSha256(signK, buf.toString().getBytes(StandardCharsets.UTF_8));
         return String.valueOf(toHex(sign));
