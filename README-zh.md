@@ -7,19 +7,11 @@ TOS Java SDK为Java开发者提供了访问火山引擎对象存储服务TOS（T
 - Java 1.8或更高
 - Maven
 ### Maven引入
-添加仓库源
-```xml
-<repository>
-    <id>Volcengine Release Repo</id>
-    <url>https://artifact.bytedance.com/repository/releases</url>
-</repository>
-```
-添加依赖
 ```xml
 <dependency>
     <groupId>com.volcengine</groupId>
     <artifactId>ve-tos-java-sdk</artifactId>
-    <version>0.2.2</version>
+    <version>0.2.3</version>
 </dependency>
 ```
 

@@ -17,17 +17,20 @@ public class SignV4Test {
     static final DateTimeFormatter iso8601Layout = DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss'Z'");
     @Test
     public void URIEncodeTest(){
-        StringBuilder out = SignV4.uriEncode("23i23+___", true);
-        Assert.assertEquals("23i23%2B___", out.toString());
+        String out = SignV4.uriEncode("23i23+___", true);
+        Assert.assertEquals(out, "23i23%2B___");
 
         out = SignV4.uriEncode("23i23 ___", true);
-        Assert.assertEquals("23i23%20___", out.toString());
+        Assert.assertEquals(out, "23i23%20___");
 
         out = SignV4.uriEncode("23i23 /___", true);
-        Assert.assertEquals("23i23%20%2F___", out.toString());
+        Assert.assertEquals(out, "23i23%20%2F___");
 
         out = SignV4.uriEncode("23i23 /___", false);
-        Assert.assertEquals("23i23%20/___", out.toString());
+        Assert.assertEquals(out, "23i23%20/___");
+
+        out = SignV4.uriEncode("/中文测试/", true);
+        Assert.assertEquals(out, "%2F%E4%B8%AD%E6%96%87%E6%B5%8B%E8%AF%95%2F");
     }
 
     @Test
