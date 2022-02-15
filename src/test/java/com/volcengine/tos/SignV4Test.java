@@ -17,17 +17,20 @@ public class SignV4Test {
     static final DateTimeFormatter iso8601Layout = DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss'Z'");
     @Test
     public void URIEncodeTest(){
-        StringBuilder out = SignV4.uriEncode("23i23+___", true);
-        Assert.assertEquals("23i23%2B___", out.toString());
+        String out = SignV4.uriEncode("23i23+___", true);
+        Assert.assertEquals(out, "23i23%2B___");
 
         out = SignV4.uriEncode("23i23 ___", true);
-        Assert.assertEquals("23i23%20___", out.toString());
+        Assert.assertEquals(out, "23i23%20___");
 
         out = SignV4.uriEncode("23i23 /___", true);
-        Assert.assertEquals("23i23%20%2F___", out.toString());
+        Assert.assertEquals(out, "23i23%20%2F___");
 
         out = SignV4.uriEncode("23i23 /___", false);
-        Assert.assertEquals("23i23%20/___", out.toString());
+        Assert.assertEquals(out, "23i23%20/___");
+
+        out = SignV4.uriEncode("/中文测试/", true);
+        Assert.assertEquals(out, "%2F%E4%B8%AD%E6%96%87%E6%B5%8B%E8%AF%95%2F");
     }
 
     @Test
@@ -59,15 +62,6 @@ public class SignV4Test {
         req.setPath(url.encodedPath());
         req.setQuery(new HashMap<>());
         req.setHeaders(new HashMap<>());
-
-        Map<String, String> query = sv.signQuery(req, Duration.ofHours(1));
-        Assert.assertEquals(6, query.size());
-        Assert.assertEquals(date, query.get("X-Tos-Date"));
-        Assert.assertEquals("TOS4-HMAC-SHA256", query.get("X-Tos-Algorithm"));
-        Assert.assertEquals("host", query.get("X-Tos-SignedHeaders"));
-        Assert.assertEquals("AKIAIOSFODNN7EXAMPLE/20210721/cn-north-1/tos/request", query.get("X-Tos-Credential"));
-        Assert.assertEquals("3600", query.get("X-Tos-Expires"));
-        Assert.assertEquals("decc75e2b2d453117f81e53954eb2cd3a2f56db2951e9b2257863db4c4921111", query.get("X-Tos-Signature"));
 
         Map<String, String> header = sv.signHeader(req);
         Assert.assertEquals(3, header.size());
