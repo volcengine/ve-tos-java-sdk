@@ -43,7 +43,7 @@ public class TOSClient implements TOS{
      */
     static final int URL_MODE_DEFAULT = 0;
 
-    private static final String VERSION = "v0.2.2";
+    private static final String VERSION = "v0.2.3";
     static final String USER_AGENT = String.format("volc-tos-sdk-java/%s (%s/%s;%s)", VERSION, System.getProperty("os.name"), System.getProperty("os.arch"), System.getProperty("java.version", "0"));
 
     private String scheme;
@@ -552,6 +552,7 @@ public class TOSClient implements TOS{
 
     @Override
     public String preSignedURL(String httpMethod, String bucket, String objectKey, Duration ttl, RequestOptionsBuilder...builders) throws TosException{
+        isValidKey(objectKey);
         return newBuilder(bucket, objectKey, builders).preSignedURL(httpMethod, ttl);
     }
 

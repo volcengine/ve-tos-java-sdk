@@ -9,19 +9,11 @@ More details can be found in [Volcengine TOS Java SDK Reference](https://www.vol
 - Java 1.8 or later
 - Maven
 ### Use Maven
-add repository source
-```xml
-<repository>
-    <id>Volcengine Release Repo</id>
-    <url>https://artifact.bytedance.com/repository/releases</url>
-</repository>
-```
-add dependency
 ```xml
 <dependency>
     <groupId>com.volcengine</groupId>
     <artifactId>ve-tos-java-sdk</artifactId>
-    <version>0.2.2</version>
+    <version>0.2.3</version>
 </dependency>
 ```
 
