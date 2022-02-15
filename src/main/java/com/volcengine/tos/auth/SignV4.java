@@ -297,23 +297,21 @@ public class SignV4 implements Signer {
         return String.valueOf(toHex(sign));
     }
 
-    private static StringBuilder encodePath(String path) {
+    private static String encodePath(String path) {
         if (path == null || path.isEmpty()) {
-            StringBuilder res = new StringBuilder();
-            res.append('/');
-            return res;
+            return "/";
         }
         return uriEncode(path, false);
     }
 
-    private static StringBuilder encodeQuery(List<Map.Entry<String, String>> query) {
+    private static String encodeQuery(List<Map.Entry<String, String>> query) {
         if (query == null || query.isEmpty()) {
-            return new StringBuilder();
+            return "";
         }
         StringBuilder buf = new StringBuilder(512);
         query.sort(Map.Entry.comparingByKey());
         for (Map.Entry<String, String> kv : query) {
-            StringBuilder keyEscaped = uriEncode(kv.getKey(), true);
+            String keyEscaped = uriEncode(kv.getKey(), true);
             if (buf.length() > 0){
                 buf.append('&');
             }
@@ -321,10 +319,11 @@ public class SignV4 implements Signer {
             buf.append('=');
             buf.append(uriEncode(kv.getValue() == null ? "" : kv.getValue(), true));
         }
-        return buf;
+        return buf.toString();
     }
 
     private static final boolean[] nonEscape = new boolean[256];
+    private static final byte[] escapeChar = "0123456789ABCDEF".getBytes(StandardCharsets.UTF_8);
 
     static {
         for (byte ch = 'a'; ch <= 'z'; ch++) {
@@ -349,42 +348,43 @@ public class SignV4 implements Signer {
      * @param encodeSlash 是否编码 /
      * @return 编码之后的string
      */
-    public static StringBuilder uriEncode(String in, boolean encodeSlash) {
+    public static String uriEncode(String in, boolean encodeSlash) {
         int hexCount = 0;
-        for (int i = 0; i < in.length();i++){
-            char c = in.charAt(i);
-            if (c == '/'){
+        byte[] inBytes = in.getBytes(StandardCharsets.UTF_8);
+        for (byte b : inBytes) {
+            int uintByte = b & 0xFF;
+            if (b == '/') {
                 if (encodeSlash) {
                     hexCount++;
                 }
-            } else if (!nonEscape[c]) {
+            } else if (!nonEscape[uintByte]) {
                 hexCount++;
             }
         }
-        StringBuilder encoded = new StringBuilder(in.length()+2*hexCount);
-        for (int i = 0, j = 0; i < in.length(); i++) {
-            char c = in.charAt(i);
-            if (c == '/'){
+        byte[] encoded = new byte[inBytes.length+2*hexCount];
+        for (int i = 0, j = 0; i < inBytes.length; i++) {
+            int uintByte = inBytes[i] & 0xFF;
+            if (uintByte == '/'){
                 if (encodeSlash) {
-                    encoded.insert(j, '%');
-                    encoded.insert(j+1, '2');
-                    encoded.insert(j+2, 'F');
+                    encoded[j] = '%';
+                    encoded[j+1] = '2';
+                    encoded[j+2] = 'F';
                     j += 3;
                 } else{
-                    encoded.insert(j, c);
+                    encoded[j] = inBytes[i];
                     j++;
                 }
-            } else if (!nonEscape[c]) {
-                encoded.insert(j, '%');
-                encoded.insert(j+1, "0123456789ABCDEF".charAt(c >> 4));
-                encoded.insert(j+2, "0123456789ABCDEF".charAt(c & 15));
+            } else if (!nonEscape[uintByte]) {
+                encoded[j] = '%';
+                encoded[j+1] = escapeChar[uintByte >> 4];
+                encoded[j+2] = escapeChar[uintByte & 15];
                 j += 3;
             } else {
-                encoded.insert(j, c);
+                encoded[j] = inBytes[i];
                 j++;
             }
         }
-        return encoded;
+        return new String(encoded, StandardCharsets.UTF_8);
     }
 
     static byte[] hmacSha256(byte[] key, byte[] value) {
