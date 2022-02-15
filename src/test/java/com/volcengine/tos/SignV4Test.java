@@ -63,6 +63,15 @@ public class SignV4Test {
         req.setQuery(new HashMap<>());
         req.setHeaders(new HashMap<>());
 
+        Map<String, String> query = sv.signQuery(req, Duration.ofHours(1));
+        Assert.assertEquals(6, query.size());
+        Assert.assertEquals(date, query.get("X-Tos-Date"));
+        Assert.assertEquals("TOS4-HMAC-SHA256", query.get("X-Tos-Algorithm"));
+        Assert.assertEquals("host", query.get("X-Tos-SignedHeaders"));
+        Assert.assertEquals("AKIAIOSFODNN7EXAMPLE/20210721/cn-north-1/tos/request", query.get("X-Tos-Credential"));
+        Assert.assertEquals("3600", query.get("X-Tos-Expires"));
+        Assert.assertEquals("decc75e2b2d453117f81e53954eb2cd3a2f56db2951e9b2257863db4c4921111", query.get("X-Tos-Signature"));
+
         Map<String, String> header = sv.signHeader(req);
         Assert.assertEquals(3, header.size());
         Assert.assertEquals("TOS4-HMAC-SHA256 Credential=AKIAIOSFODNN7EXAMPLE/20210721/cn-north-1/tos/request,SignedHeaders=date;" +
