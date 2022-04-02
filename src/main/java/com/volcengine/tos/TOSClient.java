@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.volcengine.tos.auth.Credentials;
 import com.volcengine.tos.auth.SignV4;
@@ -43,8 +44,10 @@ public class TOSClient implements TOS{
      */
     static final int URL_MODE_DEFAULT = 0;
 
-    private static final String VERSION = "v0.2.3";
-    static final String USER_AGENT = String.format("volc-tos-sdk-java/%s (%s/%s;%s)", VERSION, System.getProperty("os.name"), System.getProperty("os.arch"), System.getProperty("java.version", "0"));
+    private static final String VERSION = "v0.2.4";
+    private static final String SDK_NAME = "ve-tos-java-sdk";
+    private static final String USER_AGENT = String.format("%s/%s (%s/%s;%s)", SDK_NAME, VERSION, System.getProperty("os.name"), System.getProperty("os.arch"), System.getProperty("java.version", "0"));
+    private static final ObjectMapper JSON = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
     private String scheme;
     private String host;
@@ -234,7 +237,7 @@ public class TOSClient implements TOS{
     @Override
     public DeleteMultiObjectsOutput deleteMultiObjects(String bucket, DeleteMultiObjectsInput input, RequestOptionsBuilder... builders) throws TosException {
         TosMarshalResult inputRes = marshalInput(input);
-        TosRequest req = newBuilder(bucket, "")
+        TosRequest req = newBuilder(bucket, "", builders)
                 .withHeader(TosHeader.HEADER_CONTENT_MD5, inputRes.getContentMD5())
                 .withQuery("delete", "")
                 .Build(HttpMethod.POST, null).setData((inputRes.getData()));
@@ -334,7 +337,7 @@ public class TOSClient implements TOS{
 
     @Override
     public CopyObjectOutput copyObject(String bucket, String srcObjectKey, String dstObjectKey, RequestOptionsBuilder... builders) throws TosException {
-        isValidKey(dstObjectKey, srcObjectKey);
+        isValidKeySet(dstObjectKey, srcObjectKey);
         return copyObject(bucket, dstObjectKey, bucket, srcObjectKey, builders);
     }
 
@@ -399,11 +402,13 @@ public class TOSClient implements TOS{
         InputStream content = null;
         try {
             if (input.getAclRules() != null) {
-                byte[] data = new ObjectMapper().writeValueAsBytes(input.getAclRules());
+                byte[] data = JSON.writeValueAsBytes(input.getAclRules());
+                System.out.println("hh");
+                System.out.println(input);
                 content = new ByteArrayInputStream(data);
             }
         } catch (JsonProcessingException jpe) {
-            throw new TosClientException("json parse exception", jpe);
+            throw new TosClientException("tos: json parse exception", jpe);
         }
         RequestBuilder builder = newBuilder(bucket, input.getKey())
                 .withQuery("acl", "");
@@ -493,19 +498,7 @@ public class TOSClient implements TOS{
 
     @Override
     public CompleteMultipartUploadOutput completeMultipartUpload(String bucket, CompleteMultipartUploadInput input) throws TosException {
-        int partsNum = input.getUploadedPartsLength();
-        CompleteMultipartUploadInput.InnerCompleteMultipartUploadInput multipart = new
-                CompleteMultipartUploadInput.InnerCompleteMultipartUploadInput(partsNum);
-        for (int i = 0; i < partsNum; i++) {
-            multipart.setPartsByIdx(input.getUploadedParts()[i].uploadedPart(), i);
-        }
-        Arrays.sort(multipart.getParts());
-        byte[] data;
-        try{
-            data = new ObjectMapper().writeValueAsBytes(multipart);
-        } catch (JsonProcessingException jpe) {
-            throw new TosClientException("json parse exception", jpe);
-        }
+        byte[] data = input.getUploadedPartData(JSON);
         TosRequest req = newBuilder(bucket, input.getKey())
                 .withQuery("uploadId", input.getUploadID())
                 .Build(HttpMethod.POST, null).setData(data);
@@ -560,7 +553,7 @@ public class TOSClient implements TOS{
         byte[] data;
         String dataMD5;
         try{
-            data = new ObjectMapper().setSerializationInclusion(JsonInclude.Include.NON_NULL).writeValueAsBytes(input);
+            data = JSON.setSerializationInclusion(JsonInclude.Include.NON_NULL).writeValueAsBytes(input);
             MessageDigest md = MessageDigest.getInstance("MD5");
             byte[] bytes = md.digest(data);
             dataMD5 = Base64.getEncoder().encodeToString(bytes);
@@ -572,7 +565,7 @@ public class TOSClient implements TOS{
     
     private <T> T marshalOutput(InputStream reader,TypeReference<T> valueTypeRef) throws TosException{
         try{
-            return new ObjectMapper().readValue(reader, valueTypeRef);
+            return JSON.readValue(reader, valueTypeRef);
         } catch (IOException e){
             throw new TosClientException("Marshal Output Exception", e);
         }
@@ -609,17 +602,22 @@ public class TOSClient implements TOS{
 
     static void isValidNames(String bucket, String key, String ...keys){
         isValidBucketName(bucket);
-        isValidKey(key, keys);
+        isValidKey(key);
+        isValidKeySet(keys);
     }
 
-    static void isValidKey(String key, String ...keys){
+    private static void isValidKey(String key){
         if (StringUtils.isEmpty(key)) {
             throw new IllegalArgumentException("tos: object name is empty");
         }
+        if (key.startsWith("/") || key.endsWith("/") || key.contains("//")) {
+            throw new IllegalArgumentException(String.format("tos: object name %s is illegal", key));
+        }
+    }
+
+    private static void isValidKeySet(String ...keys) {
         for (String k: keys) {
-            if (k == null || k.length() == 0) {
-                throw new IllegalArgumentException("tos: object name is empty");
-            }
+            isValidKey(k);
         }
     }
 

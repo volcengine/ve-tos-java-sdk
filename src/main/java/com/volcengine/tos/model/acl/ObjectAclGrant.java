@@ -25,12 +25,54 @@ public class ObjectAclGrant {
         return this;
     }
 
+    public ObjectAclGrant setAclPrivate() {
+        this.acl = ACLConst.ACL_PRIVATE;
+        return this;
+    }
+
+    public ObjectAclGrant setAclPublicRead() {
+        this.acl = ACLConst.ACL_PUBLIC_READ;
+        return this;
+    }
+
+    public ObjectAclGrant setAclPublicReadWrite() {
+        this.acl = ACLConst.ACL_PUBLIC_READ_WRITE;
+        return this;
+    }
+
+    public ObjectAclGrant setAclAuthRead() {
+        this.acl = ACLConst.ACL_AUTH_READ;
+        return this;
+    }
+
+    public ObjectAclGrant setAclBucketOwnerRead() {
+        this.acl = ACLConst.ACL_BUCKET_OWNER_READ;
+        return this;
+    }
+
+    public ObjectAclGrant setAclBucketOwnerFullControl() {
+        this.acl = ACLConst.ACL_BUCKET_OWNER_FULL_CONTROL;
+        return this;
+    }
+
+    public ObjectAclGrant setAclLogDeliveryWrite() {
+        this.acl = ACLConst.ACL_LOG_DELIVERY_WRITE;
+        return this;
+    }
+
+
     public String getGrantFullControl() {
         return grantFullControl;
     }
 
+    @Deprecated
     public ObjectAclGrant setGrantFullControl(String grantFullControl) {
         this.grantFullControl = grantFullControl;
+        return this;
+    }
+
+    public ObjectAclGrant setGrantFullControl() {
+        this.grantFullControl = ACLConst.PERMISSION_TYPE_FULL_CONTROL;
         return this;
     }
 
@@ -38,8 +80,14 @@ public class ObjectAclGrant {
         return grantRead;
     }
 
+    @Deprecated
     public ObjectAclGrant setGrantRead(String grantRead) {
         this.grantRead = grantRead;
+        return this;
+    }
+
+    public ObjectAclGrant setGrantRead() {
+        this.grantRead = ACLConst.PERMISSION_TYPE_READ;
         return this;
     }
 
@@ -47,8 +95,14 @@ public class ObjectAclGrant {
         return grantReadAcp;
     }
 
+    @Deprecated
     public ObjectAclGrant setGrantReadAcp(String grantReadAcp) {
         this.grantReadAcp = grantReadAcp;
+        return this;
+    }
+
+    public ObjectAclGrant setGrantReadAcp() {
+        this.grantReadAcp = ACLConst.PERMISSION_TYPE_READ_ACP;
         return this;
     }
 
@@ -56,8 +110,14 @@ public class ObjectAclGrant {
         return grantWrite;
     }
 
+    @Deprecated
     public ObjectAclGrant setGrantWrite(String grantWrite) {
         this.grantWrite = grantWrite;
+        return this;
+    }
+
+    public ObjectAclGrant setGrantWrite() {
+        this.grantWrite = ACLConst.PERMISSION_TYPE_WRITE;
         return this;
     }
 
@@ -65,8 +125,14 @@ public class ObjectAclGrant {
         return grantWriteAcp;
     }
 
+    @Deprecated
     public ObjectAclGrant setGrantWriteAcp(String grantWriteAcp) {
         this.grantWriteAcp = grantWriteAcp;
+        return this;
+    }
+
+    public ObjectAclGrant setGrantWriteAcp() {
+        this.grantWriteAcp = ACLConst.PERMISSION_TYPE_WRITE_ACP;
         return this;
     }
 }

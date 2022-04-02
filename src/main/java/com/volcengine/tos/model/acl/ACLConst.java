@@ -9,9 +9,9 @@ public interface ACLConst {
     String ACL_BUCKET_OWNER_FULL_CONTROL = "bucket-owner-full-control";
     String ACL_LOG_DELIVERY_WRITE = "log-delivery-write";
 
-    String PERMISSION_READ = "READ";
+    String PERMISSION_TYPE_READ = "READ";
     String PERMISSION_TYPE_WRITE = "WRITE";
     String PERMISSION_TYPE_READ_ACP = "READ_ACP";
     String PERMISSION_TYPE_WRITE_ACP = "WRITE_ACP";
-    String PERMISSION_FULL_CONTROL = "FULL_CONTROL";
+    String PERMISSION_TYPE_FULL_CONTROL = "FULL_CONTROL";
 }

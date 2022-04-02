@@ -183,9 +183,7 @@ class RequestBuilder {
         for (String key : query.keySet()){
             request.getQuery().put(key, query.get(key));
         }
-        String url = "";
-        url = request.toURL().toString();
-        return url;
+        return request.toURL().toString();
     }
 
     public static int tryResolveLength(InputStream stream) throws IOException {
