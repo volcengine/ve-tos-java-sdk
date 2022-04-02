@@ -9,6 +9,9 @@ import com.volcengine.tos.model.object.*;
 import java.io.InputStream;
 import java.time.Duration;
 
+/**
+ * @author volcengine tos
+ */
 public interface TOS {
     /**
      * create a new bucket

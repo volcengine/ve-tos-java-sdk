@@ -95,12 +95,12 @@ public class DefaultTransport implements Transport{
                 .setInputStream(inputStream);
     }
 
-    private int getSize(Response response) {
+    private long getSize(Response response) {
         String size = response.header(TosHeader.HEADER_CONTENT_LENGTH);
         if (StringUtils.isEmpty(size)) {
             return 0;
         }
-        return Integer.parseInt(size);
+        return Long.parseLong(size);
     }
 
     private Map<String, String> getHeaders(Response response) {

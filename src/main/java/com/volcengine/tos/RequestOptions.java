@@ -9,7 +9,7 @@ import java.time.format.DateTimeFormatter;
 
 public class RequestOptions {
 
-    public static RequestOptionsBuilder withContentLength(int length) {
+    public static RequestOptionsBuilder withContentLength(long length) {
         return builder -> builder.withContentLength(length);
     }
 
