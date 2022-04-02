@@ -89,6 +89,9 @@ class TosServerException extends TosException implements Serializable {
                 ServerExceptionJson se = JSON.readValue(s, new TypeReference<ServerExceptionJson>(){});
                 throw new TosServerException(res.getStatusCode(), se.getCode(), se.getMessage(), se.getRequestID(), se.getHostID());
             }
+            if (res.getStatusCode() == 404) {
+                throw new TosServerException(res.getStatusCode(), "not found", "", res.getRequesID(), "");
+            }
         }
         throw new UnexpectedStatusCodeException(res.getStatusCode(), okCode, okCodes).withRequestID(res.getRequesID());
     }
