@@ -1,4 +1,6 @@
 ## Release Note
+### 2022.3.18 Version 0.2.4
+- fix some bugs about content-length
 ### 2022.2.15 Version 0.2.3
 - fix bug that sdk no-support Chinese
 ### 2021.12.13 Version 0.2.2
