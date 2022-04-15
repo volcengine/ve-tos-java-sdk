@@ -13,7 +13,7 @@ More details can be found in [Volcengine TOS Java SDK Reference](https://www.vol
 <dependency>
     <groupId>com.volcengine</groupId>
     <artifactId>ve-tos-java-sdk</artifactId>
-    <version>0.2.4</version>
+    <version>0.2.5</version>
 </dependency>
 ```
 
