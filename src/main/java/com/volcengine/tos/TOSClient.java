@@ -44,7 +44,7 @@ public class TOSClient implements TOS{
      */
     static final int URL_MODE_DEFAULT = 0;
 
-    private static final String VERSION = "v0.2.4";
+    private static final String VERSION = "v0.2.5";
     private static final String SDK_NAME = "ve-tos-java-sdk";
     private static final String USER_AGENT = String.format("%s/%s (%s/%s;%s)", SDK_NAME, VERSION, System.getProperty("os.name"), System.getProperty("os.arch"), System.getProperty("java.version", "0"));
     private static final ObjectMapper JSON = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
@@ -72,7 +72,7 @@ public class TOSClient implements TOS{
         this.urlMode = URL_MODE_DEFAULT;
     }
 
-    public TOSClient(Session session) throws TosException {
+    public TOSClient(Session session){
         Objects.requireNonNull(session.getEndpoint(), "the endpoint is null");
         Objects.requireNonNull(session.getRegion(), "the region is null");
         Objects.requireNonNull(session.getCredentials(), "the credentials is null");
@@ -108,7 +108,7 @@ public class TOSClient implements TOS{
         }
     }
 
-    public TOSClient(String endpoint, ClientOptionsBuilder...options) throws TosException {
+    public TOSClient(String endpoint, ClientOptionsBuilder...options) {
         this.config = new Config().defaultConfig();
         this.config.setEndpoint(endpoint);
         this.schemeHost(endpoint);
@@ -562,7 +562,7 @@ public class TOSClient implements TOS{
         }
         return new TosMarshalResult(dataMD5, data);
     }
-    
+
     private <T> T marshalOutput(InputStream reader,TypeReference<T> valueTypeRef) throws TosException{
         try{
             return JSON.readValue(reader, valueTypeRef);
@@ -609,9 +609,6 @@ public class TOSClient implements TOS{
     private static void isValidKey(String key){
         if (StringUtils.isEmpty(key)) {
             throw new IllegalArgumentException("tos: object name is empty");
-        }
-        if (key.startsWith("/") || key.endsWith("/") || key.contains("//")) {
-            throw new IllegalArgumentException(String.format("tos: object name %s is illegal", key));
         }
     }
 
