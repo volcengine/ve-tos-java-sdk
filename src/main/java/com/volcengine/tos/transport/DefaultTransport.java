@@ -72,7 +72,7 @@ public class DefaultTransport implements Transport{
                 break;
             case HttpMethod.PUT: {
                 if (request.getContent() != null) {
-                    builder.put(new InputStreamRequestBody(getMediaType(request), request.getContent()));
+                    builder.put(new InputStreamRequestBody(getMediaType(request), request.getContent(), request.getContentLength()));
                 } else {
                     builder.put(RequestBody.create(getMediaType(request), request.getData()));
                 }
@@ -104,7 +104,7 @@ public class DefaultTransport implements Transport{
     }
 
     private Map<String, String> getHeaders(Response response) {
-        Map<String, String> headers = new HashMap<>();
+        Map<String, String> headers = new HashMap<>(response.headers().size());
         response.headers().names().forEach(
                 (name) -> headers.put(formatHeadersName(name), response.header(name))
         );

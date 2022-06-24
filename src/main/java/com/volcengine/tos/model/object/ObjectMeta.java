@@ -29,6 +29,7 @@ public class ObjectMeta {
     private String sseCustomerAlgorithm;
     private String sseCustomerKeyMD5;
     private String csType;
+    private String crc64;
 
     public ObjectMeta fromResponse(TosResponse res) {
         this.contentLength = res.getContentLength();
@@ -51,6 +52,7 @@ public class ObjectMeta {
         this.sseCustomerAlgorithm = res.getHeaders().get(TosHeader.HEADER_SSE_CUSTOMER_ALGORITHM);
         this.sseCustomerKeyMD5 = res.getHeaders().get(TosHeader.HEADER_SSE_CUSTOMER_KEY_MD5);
         this.csType = res.getHeaders().get(TosHeader.HEADER_CS_TYPE);
+        this.crc64 = res.getHeaders().get(TosHeader.HEADER_CRC64);
         return this;
     }
 
@@ -271,6 +273,15 @@ public class ObjectMeta {
         return this;
     }
 
+    public String getCrc64() {
+        return crc64;
+    }
+
+    public ObjectMeta setCrc64(String crc64) {
+        this.crc64 = crc64;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "ObjectMeta{" +
@@ -294,6 +305,7 @@ public class ObjectMeta {
                 ", sseCustomerAlgorithm='" + sseCustomerAlgorithm + '\'' +
                 ", sseCustomerKeyMD5='" + sseCustomerKeyMD5 + '\'' +
                 ", csType='" + csType + '\'' +
+                ", crc64=" + crc64 +
                 '}';
     }
 }

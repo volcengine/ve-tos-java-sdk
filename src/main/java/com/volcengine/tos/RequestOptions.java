@@ -9,15 +9,28 @@ import java.time.format.DateTimeFormatter;
 
 public class RequestOptions {
 
+    /**
+     * 设置 http header : Content-Length
+     * @param length 长度
+     * @return
+     */
     public static RequestOptionsBuilder withContentLength(long length) {
         return builder -> builder.withContentLength(length);
     }
 
+    /**
+     * 设置 http header : Content-Type
+     * @param contentType
+     * @return
+     */
     public static RequestOptionsBuilder withContentType(String contentType) {
         return builder -> builder.withHeader(TosHeader.HEADER_CONTENT_TYPE, contentType);
     }
 
-    // SDK auto set content-type default, set withAutoRecognizeContentType(false) to disable it.
+    /**
+     * SDK 自动根据后缀识别content-type。通过 withAutoRecognizeContentType(false) 关闭
+      */
+
     public static RequestOptionsBuilder withAutoRecognizeContentType(boolean autoRecognized) {
         return builder -> builder.setAutoRecognizeContentType(autoRecognized);
     }
@@ -50,12 +63,29 @@ public class RequestOptions {
         return builder -> builder.withHeader(TosHeader.HEADER_EXPIRES, expires.toString());
     }
 
+    /**
+     * 设置自定义的服务端加密算法
+     * @param ssecAlgorithm 服务端加密算法
+     * @param ssecKey 加密密钥
+     * @param ssecKeyMD5 加密密钥MD5
+     * @return
+     */
     public static RequestOptionsBuilder withServerSideEncryptionCustomer(String ssecAlgorithm, String ssecKey, String ssecKeyMD5) {
         return builder -> {
             builder.withHeader(TosHeader.HEADER_SSE_CUSTOMER_ALGORITHM, ssecAlgorithm);
             builder.withHeader(TosHeader.HEADER_SSE_CUSTOMER_KEY, ssecKey);
             builder.withHeader(TosHeader.HEADER_SSE_CUSTOMER_KEY_MD5, ssecKeyMD5);
         };
+    }
+
+    /**
+     * 设置服务端加密算法
+     * @param serverSideEncryption 服务端加密算法
+     * @return
+     */
+
+    public static RequestOptionsBuilder withServerSideEncryption(String serverSideEncryption) {
+        return builder -> builder.withHeader(TosHeader.HEADER_SSE, serverSideEncryption);
     }
 
     public static RequestOptionsBuilder withIfModifiedSince(ZonedDateTime since) {
@@ -101,8 +131,22 @@ public class RequestOptions {
         };
     }
 
+    /**
+     * 设置对象版本号
+     * @param versionID 版本号
+     * @return
+     */
     public static RequestOptionsBuilder withVersionID(String versionID) {
         return builder -> builder.withQuery("versionId", versionID);
+    }
+
+    /**
+     * 设置对象存储类型
+     * @param storageClass 存储类型 'STANDARD|IA'
+     * @return
+     */
+    public static RequestOptionsBuilder withStorageClass(String storageClass) {
+        return builder -> builder.withQuery(TosHeader.HEADER_STORAGE_CLASS, storageClass);
     }
 
     public static RequestOptionsBuilder withMetadataDirective(String directive) {

@@ -55,20 +55,4 @@ public class TosRequestTest {
 //        assertEquals("bbb", output.getRequestInfo().getRequestID());
 //        assertEquals("application/json", output.getRequestInfo().getHeader().get(HttpHeaders.HeaderContentType));
     }
-
-    @Test
-    public void TryResolveLengthTest() {
-        try{
-            FileInputStream f = new FileInputStream("pom.xml");
-            int size = RequestBuilder.tryResolveLength(f);
-            Assert.assertTrue(size>0);
-            byte[] data = new byte[1024];
-            BufferedInputStream buffers = new BufferedInputStream(new ByteArrayInputStream(data));
-            size = RequestBuilder.tryResolveLength(buffers);
-            Assert.assertEquals(1024, size);
-        } catch (IOException e){
-            LOG.error(e.getMessage());
-            Assert.fail();
-        }
-    }
 }

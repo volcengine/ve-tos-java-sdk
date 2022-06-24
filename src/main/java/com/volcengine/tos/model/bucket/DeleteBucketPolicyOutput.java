@@ -2,26 +2,21 @@ package com.volcengine.tos.model.bucket;
 
 import com.volcengine.tos.model.RequestInfo;
 
-import java.io.Serializable;
-public class DeleteBucketOutput implements Serializable {
+public class DeleteBucketPolicyOutput {
     private RequestInfo requestInfo;
-
-    public DeleteBucketOutput(RequestInfo requestInfo) {
-        this.requestInfo = requestInfo;
-    }
 
     public RequestInfo getRequestInfo() {
         return requestInfo;
     }
 
-    public DeleteBucketOutput setRequestInfo(RequestInfo requestInfo) {
+    public DeleteBucketPolicyOutput setRequestInfo(RequestInfo requestInfo) {
         this.requestInfo = requestInfo;
         return this;
     }
 
     @Override
     public String toString() {
-        return "DeleteBucketOutput{" +
+        return "DeleteBucketPolicyOutput{" +
                 "requestInfo=" + requestInfo +
                 '}';
     }
