@@ -1,6 +1,7 @@
-package com.volcengine.tos;
+package com.volcengine.tos.comm;
 
-import com.volcengine.tos.comm.MimeType;
+import com.volcengine.tos.TosClientException;
+import com.volcengine.tos.Consts;
 import org.testng.annotations.Test;
 import org.testng.Assert;
 

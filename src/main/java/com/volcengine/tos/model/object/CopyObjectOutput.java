@@ -15,6 +15,7 @@ public class CopyObjectOutput {
     private String etag;
     @JsonProperty("LastModified")
     private String lastModified;
+    private String crc64;
 
     public RequestInfo getRequestInfo() {
         return requestInfo;
@@ -61,6 +62,15 @@ public class CopyObjectOutput {
         return this;
     }
 
+    public String getCrc64() {
+        return crc64;
+    }
+
+    public CopyObjectOutput setCrc64(String crc64) {
+        this.crc64 = crc64;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "CopyObjectOutput{" +
@@ -69,6 +79,7 @@ public class CopyObjectOutput {
                 ", sourceVersionID='" + sourceVersionID + '\'' +
                 ", etag='" + etag + '\'' +
                 ", lastModified='" + lastModified + '\'' +
+                ", crc64=" + crc64 +
                 '}';
     }
 }

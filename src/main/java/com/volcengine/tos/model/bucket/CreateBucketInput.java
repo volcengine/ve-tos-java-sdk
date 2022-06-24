@@ -9,6 +9,7 @@ public class CreateBucketInput {
     private String grantReadAcp;
     private String grantWrite;
     private String grantWriteAcp;
+    private String storageClass;
 
     public CreateBucketInput(String bucket) {
         this.bucket = bucket;
@@ -16,7 +17,7 @@ public class CreateBucketInput {
 
     public CreateBucketInput(String bucket, String acl, String grantFullControl,
                              String grantRead, String grantReadAcp,
-                             String grantWrite, String grantWriteAcp) {
+                             String grantWrite, String grantWriteAcp, String storageClass) {
         this.bucket = bucket;
         this.acl = acl;
         this.grantFullControl = grantFullControl;
@@ -24,6 +25,7 @@ public class CreateBucketInput {
         this.grantReadAcp = grantReadAcp;
         this.grantWrite = grantWrite;
         this.grantWriteAcp = grantWriteAcp;
+        this.storageClass = storageClass;
     }
 
     public String getBucket() {
@@ -89,6 +91,15 @@ public class CreateBucketInput {
         return this;
     }
 
+    public String getStorageClass() {
+        return storageClass;
+    }
+
+    public CreateBucketInput setStorageClass(String storageClass) {
+        this.storageClass = storageClass;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "CreateBucketInput{" +
@@ -99,6 +110,7 @@ public class CreateBucketInput {
                 ", grantReadAcp='" + grantReadAcp + '\'' +
                 ", grantWrite='" + grantWrite + '\'' +
                 ", grantWriteAcp='" + grantWriteAcp + '\'' +
+                ", storageClass='" + storageClass + '\'' +
                 '}';
     }
 }

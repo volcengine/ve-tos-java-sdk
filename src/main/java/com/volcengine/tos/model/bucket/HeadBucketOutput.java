@@ -7,10 +7,12 @@ import java.io.Serializable;
 public class HeadBucketOutput implements Serializable {
     private RequestInfo requestInfo;
     private String region;
+    private String storageClass;
 
-    public HeadBucketOutput(RequestInfo requestInfo, String region) {
+    public HeadBucketOutput(RequestInfo requestInfo, String region, String storageClass) {
         this.requestInfo = requestInfo;
         this.region = region;
+        this.storageClass = storageClass;
     }
 
     public String getRegion() {
@@ -19,5 +21,17 @@ public class HeadBucketOutput implements Serializable {
 
     public RequestInfo getRequestInfo() {
         return requestInfo;
+    }
+
+    public String getStorageClass() {
+        return storageClass;
+    }
+
+    @Override
+    public String toString() {
+        return "HeadBucketOutput{" +
+                "requestInfo=" + requestInfo +
+                ", region='" + region + '\'' +
+                '}';
     }
 }

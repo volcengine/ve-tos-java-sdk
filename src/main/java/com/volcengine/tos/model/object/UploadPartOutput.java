@@ -1,8 +1,12 @@
 package com.volcengine.tos.model.object;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.volcengine.tos.model.RequestInfo;
 
-public class UploadPartOutput implements MultipartUploadedPart{
+import java.io.Serializable;
+
+public class UploadPartOutput implements MultipartUploadedPart, Serializable {
+    @JsonIgnore
     private RequestInfo requestInfo;
     private int partNumber;
     private String etag;

@@ -8,6 +8,9 @@ public class UploadPartInput {
     private int partNumber;
     private TosObjectInputStream content;
 
+    public UploadPartInput() {
+    }
+
     public UploadPartInput(String key, String uploadID, long partSize, int partNumber, TosObjectInputStream content) {
         this.key = key;
         this.uploadID = uploadID;

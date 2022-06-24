@@ -1,6 +1,10 @@
 package com.volcengine.tos;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.volcengine.tos.io.TosRepeatableBoundedFileInputStream;
+import com.volcengine.tos.io.TosRepeatableFileInputStream;
+import com.volcengine.tos.io.TosRepeatableInputStream;
+import com.volcengine.tos.internal.Consts;
 import okhttp3.HttpUrl;
 import org.apache.commons.lang3.ArrayUtils;
 
@@ -37,7 +41,12 @@ public class TosRequest {
         this.method = method;
         this.host = host;
         this.path = path;
-        this.content = inputStream;
+        this.content = new TosRepeatableInputStream(inputStream, Consts.DEFAULT_READ_BUFFER_SIZE);
+        if (inputStream instanceof TosRepeatableInputStream || inputStream instanceof TosRepeatableFileInputStream
+                || inputStream instanceof TosRepeatableBoundedFileInputStream) {
+            // 这几种不用转换
+            this.content = inputStream;
+        }
         this.query = query;
         this.headers = headers;
     }

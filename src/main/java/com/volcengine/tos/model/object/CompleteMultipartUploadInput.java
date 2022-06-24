@@ -107,6 +107,7 @@ public class CompleteMultipartUploadInput {
                 return null;
             }
         }
+        Arrays.sort(multipart.getParts());
         return multipart;
     }
 

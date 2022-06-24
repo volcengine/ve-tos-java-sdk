@@ -6,12 +6,13 @@
 
     <groupId>com.volcengine</groupId>
     <artifactId>ve-tos-java-sdk</artifactId>
-    <version>0.2.5</version>
+    <version>${tos.version}</version>
 
     <properties>
         <maven.compiler.source>8</maven.compiler.source>
         <maven.compiler.target>8</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <tos.version>0.2.7</tos.version>
     </properties>
     <dependencies>
         <dependency>

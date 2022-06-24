@@ -12,10 +12,10 @@ public class PutObjectOutput {
     private String etag;
     @JsonProperty("VersionId")
     private String versionID;
-    @JsonProperty("SSECustomerAlgorithm")
+    private String crc64;
     private String sseCustomerAlgorithm;
-    @JsonProperty("SSECustomerKeyMD5")
     private String sseCustomerKeyMD5;
+    private String sseCustomerKey;
 
     public RequestInfo getRequestInfo() {
         return requestInfo;
@@ -44,6 +44,15 @@ public class PutObjectOutput {
         return this;
     }
 
+    public String getCrc64() {
+        return crc64;
+    }
+
+    public PutObjectOutput setCrc64(String crc64) {
+        this.crc64 = crc64;
+        return this;
+    }
+
     public String getSseCustomerAlgorithm() {
         return sseCustomerAlgorithm;
     }
@@ -62,14 +71,25 @@ public class PutObjectOutput {
         return this;
     }
 
+    public String getSseCustomerKey() {
+        return sseCustomerKey;
+    }
+
+    public PutObjectOutput setSseCustomerKey(String sseCustomerKey) {
+        this.sseCustomerKey = sseCustomerKey;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "PutObjectOutput{" +
                 "requestInfo=" + requestInfo +
                 ", etag='" + etag + '\'' +
                 ", versionID='" + versionID + '\'' +
+                ", crc64=" + crc64 +
                 ", sseCustomerAlgorithm='" + sseCustomerAlgorithm + '\'' +
                 ", sseCustomerKeyMD5='" + sseCustomerKeyMD5 + '\'' +
+                ", sseCustomerKey='" + sseCustomerKey + '\'' +
                 '}';
     }
 }
