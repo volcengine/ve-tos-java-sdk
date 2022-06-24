@@ -5,6 +5,7 @@ import com.volcengine.tos.model.RequestInfo;
 public class CompleteMultipartUploadOutput {
     private RequestInfo requestInfo;
     private String versionID;
+    private String crc64;
 
     public RequestInfo getRequestInfo() {
         return requestInfo;
@@ -24,11 +25,21 @@ public class CompleteMultipartUploadOutput {
         return this;
     }
 
+    public String getCrc64() {
+        return crc64;
+    }
+
+    public CompleteMultipartUploadOutput setCrc64(String crc64) {
+        this.crc64 = crc64;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "CompleteMultipartUploadOutput{" +
                 "requestInfo=" + requestInfo +
                 ", versionID='" + versionID + '\'' +
+                ", crc64=" + crc64 +
                 '}';
     }
 }

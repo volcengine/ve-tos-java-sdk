@@ -17,6 +17,7 @@ public class UploadPartCopyOutput implements MultipartUploadedPart{
     private String etag;
     @JsonProperty("LastModified")
     private String lastModified;
+    private String crc64;
 
     @Override
     public InnerUploadedPart uploadedPart(){
@@ -77,6 +78,15 @@ public class UploadPartCopyOutput implements MultipartUploadedPart{
         return this;
     }
 
+    public String getCrc64() {
+        return crc64;
+    }
+
+    public UploadPartCopyOutput setCrc64(String crc64) {
+        this.crc64 = crc64;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "UploadPartCopyOutput{" +
@@ -86,6 +96,7 @@ public class UploadPartCopyOutput implements MultipartUploadedPart{
                 ", partNumber=" + partNumber +
                 ", etag='" + etag + '\'' +
                 ", lastModified='" + lastModified + '\'' +
+                ", crc64=" + crc64 +
                 '}';
     }
 }

@@ -74,7 +74,7 @@ class TosServerException extends TosException implements Serializable {
         return code;
     }
 
-    static void checkException(TosResponse res, int okCode, int ...okCodes) throws TosServerException, UnexpectedStatusCodeException, IOException {
+    static void checkException(TosResponse res, int okCode, int ...okCodes) throws TosServerException, UnexpectedStatusCodeException, IOException, TosClientException {
         if (res.getStatusCode() == okCode) {
             return;
         }
@@ -86,10 +86,13 @@ class TosServerException extends TosException implements Serializable {
         if (res.getStatusCode() >= HttpStatus.SC_BAD_REQUEST){
             String s = IOUtils.toString(res.getInputStream(), StandardCharsets.UTF_8);
             if (s.length() > 0) {
+                if (res.getStatusCode() == HttpStatus.SC_BAD_REQUEST) {
+                    throw new TosClientException("Bad request, " + s, null);
+                }
                 ServerExceptionJson se = JSON.readValue(s, new TypeReference<ServerExceptionJson>(){});
                 throw new TosServerException(res.getStatusCode(), se.getCode(), se.getMessage(), se.getRequestID(), se.getHostID());
             }
-            if (res.getStatusCode() == 404) {
+            if (res.getStatusCode() == HttpStatus.SC_NOT_FOUND) {
                 throw new TosServerException(res.getStatusCode(), "not found", "", res.getRequesID(), "");
             }
         }

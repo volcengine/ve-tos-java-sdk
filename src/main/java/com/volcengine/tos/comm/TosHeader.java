@@ -35,6 +35,8 @@ public interface TosHeader {
     String HEADER_SSE_CUSTOMER_ALGORITHM = "X-Tos-Server-Side-Encryption-Customer-Algorithm";
     String HEADER_SSE_CUSTOMER_KEY_MD5 = "X-Tos-Server-Side-Encryption-Customer-Key-MD5";
     String HEADER_SSE_CUSTOMER_KEY = "X-Tos-Server-Side-Encryption-Customer-Key";
+    String HEADER_SSE = "x-tos-server-side-encryption";
+    String HEADER_CRC64 = "x-tos-hash-crc64ecma";
     String HEADER_REQUEST_ID = "X-Tos-Request-Id";
     String HEADER_BUCKET_REGION = "X-Tos-Bucket-Region";
     String HEADER_ACL = "X-Tos-Acl";
