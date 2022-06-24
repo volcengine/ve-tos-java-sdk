@@ -99,11 +99,7 @@ class RequestBuilder {
         String[] hostAndPath = hostPath();
         TosRequest request = new TosRequest(scheme, method, hostAndPath[0], hostAndPath[1], stream, query, headers);
         if (stream != null){
-            if (contentLength != 0) {
-                request.setContentLength(contentLength);
-            } else{
-                request.setContentLength(tryResolveLength(stream));
-            }
+            request.setContentLength(contentLength != 0 ? contentLength : -1);
         }
         return request;
     }
@@ -162,7 +158,7 @@ class RequestBuilder {
     }
 
     private String copySource(String bucket, String object, String versionID) throws UnsupportedEncodingException {
-        if (versionID == null || versionID.equals("")) {
+        if (StringUtils.isEmpty(versionID)) {
             return "/" + bucket + "/" + URLEncoder.encode(object, "UTF-8");
         }
         return "/" + bucket + "/" + URLEncoder.encode(object, "UTF-8") + "?versionId=" + versionID;
@@ -185,11 +181,6 @@ class RequestBuilder {
         }
         return request.toURL().toString();
     }
-
-    public static int tryResolveLength(InputStream stream) throws IOException {
-        return stream.available() == 0 ? -1 : stream.available();
-    }
-
 }
 
 class HttpRange {
@@ -216,6 +207,16 @@ class HttpRange {
 
     @Override
     public String toString(){
-        return "bytes=" + start + "-" + end;
+        if (start < 0 && end < 0) {
+            return "bytes=0-";
+        } else if (start > 0 && end > 0 && start > end) {
+            return "bytes=0-";
+        } else if (start < 0) {
+            return "bytes=-" + end;
+        } else if (end < 0) {
+            return "bytes=" + start + "-";
+        } else {
+            return "bytes=" + start + "-" + end;
+        }
     }
 }

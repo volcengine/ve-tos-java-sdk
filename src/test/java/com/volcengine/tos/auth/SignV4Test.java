@@ -1,8 +1,7 @@
-package com.volcengine.tos;
+package com.volcengine.tos.auth;
 
-import com.volcengine.tos.auth.Credentials;
-import com.volcengine.tos.auth.SignV4;
-import com.volcengine.tos.auth.StaticCredentials;
+import com.volcengine.tos.Consts;
+import com.volcengine.tos.TosRequest;
 import com.volcengine.tos.comm.HttpMethod;
 import okhttp3.HttpUrl;
 import org.testng.Assert;

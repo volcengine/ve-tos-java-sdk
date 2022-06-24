@@ -6,6 +6,7 @@ public class AppendObjectOutput {
     private RequestInfo requestInfo;
     private String etag;
     private long nextAppendOffset;
+    private String crc64;
 
     public RequestInfo getRequestInfo() {
         return requestInfo;
@@ -34,12 +35,22 @@ public class AppendObjectOutput {
         return this;
     }
 
+    public String getCrc64() {
+        return crc64;
+    }
+
+    public AppendObjectOutput setCrc64(String crc64) {
+        this.crc64 = crc64;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "AppendObjectOutput{" +
                 "requestInfo=" + requestInfo +
                 ", etag='" + etag + '\'' +
                 ", nextAppendOffset=" + nextAppendOffset +
+                ", crc64=" + crc64 +
                 '}';
     }
 }

@@ -51,6 +51,31 @@ public interface TOS {
     ListBucketsOutput listBuckets(ListBucketsInput input) throws TosException;
 
     /**
+     * 设置桶策略
+     * @param bucket 桶名
+     * @param policy 桶策略
+     * @return PutBucketPolicyOutput
+     * @throws TosException
+     */
+    PutBucketPolicyOutput putBucketPolicy(String bucket, String policy) throws TosException;
+
+    /**
+     * 获取桶策略
+     * @param bucket 桶名
+     * @return GetBucketPolicyOutput
+     * @throws TosException
+     */
+    GetBucketPolicyOutput getBucketPolicy(String bucket) throws TosException;
+
+    /**
+     * 删除桶策略
+     * @param bucket 桶名
+     * @return DeleteBucketPolicyOutput
+     * @throws TosException
+     */
+    DeleteBucketPolicyOutput deleteBucketPolicy(String bucket) throws TosException;
+
+    /**
      * get data and metadata of an object
      *
      * @param bucket the bucket to operate
@@ -125,10 +150,13 @@ public interface TOS {
      *                    withServerSideEncryptionCustomer: set server side encryption options.
      *                    withACL, withACLGrantFullControl, withACLGrantRead, withACLGrantReadAcp,
      *                    withACLGrantWrite, withACLGrantWriteAcp set object acl.
+     *                    withStorageClass set storage class, 'STANDARD|IA'
      * @return {@link PutObjectOutput}
      * @throws TosException
      */
     PutObjectOutput putObject(String bucket, String objectKey, InputStream inputStream, RequestOptionsBuilder...builders) throws TosException;
+
+    UploadFileOutput uploadFile(String bucket, UploadFileInput input, RequestOptionsBuilder ...builders) throws TosException;
 
     /**
      * append content at the tail of an appendable object
@@ -148,6 +176,7 @@ public interface TOS {
      *                  withExpires: set Expires.
      *                  withACL, withACLGrantFullControl, withACLGrantRead, withACLGrantReadAcp,
      *                  withACLGrantWrite, withACLGrantWriteAcp set object acl.
+     *                  withStorageClass set storage class, 'STANDARD|IA'
      *                  above options only take effect when offset parameter is 0.
      *
      *                  withContentSHA256: set Content-Sha256.
@@ -213,6 +242,10 @@ public interface TOS {
      *                     withCopySourceIfMatch withCopySourceIfNoneMatch withCopySourceIfModifiedSince
      *                     withCopySourceIfUnmodifiedSince set copy conditions.
      *
+     *                     withStorageClass set storage class, 'STANDARD|IA'
+     *
+     *                     withServerSideEncryptionCustomer: Copy SSE-C加密对象，源对象的加密算法、加密密钥、密钥MD5
+     *
      *                     if copyObject called with withMetadataDirective(TosHeaders.METADATA_DIRECTIVE_REPLACE),
      *                     these properties can be used:
      *                     withContentType set Content-Type.
@@ -243,6 +276,10 @@ public interface TOS {
      *
      *                     withCopySourceIfMatch withCopySourceIfNoneMatch withCopySourceIfModifiedSince
      *                     withCopySourceIfUnmodifiedSince set copy conditions.
+     *
+     *                     withStorageClass set storage class, 'STANDARD|IA'
+     *
+     *                     withServerSideEncryptionCustomer: Copy SSE-C加密对象，源对象的加密算法、加密密钥、密钥MD5
      *
      *                     if copyObjectTo called with withMetadataDirective(TosHeaders.METADATA_DIRECTIVE_REPLACE),
      *                     these properties can be used:
@@ -275,6 +312,10 @@ public interface TOS {
      *                     withCopySourceIfMatch withCopySourceIfNoneMatch withCopySourceIfModifiedSince
      *                     withCopySourceIfUnmodifiedSince set copy conditions.
      *
+     *                     withStorageClass set storage class, 'STANDARD|IA'
+     *
+     *                     withServerSideEncryptionCustomer: Copy SSE-C加密对象，源对象的加密算法、加密密钥、密钥MD5
+     *
      *                     if copyObjectFrom called with withMetadataDirective(TosHeaders.METADATA_DIRECTIVE_REPLACE),
      *                     these properties can be used:
      *                     withContentType set Content-Type.
@@ -298,6 +339,8 @@ public interface TOS {
      * @param builders optional. setting withXXX properties.
      *                 withCopySourceIfMatch, withCopySourceIfNoneMatch, withCopySourceIfModifiedSince and
      *                 withCopySourceIfUnmodifiedSince set copy conditions
+     *                 withServerSideEncryption: set server side encryption algorithm, 'AES256'.
+     *                 withServerSideEncryptionCustomer: Copy SSE-C加密对象，源对象的加密算法、加密密钥、密钥MD5
      * @return {@link UploadPartCopyOutput}
      * @throws TosException
      */
@@ -343,7 +386,9 @@ public interface TOS {
      *                  withExpires set Expires.
      *                  withServerSideEncryptionCustomer set server side encryption options.
      *                  withACL, WithACLGrantFullControl, withACLGrantRead, withACLGrantReadAcp,
-     *                  withACLGrantWrite, withACLGrantWriteAcp set object acl
+     *                  withACLGrantWrite, withACLGrantWriteAcp set object acl.
+     *                  withStorageClass set storage class, 'STANDARD|IA'.
+     *                  withServerSideEncryption: set server side encryption algorithm, 'AES256'.
      *
      * @return {@link CreateMultipartUploadOutput}
      * @throws TosException

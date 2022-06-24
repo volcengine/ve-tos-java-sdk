@@ -9,6 +9,7 @@ public class CreateMultipartUploadOutput {
     private String uploadID;
     private String sseCustomerAlgorithm;
     private String sseCustomerMD5;
+    private String sseCustomerKey;
 
     public RequestInfo getRequestInfo() {
         return requestInfo;
@@ -64,6 +65,15 @@ public class CreateMultipartUploadOutput {
         return this;
     }
 
+    public String getSseCustomerKey() {
+        return sseCustomerKey;
+    }
+
+    public CreateMultipartUploadOutput setSseCustomerKey(String sseCustomerKey) {
+        this.sseCustomerKey = sseCustomerKey;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "CreateMultipartUploadOutput{" +
@@ -73,6 +83,7 @@ public class CreateMultipartUploadOutput {
                 ", uploadID='" + uploadID + '\'' +
                 ", sseCustomerAlgorithm='" + sseCustomerAlgorithm + '\'' +
                 ", sseCustomerMD5='" + sseCustomerMD5 + '\'' +
+                ", sseCustomerKey='" + sseCustomerKey + '\'' +
                 '}';
     }
 }

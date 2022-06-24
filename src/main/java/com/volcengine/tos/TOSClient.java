@@ -12,6 +12,8 @@ import com.volcengine.tos.auth.Signer;
 import com.volcengine.tos.comm.HttpMethod;
 import com.volcengine.tos.comm.MimeType;
 import com.volcengine.tos.comm.TosHeader;
+import com.volcengine.tos.comm.Consts;
+import com.volcengine.tos.io.TosRepeatableBoundedFileInputStream;
 import com.volcengine.tos.model.TosMarshalResult;
 import com.volcengine.tos.model.acl.GetObjectAclOutput;
 import com.volcengine.tos.model.acl.ObjectAclGrant;
@@ -24,19 +26,19 @@ import com.volcengine.tos.session.SessionTransport;
 import com.volcengine.tos.transport.DefaultTransport;
 import com.volcengine.tos.transport.Transport;
 import com.volcengine.tos.transport.TransportConfig;
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.HttpStatus;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
-import java.util.Arrays;
-import java.util.Base64;
-import java.util.HashMap;
-import java.util.Objects;
+import java.util.*;
+import java.util.concurrent.*;
 
 public class TOSClient implements TOS{
     /**
@@ -44,7 +46,9 @@ public class TOSClient implements TOS{
      */
     static final int URL_MODE_DEFAULT = 0;
 
-    private static final String VERSION = "v0.2.5";
+    private static final Logger LOG = LoggerFactory.getLogger(TOSClient.class);
+
+    private static final String VERSION = "v0.2.7";
     private static final String SDK_NAME = "ve-tos-java-sdk";
     private static final String USER_AGENT = String.format("%s/%s (%s/%s;%s)", SDK_NAME, VERSION, System.getProperty("os.name"), System.getProperty("os.arch"), System.getProperty("java.version", "0"));
     private static final ObjectMapper JSON = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
@@ -153,6 +157,7 @@ public class TOSClient implements TOS{
         return res;
     }
 
+
     @Override
     public CreateBucketOutput createBucket(CreateBucketInput input)  throws TosException{
         Objects.requireNonNull(input, "CreateBucketInput is null");
@@ -166,6 +171,7 @@ public class TOSClient implements TOS{
                 .withHeader(TosHeader.HEADER_GRANT_READ_ACP, input.getGrantReadAcp())
                 .withHeader(TosHeader.HEADER_GRANT_WRITE, input.getGrantWrite())
                 .withHeader(TosHeader.HEADER_GRANT_WRITE_ACP, input.getGrantWriteAcp())
+                .withHeader(TosHeader.HEADER_STORAGE_CLASS, input.getStorageClass())
                 .Build(HttpMethod.PUT, null);
         TosResponse res = this.roundTrip(req, HttpStatus.SC_OK);
         return new CreateBucketOutput(res.RequestInfo(), res.getHeaders().get(TosHeader.HEADER_LOCATION));
@@ -176,7 +182,9 @@ public class TOSClient implements TOS{
         isValidBucketName(bucket);
         TosRequest req = this.newBuilder(bucket, "").Build(HttpMethod.HEAD, null);
         TosResponse res = roundTrip(req, HttpStatus.SC_OK);
-        return new HeadBucketOutput(res.RequestInfo(), res.getHeaders().get(TosHeader.HEADER_BUCKET_REGION));
+        return new HeadBucketOutput(res.RequestInfo(),
+                res.getHeaders().get(TosHeader.HEADER_BUCKET_REGION),
+                res.getHeaders().get(TosHeader.HEADER_STORAGE_CLASS));
     }
 
     @Override
@@ -193,6 +201,38 @@ public class TOSClient implements TOS{
         TosResponse res = roundTrip(req, HttpStatus.SC_OK);
         return marshalOutput(res.getInputStream(), new TypeReference<ListBucketsOutput>(){})
                 .setRequestInfo(res.RequestInfo());
+    }
+
+    @Override
+    public PutBucketPolicyOutput putBucketPolicy(String bucket, String policy) throws TosException {
+        isValidBucketName(bucket);
+        TosRequest req = this.newBuilder(bucket, "").withQuery("policy", "").
+                Build(HttpMethod.PUT, new ByteArrayInputStream(policy.getBytes(StandardCharsets.UTF_8)));
+        TosResponse res = roundTrip(req, HttpStatus.SC_NO_CONTENT);
+        return new PutBucketPolicyOutput().setRequestInfo(res.RequestInfo());
+    }
+
+    @Override
+    public GetBucketPolicyOutput getBucketPolicy(String bucket) throws TosException {
+        isValidBucketName(bucket);
+        TosRequest req = this.newBuilder(bucket, "").withQuery("policy", "").
+                Build(HttpMethod.GET, null);
+        TosResponse res = roundTrip(req, HttpStatus.SC_OK);
+        GetBucketPolicyOutput ret = new GetBucketPolicyOutput().setRequestInfo(res.RequestInfo());
+        try{
+            ret.setPolicy(IOUtils.toString(res.getInputStream(), StandardCharsets.UTF_8));
+        } catch (IOException e) {
+            throw new TosClientException("read bucket policy failed", e);
+        }
+        return ret;
+    }
+
+    @Override
+    public DeleteBucketPolicyOutput deleteBucketPolicy(String bucket) throws TosException {
+        isValidBucketName(bucket);
+        TosRequest req = this.newBuilder(bucket, "").withQuery("policy", "").Build(HttpMethod.DELETE, null);
+        TosResponse res = roundTrip(req, HttpStatus.SC_NO_CONTENT);
+        return new DeleteBucketPolicyOutput().setRequestInfo(res.RequestInfo());
     }
 
     private int expectedCode(RequestBuilder rb) {
@@ -236,6 +276,7 @@ public class TOSClient implements TOS{
 
     @Override
     public DeleteMultiObjectsOutput deleteMultiObjects(String bucket, DeleteMultiObjectsInput input, RequestOptionsBuilder... builders) throws TosException {
+        Objects.requireNonNull(input, "DeleteMultiObjectsInput is null");
         TosMarshalResult inputRes = marshalInput(input);
         TosRequest req = newBuilder(bucket, "", builders)
                 .withHeader(TosHeader.HEADER_CONTENT_MD5, inputRes.getContentMD5())
@@ -269,8 +310,220 @@ public class TOSClient implements TOS{
         return new PutObjectOutput().setRequestInfo(res.RequestInfo())
                 .setEtag(res.getHeaders().get(TosHeader.HEADER_ETAG))
                 .setVersionID(res.getHeaders().get(TosHeader.HEADER_VERSIONID))
+                .setCrc64(res.getHeaders().get(TosHeader.HEADER_CRC64))
                 .setSseCustomerAlgorithm(res.getHeaders().get(TosHeader.HEADER_SSE_CUSTOMER_ALGORITHM))
-                .setSseCustomerKeyMD5(res.getHeaders().get(TosHeader.HEADER_SSE_CUSTOMER_KEY_MD5));
+                .setSseCustomerKeyMD5(res.getHeaders().get(TosHeader.HEADER_SSE_CUSTOMER_KEY_MD5))
+                .setSseCustomerKey(res.getHeaders().get(TosHeader.HEADER_SSE_CUSTOMER_KEY));
+    }
+
+    @Override
+    public UploadFileOutput uploadFile(String bucket, UploadFileInput input, RequestOptionsBuilder... builders) throws TosException {
+        validateInput(bucket, input);
+        if (input.isEnableCheckpoint()) {
+            validateCheckpointPath(bucket, input);
+        }
+        UploadFileInfo fileInfo = getUploadFileInfo(input.getUploadFilePath());
+        return uploadPartConcurrent(input, getCheckpoint(bucket, input, fileInfo, builders), builders);
+    }
+
+    private void validateInput(String bucket, UploadFileInput input) {
+        Objects.requireNonNull(input, "UploadFileInput is null");
+        Objects.requireNonNull(input.getUploadFilePath(), "UploadFilePath is null");
+
+        isValidBucketName(bucket);
+        isValidKey(input.getObjectKey());
+
+        if (input.getPartSize() < Consts.MIN_PART_SIZE || input.getPartSize() > Consts.MIN_PART_SIZE * 1024L) {
+            throw new IllegalArgumentException("The input part size is invalid, please set it range from 5MB to 5GB");
+        }
+        if (input.getTaskNum() > 1000) {
+            input.setTaskNum(1000);
+        }
+        if (input.getTaskNum() < 1) {
+            input.setTaskNum(1);
+        }
+        File file = new File(input.getUploadFilePath());
+        if (!file.exists()) {
+            throw new IllegalArgumentException("The file to upload is not found in the specific path: " + input.getUploadFilePath());
+        }
+        if (file.isDirectory()) {
+            // 不支持文件夹上传
+            throw new IllegalArgumentException("Does not support directory, please specific your file path");
+        }
+    }
+
+    private void validateCheckpointPath(String bucket, UploadFileInput input) {
+        String checkpointFileSuffix = bucket + "." + input.getObjectKey().replace("/", "_") + ".upload";
+        if (StringUtils.isEmpty(input.getCheckpointFile())) {
+            input.setCheckpointFile(input.getUploadFilePath() + "." + checkpointFileSuffix);
+        } else {
+            File ufcf = new File(input.getCheckpointFile());
+            if (!ufcf.exists()) {
+                throw new IllegalArgumentException("The checkpoint file is not found in the specific path: " + input.getUploadFilePath());
+            }
+            if (ufcf.isDirectory()) {
+                input.setCheckpointFile(input.getCheckpointFile() + "/" + checkpointFileSuffix);
+            }
+        }
+    }
+
+    private UploadFileInfo getUploadFileInfo(String uploadFilePath){
+        File file = new File(uploadFilePath);
+        return new UploadFileInfo().setFilePath(uploadFilePath).setFileSize(file.length()).setLastModified(file.lastModified());
+    }
+
+    private UploadFileCheckpoint getCheckpoint(String bucket, UploadFileInput input, UploadFileInfo fileInfo,
+                                               RequestOptionsBuilder... builders) throws TosException{
+        UploadFileCheckpoint checkpoint = null;
+        if (input.isEnableCheckpoint()) {
+            try{
+                checkpoint = loadCheckpointFromFile(input.getCheckpointFile());
+            } catch (IOException | ClassNotFoundException e){
+                deleteCheckpointFile(input.getCheckpointFile());
+            }
+        }
+        boolean valid = false;
+        if (checkpoint != null) {
+            valid = checkpoint.isValid(fileInfo.getFileSize(), fileInfo.getLastModified(),
+                    bucket, input.getObjectKey(), input.getUploadFilePath());
+            if (!valid) {
+                deleteCheckpointFile(input.getCheckpointFile());
+            }
+        }
+        if (checkpoint == null || !valid) {
+            checkpoint = initCheckpoint(bucket, input, fileInfo, builders);
+            if (input.isEnableCheckpoint()) {
+                try{
+                    checkpoint.writeToFile(input.getCheckpointFile(), JSON);
+                } catch (IOException e) {
+                    throw new TosClientException("record to checkpoint file failed", e);
+                }
+            }
+        }
+        return checkpoint;
+    }
+
+    private boolean deleteCheckpointFile(String checkpointFilePath) {
+        File file = new File(checkpointFilePath);
+        if (file.isFile() && file.exists()) {
+            return file.delete();
+        }
+        return false;
+    }
+
+    private UploadFileCheckpoint loadCheckpointFromFile(String checkpointFilePath) throws IOException, ClassNotFoundException{
+        Objects.requireNonNull(checkpointFilePath, "checkpointFilePath is null");
+        File f = new File(checkpointFilePath);
+        try(FileInputStream checkpointFile = new FileInputStream(f))
+        {
+            byte[] data = new byte[(int)f.length()];
+            checkpointFile.read(data);
+            return JSON.readValue(data, new TypeReference<UploadFileCheckpoint>(){});
+        }
+    }
+
+    private UploadFileCheckpoint initCheckpoint(String bucket, UploadFileInput input, UploadFileInfo info, RequestOptionsBuilder... builders) throws TosException{
+        UploadFileCheckpoint checkpoint = new UploadFileCheckpoint()
+                .setBucket(bucket).setKey(input.getObjectKey()).setFileInfo(info)
+                .setPartInfoList(getPartsFromFile(info.getFileSize(), input.getPartSize()));
+        CreateMultipartUploadOutput output = this.createMultipartUpload(bucket, input.getObjectKey(), builders);
+        checkpoint.setUploadID(output.getUploadID());
+        return checkpoint;
+    }
+
+    private List<UploadFilePartInfo> getPartsFromFile(long uploadFileSize, long partSize) {
+        long partNum = uploadFileSize / partSize;
+        long lastPartSize = uploadFileSize % partSize;
+        if (lastPartSize != 0) {
+            partNum++;
+        }
+        if (partNum > 10000) {
+            throw new IllegalArgumentException("The split file parts number is larger than 10000, please increase your part size");
+        }
+        List<UploadFilePartInfo> partInfoList = new ArrayList<>((int) partNum);
+        for(int i = 0; i < partNum; i++) {
+            if (i < partNum-1) {
+                partInfoList.add(new UploadFilePartInfo().setPartSize(partSize).setPartNum(i+1).setOffset(i * partSize));
+            } else {
+                partInfoList.add(new UploadFilePartInfo().setPartSize(lastPartSize).setPartNum(i+1).setOffset(i * partSize));
+            }
+        }
+        return partInfoList;
+    }
+
+    private UploadFileOutput uploadPartConcurrent(UploadFileInput input, UploadFileCheckpoint checkpoint, RequestOptionsBuilder... builders) throws TosException {
+        ExecutorService executor = Executors.newFixedThreadPool(input.getTaskNum());
+        List<Future<MultipartUploadedPart>> futures = new ArrayList<>(checkpoint.getPartInfoList().size());
+        List<MultipartUploadedPart> uploadPartOutputs = new ArrayList<>(checkpoint.getPartInfoList().size());
+        LOG.debug("Upload file split to {} parts.", checkpoint.getPartInfoList().size());
+        for (int i = 0; i < checkpoint.getPartInfoList().size(); i++) {
+            UploadFilePartInfo partInfo = checkpoint.getPartInfoList().get(i);
+            if (!partInfo.isCompleted()) {
+                final int finalI = i;
+                Future<MultipartUploadedPart> future = executor.submit(() -> {
+                    long start = System.nanoTime();
+                    TosObjectInputStream in = getContentFromFile(checkpoint.getFileInfo().getFilePath(),
+                            partInfo.getOffset(), partInfo.getPartSize());
+                    // 区分错误进行 catch
+                    // 4xx
+                    // 超时处理
+                    UploadPartOutput output = this.uploadPart(checkpoint.getBucket(),
+                            new UploadPartInput().setKey(checkpoint.getKey())
+                                    .setUploadID(checkpoint.getUploadID())
+                                    .setPartNumber(partInfo.getPartNum())
+                                    .setPartSize(partInfo.getPartSize())
+                                    .setContent(in), builders);
+                    partInfo.setPart(output);
+                    partInfo.setCompleted(true);
+                    if (input.isEnableCheckpoint()) {
+                        checkpoint.writeToFile(input.getCheckpointFile(), JSON);
+                    }
+                    long end = System.nanoTime();
+                    LOG.debug("Upload No.{} part cost {} milliseconds, part size is {}", (finalI +1), (end-start) / 1000000, partInfo.getPartSize());
+                    return output;
+                });
+                futures.add(future);
+            } else {
+                uploadPartOutputs.add(checkpoint.getPartInfoList().get(i).getPart());
+            }
+        }
+
+        for (Future<MultipartUploadedPart> future : futures) {
+            try {
+                uploadPartOutputs.add(future.get());
+            } catch (InterruptedException | ExecutionException e) {
+                if (!input.isEnableCheckpoint()) {
+                    this.abortMultipartUpload(checkpoint.getBucket(), new AbortMultipartUploadInput(checkpoint.getKey(), checkpoint.getUploadID()));
+                }
+                throw new TosClientException("Thread executor failed", e);
+            }
+        }
+
+        executor.shutdown();
+        try{
+            executor.awaitTermination(Long.MAX_VALUE, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            if (!input.isEnableCheckpoint()) {
+                this.abortMultipartUpload(checkpoint.getBucket(), new AbortMultipartUploadInput(checkpoint.getKey(), checkpoint.getUploadID()));
+            }
+            throw new TosClientException("await upload executor terminated failed", e);
+        }
+
+        CompleteMultipartUploadOutput output = this.completeMultipartUpload(checkpoint.getBucket(), new CompleteMultipartUploadInput()
+                .setUploadID(checkpoint.getUploadID()).setKey(checkpoint.getKey()).setMultiUploadedParts(uploadPartOutputs));
+        if (input.isEnableCheckpoint()) {
+            deleteCheckpointFile(input.getCheckpointFile());
+        }
+        return new UploadFileOutput().setUploadID(checkpoint.getUploadID()).setBucket(checkpoint.getBucket())
+                .setObjectKey(checkpoint.getKey()).setCompleteMultipartUploadOutput(output);
+    }
+
+    private TosObjectInputStream getContentFromFile(String filePath, long offset, long size) throws IOException, TosClientException {
+        FileInputStream in = new FileInputStream(filePath);
+        if (in.skip(offset) != offset) {
+            throw new IllegalArgumentException("The offset is invalid");
+        }
+        return new TosRepeatableBoundedFileInputStream(in, size);
     }
 
     @Override
@@ -292,7 +545,8 @@ public class TOSClient implements TOS{
         return new AppendObjectOutput()
                 .setRequestInfo(res.RequestInfo())
                 .setEtag(res.getHeaders().get(TosHeader.HEADER_ETAG))
-                .setNextAppendOffset(appendOffset);
+                .setNextAppendOffset(appendOffset)
+                .setCrc64(res.getHeaders().get(TosHeader.HEADER_CRC64));
     }
 
     @Override
@@ -307,6 +561,7 @@ public class TOSClient implements TOS{
 
     @Override
     public ListObjectsOutput listObjects(String bucket, ListObjectsInput input) throws TosException {
+        Objects.requireNonNull(input, "ListObjectsInput is null");
         TosRequest req = newBuilder(bucket, "")
                 .withQuery("prefix", input.getPrefix())
                 .withQuery("delimiter", input.getDelimiter())
@@ -322,6 +577,7 @@ public class TOSClient implements TOS{
 
     @Override
     public ListObjectVersionsOutput listObjectVersions(String bucket, ListObjectVersionsInput input) throws TosException {
+        Objects.requireNonNull(input, "ListObjectVersionsInput is null");
         TosRequest req = newBuilder(bucket, "")
                 .withQuery("prefix", input.getPrefix())
                 .withQuery("delimiter", input.getDelimiter())
@@ -369,6 +625,7 @@ public class TOSClient implements TOS{
     }
     @Override
     public UploadPartCopyOutput uploadPartCopy(String bucket, UploadPartCopyInput input, RequestOptionsBuilder... builders) throws TosException {
+        Objects.requireNonNull(input, "UploadPartCopyInput is null");
         isValidNames(input.getSourceBucket(), input.getDestinationKey());
         TosRequest req = newBuilder(bucket, input.getDestinationKey(), builders)
                 .withQuery("partNumber", String.valueOf(input.getPartNumber()))
@@ -383,7 +640,8 @@ public class TOSClient implements TOS{
                 .setSourceVersionID(res.getHeaders().get(TosHeader.HEADER_COPY_SOURCE_VERSION_ID))
                 .setPartNumber(input.getPartNumber())
                 .setEtag(out.getEtag())
-                .setLastModified(out.getLastModified());
+                .setLastModified(out.getLastModified())
+                .setCrc64(res.getHeaders().get(TosHeader.HEADER_CRC64));
     }
 
     CopyObjectOutput copyObject(String dstBucket, String dstObject, String srcBucket, String srcObject, RequestOptionsBuilder...builders) throws TosException {
@@ -393,18 +651,18 @@ public class TOSClient implements TOS{
         return marshalOutput(res.getInputStream(), new TypeReference<CopyObjectOutput>(){})
                 .setRequestInfo(res.RequestInfo())
                 .setVersionID(res.getHeaders().get(TosHeader.HEADER_VERSIONID))
-                .setSourceVersionID(res.getHeaders().get(TosHeader.HEADER_COPY_SOURCE_VERSION_ID));
+                .setSourceVersionID(res.getHeaders().get(TosHeader.HEADER_COPY_SOURCE_VERSION_ID))
+                .setCrc64(res.getHeaders().get(TosHeader.HEADER_CRC64));
     }
 
     @Override
     public PutObjectAclOutput putObjectAcl(String bucket, PutObjectAclInput input) throws TosException {
+        Objects.requireNonNull(input, "PutObjectAclInput is null");
         isValidKey(input.getKey());
         InputStream content = null;
         try {
             if (input.getAclRules() != null) {
                 byte[] data = JSON.writeValueAsBytes(input.getAclRules());
-                System.out.println("hh");
-                System.out.println(input);
                 content = new ByteArrayInputStream(data);
             }
         } catch (JsonProcessingException jpe) {
@@ -452,7 +710,8 @@ public class TOSClient implements TOS{
                 .setKey(upload.getKey())
                 .setUploadID(upload.getUploadID())
                 .setSseCustomerAlgorithm(res.getHeaders().get(TosHeader.HEADER_SSE_CUSTOMER_ALGORITHM))
-                .setSseCustomerMD5(res.getHeaders().get(TosHeader.HEADER_SSE_CUSTOMER_KEY_MD5));
+                .setSseCustomerMD5(res.getHeaders().get(TosHeader.HEADER_SSE_CUSTOMER_KEY_MD5))
+                .setSseCustomerKey(res.getHeaders().get(TosHeader.HEADER_SSE_CUSTOMER_KEY));
     }
 
     InputStream limitPartSizeReader(InputStream input, int limitedPartSize) throws TosClientException{
@@ -481,13 +740,15 @@ public class TOSClient implements TOS{
 
     @Override
     public UploadPartOutput uploadPart(String bucket, UploadPartInput input, RequestOptionsBuilder... builders) throws TosException {
+        Objects.requireNonNull(input, "UploadPartInput is null");
         isValidKey(input.getKey());
-        int limitedPartSize = resolveStreamSize("UploadPart", input.getPartSize());
-        InputStream content = limitPartSizeReader(input.getContent(), limitedPartSize);
+//        int limitedPartSize = resolveStreamSize("UploadPart", input.getPartSize());
+//        InputStream content = limitPartSizeReader(input.getContent(), limitedPartSize);
         TosRequest req = newBuilder(bucket, input.getKey(), builders)
                 .withQuery("uploadId", input.getUploadID())
                 .withQuery("partNumber", String.valueOf(input.getPartNumber()))
-                .Build(HttpMethod.PUT, content);
+                .withContentLength(input.getPartSize())
+                .Build(HttpMethod.PUT, input.getContent());
         TosResponse res = roundTrip(req, HttpStatus.SC_OK);
         return new UploadPartOutput().setRequestInfo(res.RequestInfo())
                 .setPartNumber(input.getPartNumber())
@@ -498,17 +759,20 @@ public class TOSClient implements TOS{
 
     @Override
     public CompleteMultipartUploadOutput completeMultipartUpload(String bucket, CompleteMultipartUploadInput input) throws TosException {
+        Objects.requireNonNull(input, "CompleteMultipartUploadInput is null");
         byte[] data = input.getUploadedPartData(JSON);
         TosRequest req = newBuilder(bucket, input.getKey())
                 .withQuery("uploadId", input.getUploadID())
                 .Build(HttpMethod.POST, null).setData(data);
         TosResponse res = roundTrip(req, HttpStatus.SC_OK);
         return new CompleteMultipartUploadOutput().setRequestInfo(res.RequestInfo())
-                .setVersionID(res.getHeaders().get(TosHeader.HEADER_VERSIONID));
+                .setVersionID(res.getHeaders().get(TosHeader.HEADER_VERSIONID))
+                .setCrc64(res.getHeaders().get(TosHeader.HEADER_CRC64));
     }
 
     @Override
     public AbortMultipartUploadOutput abortMultipartUpload(String bucket, AbortMultipartUploadInput input) throws TosException {
+        Objects.requireNonNull(input, "AbortMultipartUploadInput is null");
         isValidKey(input.getKey());
         TosRequest req = newBuilder(bucket, input.getKey())
                 .withQuery("uploadId", input.getUploadID())
@@ -519,9 +783,15 @@ public class TOSClient implements TOS{
 
     @Override
     public ListUploadedPartsOutput listUploadedParts(String bucket, ListUploadedPartsInput input, RequestOptionsBuilder... builders) throws TosException {
+        Objects.requireNonNull(input, "ListUploadedPartsInput is null");
         isValidKey(input.getKey());
+        if (input.getMaxParts() < 0 || input.getPartNumberMarker() < 0) {
+            throw new IllegalArgumentException("tos: ListUploadedPartsInput maxParts or partNumberMarker is small than 0");
+        }
         TosRequest req = newBuilder(bucket, input.getKey(), builders)
                 .withQuery("uploadId", input.getUploadID())
+                .withQuery("max-parts", String.valueOf(input.getMaxParts()))
+                .withQuery("part-number-marker", String.valueOf(input.getPartNumberMarker()))
                 .Build(HttpMethod.GET, null);
         TosResponse res = roundTrip(req, HttpStatus.SC_OK);
         return marshalOutput(res.getInputStream(), new TypeReference<ListUploadedPartsOutput>(){})
@@ -530,6 +800,7 @@ public class TOSClient implements TOS{
 
     @Override
     public ListMultipartUploadsOutput listMultipartUploads(String bucket, ListMultipartUploadsInput input) throws TosException {
+        Objects.requireNonNull(input, "ListMultipartUploadsInput is null");
         TosRequest req = newBuilder(bucket, "")
                 .withQuery("uploads", "")
                 .withQuery("prefix", input.getPrefix())
@@ -562,7 +833,7 @@ public class TOSClient implements TOS{
         }
         return new TosMarshalResult(dataMD5, data);
     }
-
+    
     private <T> T marshalOutput(InputStream reader,TypeReference<T> valueTypeRef) throws TosException{
         try{
             return JSON.readValue(reader, valueTypeRef);
