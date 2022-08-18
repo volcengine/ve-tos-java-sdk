@@ -41,7 +41,11 @@ public class TosRequest {
         this.method = method;
         this.host = host;
         this.path = path;
-        this.content = new TosRepeatableInputStream(inputStream, Consts.DEFAULT_READ_BUFFER_SIZE);
+        if (inputStream != null) {
+            this.content = new TosRepeatableInputStream(inputStream, Consts.DEFAULT_READ_BUFFER_SIZE);
+        } else {
+            this.content = null;
+        }
         if (inputStream instanceof TosRepeatableInputStream || inputStream instanceof TosRepeatableFileInputStream
                 || inputStream instanceof TosRepeatableBoundedFileInputStream) {
             // 这几种不用转换

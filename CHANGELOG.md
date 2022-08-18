@@ -1,5 +1,5 @@
 ## Release Note
-### 2022.8.18 Version 0.2.8
+### 2022.8.18 Version 0.2.9
 - fix connection leak issue.
 ### 2022.6.9 Version 0.2.7
 - support upload file concurrent and resumeble
