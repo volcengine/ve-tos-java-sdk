@@ -48,7 +48,7 @@ public class TOSClient implements TOS{
 
     private static final Logger LOG = LoggerFactory.getLogger(TOSClient.class);
 
-    private static final String VERSION = "v0.2.7";
+    private static final String VERSION = "v0.2.8";
     private static final String SDK_NAME = "ve-tos-java-sdk";
     private static final String USER_AGENT = String.format("%s/%s (%s/%s;%s)", SDK_NAME, VERSION, System.getProperty("os.name"), System.getProperty("os.arch"), System.getProperty("java.version", "0"));
     private static final ObjectMapper JSON = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
@@ -765,6 +765,11 @@ public class TOSClient implements TOS{
                 .withQuery("uploadId", input.getUploadID())
                 .Build(HttpMethod.POST, null).setData(data);
         TosResponse res = roundTrip(req, HttpStatus.SC_OK);
+        try {
+            res.close();
+        } catch (IOException e) {
+            throw new TosClientException("close http body failed", e);
+        }
         return new CompleteMultipartUploadOutput().setRequestInfo(res.RequestInfo())
                 .setVersionID(res.getHeaders().get(TosHeader.HEADER_VERSIONID))
                 .setCrc64(res.getHeaders().get(TosHeader.HEADER_CRC64));

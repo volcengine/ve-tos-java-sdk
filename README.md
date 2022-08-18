@@ -13,7 +13,7 @@ More details can be found in [xxx]()
 <dependency>
     <groupId>com.volcengine</groupId>
     <artifactId>ve-tos-java-sdk</artifactId>
-    <version>0.2.7</version>
+    <version>0.2.8</version>
 </dependency>
 ```
 

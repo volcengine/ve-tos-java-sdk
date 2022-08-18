@@ -43,7 +43,7 @@ class ServerExceptionJson{
     }
 }
 
-class TosServerException extends TosException implements Serializable {
+public class TosServerException extends TosException implements Serializable {
 
     private static final String UTF8 = "UTF-8";
     private static final int UNKNOWN_ERROR_CODE = -1;
@@ -97,6 +97,15 @@ class TosServerException extends TosException implements Serializable {
             }
         }
         throw new UnexpectedStatusCodeException(res.getStatusCode(), okCode, okCodes).withRequestID(res.getRequesID());
+    }
+
+    @Override
+    public String getMessage() {
+        return "statusCode=" + statusCode +
+                ", code='" + code + '\'' +
+                ", message='" + message + '\'' +
+                ", requestID='" + requestID + '\'' +
+                ", hostID='" + hostID;
     }
 
     @Override

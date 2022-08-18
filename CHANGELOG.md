@@ -1,5 +1,7 @@
 ## Release Note
-### 2022.6.24 Version 0.2.7
+### 2022.8.18 Version 0.2.8
+- fix connection leak issue.
+### 2022.6.9 Version 0.2.7
 - support upload file concurrent and resumeble
 ### 2022.6.9 Version 0.2.6
 - fix ListUploadedParts query params.
