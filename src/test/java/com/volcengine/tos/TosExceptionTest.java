@@ -37,11 +37,13 @@ public class TosExceptionTest {
         Assert.assertNotNull(se);
         Assert.assertEquals(Code.INTERNAL_ERROR, se.getCode());
         Assert.assertEquals(HttpStatus.SC_INTERNAL_SERVER_ERROR, se.getStatusCode());
+        Consts.LOG.info("exception message {}", se.getMessage());
 
         TosException te = se;
         Assert.assertNotNull(te);
         Assert.assertEquals(Code.INTERNAL_ERROR, te.getCode());
         Assert.assertEquals(HttpStatus.SC_INTERNAL_SERVER_ERROR, te.getStatusCode());
+        Consts.LOG.info("exception message {}", te.getMessage());
 
         Consts.LOG.info(te.toString());
     }
