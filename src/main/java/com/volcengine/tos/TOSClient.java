@@ -48,7 +48,7 @@ public class TOSClient implements TOS{
 
     private static final Logger LOG = LoggerFactory.getLogger(TOSClient.class);
 
-    private static final String VERSION = "v0.2.8";
+    private static final String VERSION = "v0.2.9";
     private static final String SDK_NAME = "ve-tos-java-sdk";
     private static final String USER_AGENT = String.format("%s/%s (%s/%s;%s)", SDK_NAME, VERSION, System.getProperty("os.name"), System.getProperty("os.arch"), System.getProperty("java.version", "0"));
     private static final ObjectMapper JSON = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
