@@ -276,6 +276,8 @@ public class SignV4 implements Signer {
 
         String req = this.canonicalRequest(method, path, contentSha256, header, query);
 
+        LOG.debug("canonicalRequest: \n {}", req);
+
         StringBuilder buf = new StringBuilder(signPrefix.length() + 128);
 
         buf.append(signPrefix);
