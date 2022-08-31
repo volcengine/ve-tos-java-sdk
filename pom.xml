@@ -77,19 +77,6 @@
         </dependency>
     </dependencies>
 
-    <distributionManagement>
-        <repository>
-            <id>maven.byted.org</id>
-            <name>maven.byted.org</name>
-            <url>https://artifact-maven.byted.org/repository/releases/</url>
-        </repository>
-        <snapshotRepository>
-            <id>maven.byted.org</id>
-            <name>maven.byted.org</name>
-            <url>https://artifact-maven.byted.org/repository/releases/</url>
-        </snapshotRepository>
-    </distributionManagement>
-
     <build>
         <plugins>
             <plugin>
