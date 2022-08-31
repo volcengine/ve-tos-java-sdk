@@ -6,13 +6,13 @@
 
     <groupId>com.volcengine</groupId>
     <artifactId>ve-tos-java-sdk</artifactId>
-    <version>0.2.9</version>
+    <version>0.2.10</version>
 
     <properties>
         <maven.compiler.source>8</maven.compiler.source>
         <maven.compiler.target>8</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <tos.version>0.2.9</tos.version>
+        <tos.version>0.2.10</tos.version>
     </properties>
     <dependencies>
         <dependency>
@@ -76,6 +76,19 @@
             <scope>compile</scope>
         </dependency>
     </dependencies>
+
+    <distributionManagement>
+        <repository>
+            <id>maven.byted.org</id>
+            <name>maven.byted.org</name>
+            <url>https://artifact-maven.byted.org/repository/releases/</url>
+        </repository>
+        <snapshotRepository>
+            <id>maven.byted.org</id>
+            <name>maven.byted.org</name>
+            <url>https://artifact-maven.byted.org/repository/releases/</url>
+        </snapshotRepository>
+    </distributionManagement>
 
     <build>
         <plugins>
