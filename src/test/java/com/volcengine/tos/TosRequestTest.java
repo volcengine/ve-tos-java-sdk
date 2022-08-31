@@ -30,7 +30,7 @@ public class TosRequestTest {
         req.setQuery(query);
         String u = req.toURL().toString();
 //        "https://localhost/abc/%F0%9F%98%8A%3F/%F0%9F%98%AD%23~%21.txt?versionId=abc123"
-        Assert.assertEquals("https://localhost/abc/%F0%9F%98%8A%3F/%F0%9F%98%AD%23~!.txt?versionId=abc123", u);
+        Assert.assertEquals("https://localhost/abc%2F%F0%9F%98%8A%3F%2F%F0%9F%98%AD%23~!.txt?versionId=abc123", u);
     }
 
     @Test

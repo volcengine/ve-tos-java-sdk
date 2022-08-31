@@ -172,7 +172,7 @@
 //            try {
 //                client.deleteBucket(bucketName);
 //            } catch (TosException e) {
-//                Assert.assertEquals(e.getCode(), Code.NO_SUCH_BUCKET);
+//                Assert.assertEquals(e.getCode(), "NotFound");
 //                Assert.assertEquals(e.getStatusCode(), HttpStatus.SC_NOT_FOUND);
 //            }
 //        }
@@ -407,7 +407,7 @@
 //    static void testObjectCrud(TOSClient clientCRUD, String bucket){
 //        String data = "1234567890abcdefghijklmnopqrstuvwxyz~!@#$%^&*()_+<>?,./   :'1234567890abcdefghijklmnopqrstuvwxyz~!@#$%^&*()_+<>?,./   :'";
 //        InputStream stream = new ByteArrayInputStream(data.getBytes());
-//        String key = "object-curd-"+System.currentTimeMillis();
+//        String key = "object-%E4%B8%AD%E6%96%87-curd-"+System.currentTimeMillis();
 //        try{
 //            PutObjectOutput put = clientCRUD.putObject(bucket, key, stream);
 //            GetObjectOutput got = clientCRUD.getObject(bucket, key);
@@ -477,7 +477,7 @@
 //
 //    @Test
 //    void objectListTest(){
-//        String objectPrefix = "object-"+System.currentTimeMillis();
+//        String objectPrefix = "object-"+System.currentTimeMillis() + "/";
 //        String data = "1234567890abcdefghijklmnopqrstuvwxyz~!@#$%^&*()_+<>?,./   :'1234567890abcdefghijklmnopqrstuvwxyz~!@#$%^&*()_+<>?,./   :'";
 //        int number = 12;
 //        boolean hasMore = true;
@@ -492,7 +492,7 @@
 //                Assert.assertEquals(put.getEtag(), got.getObjectMeta().getEtags());
 //            }
 //            for (int i = 0; i < 10 && hasMore; i++) {
-//                ListObjectsInput input = new ListObjectsInput().setMarker(startAfter).setMaxKeys(1);
+//                ListObjectsInput input = new ListObjectsInput().setMarker(startAfter).setMaxKeys(1).setPrefix(objectPrefix);
 //                ListObjectsOutput resp = client.listObjects(Consts.bucket, input);
 //                hasMore = resp.isTruncated();
 //                startAfter = resp.getNextMarker();
