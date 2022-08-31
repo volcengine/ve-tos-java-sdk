@@ -7,6 +7,7 @@ import com.volcengine.tos.io.TosRepeatableInputStream;
 import com.volcengine.tos.internal.Consts;
 import okhttp3.HttpUrl;
 import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.lang3.StringUtils;
 
 import java.io.InputStream;
 import java.util.Collections;
@@ -60,7 +61,9 @@ public class TosRequest {
         if (query != null) {
            query.forEach(builder::addQueryParameter);
         }
-        return builder.scheme(scheme).host(host).encodedPath(path).build();
+        // path 带了'/'，addPathSegment 会自动添加'/'，因此这里移除之
+        String escapePath = StringUtils.removeStart(path, "/");
+        return builder.scheme(scheme).host(host).addPathSegment(escapePath).build();
     }
 
     public String getScheme() {

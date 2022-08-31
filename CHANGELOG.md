@@ -1,4 +1,6 @@
 ## Release Note
+### 2022.8.31 Version 0.2.10
+- fix object key signature failed issue.
 ### 2022.8.18 Version 0.2.9
 - fix connection leak issue.
 ### 2022.6.9 Version 0.2.7
