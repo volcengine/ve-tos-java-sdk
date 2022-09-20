@@ -1,17 +1,19 @@
 package com.volcengine.tos.model.object;
 
+import java.io.InputStream;
 
+@Deprecated
 public class UploadPartInput {
     private String key;
     private String uploadID;
     private long partSize;
     private int partNumber;
-    private TosObjectInputStream content;
+    private InputStream content;
 
     public UploadPartInput() {
     }
 
-    public UploadPartInput(String key, String uploadID, long partSize, int partNumber, TosObjectInputStream content) {
+    public UploadPartInput(String key, String uploadID, long partSize, int partNumber, InputStream content) {
         this.key = key;
         this.uploadID = uploadID;
         this.partSize = partSize;
@@ -55,11 +57,11 @@ public class UploadPartInput {
         return this;
     }
 
-    public TosObjectInputStream getContent() {
+    public InputStream getContent() {
         return content;
     }
 
-    public UploadPartInput setContent(TosObjectInputStream content) {
+    public UploadPartInput setContent(InputStream content) {
         this.content = content;
         return this;
     }

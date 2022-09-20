@@ -1,9 +1,10 @@
 package com.volcengine.tos.model.object;
 
-import com.volcengine.tos.TosResponse;
+import com.volcengine.tos.internal.TosResponse;
 import com.volcengine.tos.model.RequestInfo;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
+@Deprecated
 public class HeadObjectOutput {
     @JsonIgnore
     private RequestInfo requestInfo;

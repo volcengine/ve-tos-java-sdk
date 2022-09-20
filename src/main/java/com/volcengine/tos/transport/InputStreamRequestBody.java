@@ -1,7 +1,7 @@
 package com.volcengine.tos.transport;
 
 import com.volcengine.tos.internal.Consts;
-import com.volcengine.tos.io.TosRepeatableInputStream;
+import com.volcengine.tos.comm.io.TosRepeatableInputStream;
 import com.volcengine.tos.model.object.TosObjectInputStream;
 import okhttp3.MediaType;
 import okhttp3.RequestBody;
@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Objects;
 
+@Deprecated
 class InputStreamRequestBody extends RequestBody implements Closeable {
     private InputStream inputStream;
     private final MediaType contentType;

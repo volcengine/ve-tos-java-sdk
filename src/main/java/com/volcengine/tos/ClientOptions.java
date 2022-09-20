@@ -3,8 +3,9 @@ package com.volcengine.tos;
 import com.volcengine.tos.transport.TransportConfig;
 import com.volcengine.tos.auth.Credentials;
 import com.volcengine.tos.auth.Signer;
-import com.volcengine.tos.transport.Transport;
+import com.volcengine.tos.internal.Transport;
 
+@Deprecated
 public class ClientOptions {
     public static ClientOptionsBuilder withCredentials(Credentials credentials){
         return client -> client.setCredentials(credentials);

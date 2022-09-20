@@ -1,5 +1,6 @@
 package com.volcengine.tos;
 
+@Deprecated
 @FunctionalInterface
 public interface ClientOptionsBuilder {
     /**

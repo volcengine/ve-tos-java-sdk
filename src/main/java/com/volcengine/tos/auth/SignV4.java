@@ -1,6 +1,7 @@
 package com.volcengine.tos.auth;
 
-import com.volcengine.tos.TosRequest;
+import com.volcengine.tos.internal.TosRequest;
+import com.volcengine.tos.internal.util.TosUtils;
 import org.apache.commons.lang3.StringUtils;
 
 import javax.crypto.Mac;
@@ -18,6 +19,8 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import static com.volcengine.tos.internal.util.TosUtils.uriEncode;
 
 @FunctionalInterface
 interface signingHeader{
@@ -94,7 +97,12 @@ public class SignV4 implements Signer {
             signedHeader.add(new SimpleEntry<>(v4SecurityToken.toLowerCase(), cred.getSecurityToken()));
             signed.put(v4SecurityToken, cred.getSecurityToken());
         }
-        signedHeader.sort(Map.Entry.comparingByKey());
+        Collections.sort(signedHeader, new Comparator<Map.Entry<String, String>>() {
+            @Override
+            public int compare(Map.Entry<String, String> o1, Map.Entry<String, String> o2) {
+                return o1.getKey().compareTo(o2.getKey());
+            }
+        });
         List<Map.Entry<String, String>> signedQuery = this.signedQuery(req.getQuery(), null);
         String sign = this.doSign(req.getMethod(), req.getPath(), contentSha256, signedHeader, signedQuery, now, cred);
         String credential = String.format("%s/%s/%s/tos/request", cred.getAccessKeyId(), now.format(yyyyMMdd), this.region);
@@ -132,7 +140,12 @@ public class SignV4 implements Signer {
             throw new IllegalArgumentException("params.getHost() get null/empty");
         }
         signedHeader.add(new SimpleEntry<>("host", host));
-        signedHeader.sort(Map.Entry.comparingByKey());
+        Collections.sort(signedHeader, new Comparator<Map.Entry<String, String>>() {
+            @Override
+            public int compare(Map.Entry<String, String> o1, Map.Entry<String, String> o2) {
+                return o1.getKey().compareTo(o2.getKey());
+            }
+        });
 
         String keys = signedHeader.stream().map(Map.Entry::getKey).sorted().collect(Collectors.joining(";"));
         extra.put(v4SignedHeaders, keys);
@@ -179,16 +192,18 @@ public class SignV4 implements Signer {
         if (header == null || header.isEmpty()) {
             return signed;
         }
-        header.forEach((key, value) -> {
+        for (Map.Entry<String, String> entry : header.entrySet()) {
+            String key = entry.getKey();
+            String value = entry.getValue();
             if (StringUtils.isNotEmpty(key)) {
                 String kk = key.toLowerCase();
                 if (this.signingHeader.isSigningHeader(kk, isSignedQuery)) {
                     value = value == null ? "" : value;
-                    value = String.join(" ", StringUtils.split(value)); // 目前只支持一个header value
+                    value = StringUtils.join(StringUtils.split(value), " "); // 目前只支持一个header value
                     signed.add(new SimpleEntry<>(kk, value));
                 }
             }
-        });
+        }
         return signed;
     }
 
@@ -236,7 +251,12 @@ public class SignV4 implements Signer {
         }
 
         ArrayList<String> keys = new ArrayList<>(header.size());
-        header.sort(Map.Entry.comparingByKey());
+        Collections.sort(header, new Comparator<Map.Entry<String, String>>() {
+            @Override
+            public int compare(Map.Entry<String, String> o1, Map.Entry<String, String> o2) {
+                return o1.getKey().compareTo(o2.getKey());
+            }
+        });
         for (Map.Entry<String, String> entry : header) {
             String key = entry.getKey();
             keys.add(key);
@@ -249,7 +269,7 @@ public class SignV4 implements Signer {
         }
         buf.append(split); // header
 
-        buf.append(String.join(";", keys));
+        buf.append(StringUtils.join(keys, ";"));
         buf.append(split);
 
         if (StringUtils.isNotEmpty(contentSha256)) {
@@ -276,7 +296,7 @@ public class SignV4 implements Signer {
 
         String req = this.canonicalRequest(method, path, contentSha256, header, query);
 
-        LOG.debug("canonicalRequest: \n {}", req);
+        LOG.debug("canonical request:\n{}", req);
 
         StringBuilder buf = new StringBuilder(signPrefix.length() + 128);
 
@@ -311,7 +331,12 @@ public class SignV4 implements Signer {
             return "";
         }
         StringBuilder buf = new StringBuilder(512);
-        query.sort(Map.Entry.comparingByKey());
+        Collections.sort(query, new Comparator<Map.Entry<String, String>>() {
+            @Override
+            public int compare(Map.Entry<String, String> o1, Map.Entry<String, String> o2) {
+                return o1.getKey().compareTo(o2.getKey());
+            }
+        });
         for (Map.Entry<String, String> kv : query) {
             String keyEscaped = uriEncode(kv.getKey(), true);
             if (buf.length() > 0){
@@ -322,71 +347,6 @@ public class SignV4 implements Signer {
             buf.append(uriEncode(kv.getValue() == null ? "" : kv.getValue(), true));
         }
         return buf.toString();
-    }
-
-    private static final boolean[] nonEscape = new boolean[256];
-    private static final byte[] escapeChar = "0123456789ABCDEF".getBytes(StandardCharsets.UTF_8);
-
-    static {
-        for (byte ch = 'a'; ch <= 'z'; ch++) {
-            nonEscape[ch] = true;
-        }
-        for (byte ch = 'A'; ch <= 'Z'; ch++) {
-            nonEscape[ch] = true;
-        }
-        for (byte ch = '0'; ch <= '9'; ch++) {
-            nonEscape[ch] = true;
-        }
-        nonEscape['-'] = true;
-        nonEscape['_'] = true;
-        nonEscape['.'] = true;
-        nonEscape['~'] = true;
-    }
-
-    /**
-     * 输入 null 会返回 ""
-     *
-     * @param in          输入字符串
-     * @param encodeSlash 是否编码 /
-     * @return 编码之后的string
-     */
-    public static String uriEncode(String in, boolean encodeSlash) {
-        int hexCount = 0;
-        byte[] inBytes = in.getBytes(StandardCharsets.UTF_8);
-        for (byte b : inBytes) {
-            int uintByte = b & 0xFF;
-            if (b == '/') {
-                if (encodeSlash) {
-                    hexCount++;
-                }
-            } else if (!nonEscape[uintByte]) {
-                hexCount++;
-            }
-        }
-        byte[] encoded = new byte[inBytes.length+2*hexCount];
-        for (int i = 0, j = 0; i < inBytes.length; i++) {
-            int uintByte = inBytes[i] & 0xFF;
-            if (uintByte == '/'){
-                if (encodeSlash) {
-                    encoded[j] = '%';
-                    encoded[j+1] = '2';
-                    encoded[j+2] = 'F';
-                    j += 3;
-                } else{
-                    encoded[j] = inBytes[i];
-                    j++;
-                }
-            } else if (!nonEscape[uintByte]) {
-                encoded[j] = '%';
-                encoded[j+1] = escapeChar[uintByte >> 4];
-                encoded[j+2] = escapeChar[uintByte & 15];
-                j += 3;
-            } else {
-                encoded[j] = inBytes[i];
-                j++;
-            }
-        }
-        return new String(encoded, StandardCharsets.UTF_8);
     }
 
     static byte[] hmacSha256(byte[] key, byte[] value) {

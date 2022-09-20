@@ -2,6 +2,7 @@ package com.volcengine.tos.model.object;
 
 import com.volcengine.tos.model.RequestInfo;
 
+@Deprecated
 public class CompleteMultipartUploadOutput {
     private RequestInfo requestInfo;
     private String versionID;

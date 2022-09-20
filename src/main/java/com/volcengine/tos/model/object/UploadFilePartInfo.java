@@ -54,4 +54,15 @@ public class UploadFilePartInfo implements Serializable {
         this.partSize = partSize;
         return this;
     }
+
+    @Override
+    public String toString() {
+        return "UploadFilePartInfo{" +
+                "part=" + part +
+                ", offset=" + offset +
+                ", partNum=" + partNum +
+                ", partSize=" + partSize +
+                ", isCompleted=" + isCompleted +
+                '}';
+    }
 }

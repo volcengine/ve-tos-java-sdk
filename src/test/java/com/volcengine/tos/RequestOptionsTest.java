@@ -1,16 +1,21 @@
 package com.volcengine.tos;
 
+import com.volcengine.tos.auth.StaticCredentials;
+import com.volcengine.tos.comm.MimeType;
 import com.volcengine.tos.comm.TosHeader;
+import com.volcengine.tos.internal.RequestBuilder;
+import com.volcengine.tos.model.object.HeadObjectOutput;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
+import java.io.ByteArrayInputStream;
 import java.util.HashMap;
 
 
 public class RequestOptionsTest {
     @Test
-    void PropertiesTest(){
+    void propertiesTest(){
         RequestBuilder rb = new RequestBuilder().setQuery(new HashMap<>()).setHeaders(new HashMap<>());
         RequestOptions.withContentType("type").withOption(rb);
         Assert.assertEquals("type", rb.getHeaders().get(TosHeader.HEADER_CONTENT_TYPE));

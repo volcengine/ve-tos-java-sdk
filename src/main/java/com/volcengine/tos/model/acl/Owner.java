@@ -33,4 +33,33 @@ public class Owner {
                 ", displayName='" + displayName + '\'' +
                 '}';
     }
+
+    public static OwnerBuilder builder() {
+        return new OwnerBuilder();
+    }
+
+    public static final class OwnerBuilder {
+        private String id;
+        private String displayName;
+
+        private OwnerBuilder() {
+        }
+
+        public OwnerBuilder id(String id) {
+            this.id = id;
+            return this;
+        }
+
+        public OwnerBuilder displayName(String displayName) {
+            this.displayName = displayName;
+            return this;
+        }
+
+        public Owner build() {
+            Owner owner = new Owner();
+            owner.setId(id);
+            owner.setDisplayName(displayName);
+            return owner;
+        }
+    }
 }
