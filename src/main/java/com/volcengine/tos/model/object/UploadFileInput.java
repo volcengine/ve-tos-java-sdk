@@ -61,4 +61,16 @@ public class UploadFileInput {
         this.checkpointFile = checkpointFile;
         return this;
     }
+
+    @Override
+    public String toString() {
+        return "UploadFileInput{" +
+                "objectKey='" + objectKey + '\'' +
+                ", uploadFilePath='" + uploadFilePath + '\'' +
+                ", partSize=" + partSize +
+                ", taskNum=" + taskNum +
+                ", enableCheckpoint=" + enableCheckpoint +
+                ", checkpointFile='" + checkpointFile + '\'' +
+                '}';
+    }
 }

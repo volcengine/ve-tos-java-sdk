@@ -4,6 +4,10 @@ import com.volcengine.tos.model.RequestInfo;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+/**
+ * deprecated, use GetObjectAclV2Output instead
+ */
+@Deprecated
 public class GetObjectAclOutput {
     @JsonIgnore
     private RequestInfo requestInfo;

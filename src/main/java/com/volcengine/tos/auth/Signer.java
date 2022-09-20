@@ -1,5 +1,5 @@
 package com.volcengine.tos.auth;
-import com.volcengine.tos.TosRequest;
+import com.volcengine.tos.internal.TosRequest;
 
 import java.time.Duration;
 import java.util.Map;

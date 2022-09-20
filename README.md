@@ -2,7 +2,7 @@
 The TOS Java SDK enables Java developers to easily work with TOS(Tinder Object Storage) service in the volcengine.
 You can get started in minutes using Maven or by downloading a single zip file.
 This document will show developers some basic examples about TOS bucket and object operation.
-More details can be found in [xxx]()
+More details can be found in [https://www.volcengine.com/docs/6349/79895]()
 
 ## Install
 ### Requirements
@@ -13,53 +13,71 @@ More details can be found in [xxx]()
 <dependency>
     <groupId>com.volcengine</groupId>
     <artifactId>ve-tos-java-sdk</artifactId>
-    <version>0.2.10</version>
+    <version>2.1.1</version>
 </dependency>
 ```
 
 ## Get Started
 This section introduces how to create a bucket, upload/download/delete an object in TOS service through our SDK.
-### Init a TOSClient
-You can interact with TOS service after initiating a TOSClient instance.
+### Init a TOSV2Client
+You can interact with TOS service after initiating a TOSV2Client instance.
 The accesskey and secretkey of your account, endpoint and region are required as params.
 
 ```java
-String endpoint = "your endpoint";
-String region = "your region";
-String accessKey = "Your Access Key";
-String secretKey = "Your Secret Key";
+String region = "region to access";
+String endpoint = "endpoint to access";
+String accessKey = "your access key";
+String secretKey = "your secret key";
 
-TOSClient client = new TOSClient(endpoint, ClientOptions.withRegion(region),
-        ClientOptions.withCredentials(new StaticCredentials(accessKey, secretKey)));
+TOSV2 client = new TOSV2ClientBuilder().build(region, endpoint, accessKey, secretKey);
 ```
 
 ### Creat a bucket
 The bucket is a kind of unique namespace in TOS, which is a container to store data.
 This example shows you how to create a bucket.
 ```java
-CreateBucketOutput createdBucket = client.createBucket(new CreateBucketInput(bucketName));
-LOG.info("bucket created: {}", createdBucket);
+String region = "region to access";
+String endpoint = "endpoint to access";
+String accessKey = "your access key";
+String secretKey = "your secret key";
+String bucket = "your bucket name";
 
-HeadBucketOutput output = client.headBucket(bucketName);
-LOG.info("bucket region {}", output.getRegion());
+TOSV2 client = new TOSV2ClientBuilder().build(region, endpoint, accessKey, secretKey);
 
-ListBucketsOutput output = client.listBuckets(new ListBucketsInput());
-LOG.info("list {} bukets.", output.getBuckets().length);
+CreateBucketV2Input input = new CreateBucketV2Input().setBucket(bucket);
+try{
+    CreateBucketV2Output output = client.createBucket(input);
+    System.out.println("Created bucket location is " + output.getLocation());
+} catch (TosException e) {
+    System.out.println("Create bucket failed");
+    e.printStackTrace();
+}
 ```
 
 ### PutObject
 You can put your file as an object into your own bucket.
 
 ```java
-// data is what you want to upload, wrap it as an inputStream.
+String region = "region to access";
+String endpoint = "endpoint to access";
+String accessKey = "your access key";
+String secretKey = "your secret key";
+String bucket = "your bucket name";
+
+TOSV2 client = new TOSV2ClientBuilder().build(region, endpoint, accessKey, secretKey);
+
 String data = "1234567890abcdefghijklmnopqrstuvwxyz~!@#$%^&*()_+<>?,./   :'1234567890abcdefghijklmnopqrstuvwxyz~!@#$%^&*()_+<>?,./   :'";
 InputStream stream = new ByteArrayInputStream(data.getBytes());
-String key = "object-curd-"+System.currentTimeMillis();
-String bucket = "your bucket name";
+String key = "object-crud-"+System.currentTimeMillis();
+
 try{
-    PutObjectOutput put = client.putObject(bucket, key, stream);
-} catch (TosException | IOException e) {
-    LOG.error(e.toString());
+    PutObjectBasicInput basicInput = new PutObjectBasicInput().setBucket(bucket).setKey(key);
+    PutObjectInput input = new PutObjectInput().setPutObjectBasicInput(basicInput).setContent(stream);
+    PutObjectOutput output = client.putObject(input);
+    System.out.println("Put object success, the object's etag is " + output.getEtag());
+} catch (TosException e) {
+    System.out.println("Put object failed");
+    e.printStackTrace();
 }
 ```
 
@@ -67,13 +85,20 @@ try{
 You can download objects in the TOS bucket through our SDK.
 
 ```java
+String region = "region to access";
+String endpoint = "endpoint to access";
+String accessKey = "your access key";
+String secretKey = "your secret key";
 String bucket = "your bucket name";
-String key = "your object name";
+String key = "your key name";
+String filePath = "your local file name to store downloaded file"; // eg. "/home/user/aaa.txt"
 
-FileOutputStream writer = null;
-try (GetObjectOutput object = client.getObject(bucket, key)) {
-    if (object != null) {
-        writer = new FileOutputStream("path to store file");
+TOSV2 client = new TOSV2ClientBuilder().build(region, endpoint, accessKey, secretKey);
+
+GetObjectV2Input input = new GetObjectV2Input().setBucket(bucket).setKey(key);
+try (GetObjectV2Output object = client.getObject(input);
+        FileOutputStream writer = new FileOutputStream(filePath)) {
+    if (object.getContent() != null) {
         int once, total = 0;
         byte[] buffer = new byte[4096];
         InputStream inputStream = object.getContent();
@@ -81,19 +106,14 @@ try (GetObjectOutput object = client.getObject(bucket, key)) {
             total += once;
             writer.write(buffer, 0, once);
         }
-        assertEquals(total, object.getObjectMeta().getContentLength());
-        LOG.info("object's size {}, meta {}", total, object.getObjectMeta());
+        System.out.println("object's size is " + total + " bytes");
     } else {
-        // key不存在返回null
-        LOG.info("key {} not found", key);
-        }
-} catch (TosException | IOException e) {
-    LOG.error("getObject error", e);
-} finally {
-    if (writer != null){
-        writer.flush();
-        writer.close();
+        // return null if key not exist
+        System.out.println("key " + key + " not found");
     }
+} catch (TosException | IOException e) {
+    System.out.println("getObject error");
+    e.printStackTrace();
 }
 ```
 
@@ -101,12 +121,22 @@ try (GetObjectOutput object = client.getObject(bucket, key)) {
 Your can delete your objects in the bucket.
 
 ```java
-String key = "object-curd-"+System.currentTimeMillis();
+String region = "region to access";
+String endpoint = "endpoint to access";
+String accessKey = "your access key";
+String secretKey = "your secret key";
 String bucket = "your bucket name";
-try{
-    DeleteBucketOutput ret = client.deleteObject(bucket, key);
+String key = "your key name";
+
+TOSV2 client = new TOSV2ClientBuilder().build(region, endpoint, accessKey, secretKey);
+
+DeleteObjectInput input = new DeleteObjectInput().setBucket(bucket).setKey(key);
+try {
+    DeleteObjectOutput output = client.deleteObject(input);
+    System.out.println("Delete success, " + output);
 } catch (TosException e) {
-    LOG.error(e.toString());
+    System.out.println("Delete failed");
+    e.printStackTrace();
 }
 ```
 

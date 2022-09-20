@@ -1,6 +1,6 @@
 package com.volcengine.tos.model.object;
 
-
+@Deprecated
 public class ListUploadedPartsInput {
     private String key;
     private String uploadID;

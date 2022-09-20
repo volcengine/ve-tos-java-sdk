@@ -2,6 +2,7 @@ package com.volcengine.tos.model.acl;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+@Deprecated
 public class PutObjectAclInput {
     @JsonProperty("Key")
     private String key;

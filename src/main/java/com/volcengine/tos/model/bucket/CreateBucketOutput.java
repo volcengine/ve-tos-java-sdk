@@ -1,8 +1,9 @@
 package com.volcengine.tos.model.bucket;
 
 import com.volcengine.tos.model.RequestInfo;
-
 import java.io.Serializable;
+
+@Deprecated
 public class CreateBucketOutput implements Serializable {
     private RequestInfo requestInfo;
     private String location;

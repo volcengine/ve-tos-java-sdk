@@ -5,6 +5,7 @@ import com.volcengine.tos.model.RequestInfo;
 
 import java.io.Serializable;
 
+@Deprecated
 public class UploadPartOutput implements MultipartUploadedPart, Serializable {
     @JsonIgnore
     private RequestInfo requestInfo;

@@ -3,6 +3,7 @@ package com.volcengine.tos.model.object;
 import com.volcengine.tos.model.acl.Owner;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+@Deprecated
 public class ListedObject {
     @JsonProperty("Key")
     private String key;

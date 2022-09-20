@@ -1,6 +1,7 @@
 package com.volcengine.tos.model.object;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+@Deprecated
 class InnerUploadedPart implements Comparable<InnerUploadedPart>{
     @JsonProperty("PartNumber")
     int partNumber;

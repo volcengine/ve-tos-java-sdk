@@ -10,6 +10,7 @@ public class CreateMultipartUploadOutput {
     private String sseCustomerAlgorithm;
     private String sseCustomerMD5;
     private String sseCustomerKey;
+    private String encodingType;
 
     public RequestInfo getRequestInfo() {
         return requestInfo;
@@ -74,6 +75,15 @@ public class CreateMultipartUploadOutput {
         return this;
     }
 
+    public String getEncodingType() {
+        return encodingType;
+    }
+
+    public CreateMultipartUploadOutput setEncodingType(String encodingType) {
+        this.encodingType = encodingType;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "CreateMultipartUploadOutput{" +
@@ -84,6 +94,7 @@ public class CreateMultipartUploadOutput {
                 ", sseCustomerAlgorithm='" + sseCustomerAlgorithm + '\'' +
                 ", sseCustomerMD5='" + sseCustomerMD5 + '\'' +
                 ", sseCustomerKey='" + sseCustomerKey + '\'' +
+                ", encodingType='" + encodingType + '\'' +
                 '}';
     }
 }

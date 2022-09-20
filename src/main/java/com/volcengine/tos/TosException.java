@@ -1,6 +1,6 @@
 package com.volcengine.tos;
 
-public class TosException extends Exception {
+public class TosException extends RuntimeException {
 
     public TosException() {
     }

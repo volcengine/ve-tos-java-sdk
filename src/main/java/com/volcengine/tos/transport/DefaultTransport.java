@@ -1,20 +1,23 @@
 package com.volcengine.tos.transport;
 
-import com.volcengine.tos.TosRequest;
-import com.volcengine.tos.TosResponse;
+import com.volcengine.tos.internal.TosRequest;
+import com.volcengine.tos.internal.TosResponse;
 import com.volcengine.tos.comm.HttpMethod;
 import com.volcengine.tos.comm.TosHeader;
+import com.volcengine.tos.internal.Transport;
 import okhttp3.*;
 import org.apache.commons.lang3.StringUtils;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
-public class DefaultTransport implements Transport{
+@Deprecated
+public class DefaultTransport implements Transport {
     private static final MediaType DEFAULT_MEDIA_TYPE = null;
     private final OkHttpClient client;
 
@@ -104,36 +107,13 @@ public class DefaultTransport implements Transport{
     }
 
     private Map<String, String> getHeaders(Response response) {
+        if (response == null) {
+            return Collections.emptyMap();
+        }
         Map<String, String> headers = new HashMap<>(response.headers().size());
-        response.headers().names().forEach(
-                (name) -> headers.put(formatHeadersName(name), response.header(name))
-        );
+        for (String name : response.headers().names()) {
+            headers.put(name.toLowerCase(), response.header(name));
+        }
         return headers;
-    }
-
-    String formatHeadersName(String name){
-        if (name == null || name.length() == 0) {
-            return "";
-        }
-        name = name.toLowerCase();
-        if (name.startsWith(TosHeader.HEADER_META_PREFIX.toLowerCase())) {
-            return TosHeader.HEADER_META_PREFIX;
-        }
-        if (Objects.equals(name, TosHeader.HEADER_ETAG.toLowerCase())) {
-            return TosHeader.HEADER_ETAG;
-        }
-        String[] subs = name.split("-");
-        StringBuilder res = new StringBuilder(name.length());
-        for (int i = 0; i < subs.length; i++) {
-            char[] cs = subs[i].toCharArray();
-            if (cs[0] >= 'a' && cs[0] <= 'z'){
-                cs[0] = (char)(cs[0]-32);
-            }
-            res.append(cs);
-            if (i != subs.length-1){
-                res.append('-');
-            }
-        }
-        return res.toString();
     }
 }

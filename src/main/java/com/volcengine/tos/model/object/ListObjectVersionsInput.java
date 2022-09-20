@@ -1,6 +1,6 @@
 package com.volcengine.tos.model.object;
 
-
+@Deprecated
 public class ListObjectVersionsInput {
     private String prefix;
     private String delimiter;

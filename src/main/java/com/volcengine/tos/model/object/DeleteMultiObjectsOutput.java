@@ -6,6 +6,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.Arrays;
 
+@Deprecated
 public class DeleteMultiObjectsOutput {
     @JsonIgnore
     private RequestInfo requestInfo;

@@ -1,9 +1,11 @@
 package com.volcengine.tos.model.bucket;
 
+import com.volcengine.tos.comm.common.StorageClassType;
 import com.volcengine.tos.model.RequestInfo;
 
 import java.io.Serializable;
 
+@Deprecated
 public class HeadBucketOutput implements Serializable {
     private RequestInfo requestInfo;
     private String region;
@@ -32,6 +34,7 @@ public class HeadBucketOutput implements Serializable {
         return "HeadBucketOutput{" +
                 "requestInfo=" + requestInfo +
                 ", region='" + region + '\'' +
+                ", storageClass=" + storageClass +
                 '}';
     }
 }

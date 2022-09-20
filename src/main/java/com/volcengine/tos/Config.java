@@ -2,6 +2,7 @@ package com.volcengine.tos;
 
 import com.volcengine.tos.transport.TransportConfig;
 
+@Deprecated
 public class Config {
     private String endpoint;
     private String region;
