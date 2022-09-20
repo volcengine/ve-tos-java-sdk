@@ -6,6 +6,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.Arrays;
 
+@Deprecated
 public class ListObjectsOutput {
     @JsonIgnore
     private RequestInfo requestInfo;

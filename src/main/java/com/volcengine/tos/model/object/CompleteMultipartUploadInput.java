@@ -9,6 +9,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
+@Deprecated
 public class CompleteMultipartUploadInput {
     private static class InnerCompleteMultipartUploadInput {
         @JsonProperty("Parts")

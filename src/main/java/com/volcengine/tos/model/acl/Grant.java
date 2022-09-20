@@ -2,6 +2,7 @@ package com.volcengine.tos.model.acl;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+@Deprecated
 public class Grant {
     @JsonProperty("Grantee")
     private Grantee grantee;

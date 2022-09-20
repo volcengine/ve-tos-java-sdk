@@ -5,6 +5,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.Arrays;
 
+@Deprecated
 public class ListMultipartUploadsOutput {
     private RequestInfo requestInfo;
     @JsonProperty("Bucket")

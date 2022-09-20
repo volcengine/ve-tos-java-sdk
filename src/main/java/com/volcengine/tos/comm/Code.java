@@ -1,6 +1,9 @@
 package com.volcengine.tos.comm;
 
 public interface Code {
+    String NOT_FOUND = "NotFound";
+    String FORBIDDEN = "Forbidden";
+
     String NO_SUCH_BUCKET = "NoSuchBucket";
     String NO_SUCH_KEY = "NoSuchKey";
     String ACCESS_DENIED = "AccessDenied";

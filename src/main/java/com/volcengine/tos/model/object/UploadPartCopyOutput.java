@@ -4,6 +4,7 @@ import com.volcengine.tos.model.RequestInfo;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+@Deprecated
 public class UploadPartCopyOutput implements MultipartUploadedPart{
     @JsonIgnore
     private RequestInfo requestInfo;

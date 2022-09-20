@@ -1,7 +1,10 @@
 package com.volcengine.tos.model.acl;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.volcengine.tos.comm.common.ACLType;
+import com.volcengine.tos.comm.common.PermissionType;
 
+@Deprecated
 public class ObjectAclGrant {
     @JsonProperty("ACL")
     private String acl;
@@ -26,40 +29,34 @@ public class ObjectAclGrant {
     }
 
     public ObjectAclGrant setAclPrivate() {
-        this.acl = ACLConst.ACL_PRIVATE;
+        this.acl = ACLType.ACL_PRIVATE.toString();
         return this;
     }
 
     public ObjectAclGrant setAclPublicRead() {
-        this.acl = ACLConst.ACL_PUBLIC_READ;
+        this.acl = ACLType.ACL_PUBLIC_READ.toString();
         return this;
     }
 
     public ObjectAclGrant setAclPublicReadWrite() {
-        this.acl = ACLConst.ACL_PUBLIC_READ_WRITE;
+        this.acl = ACLType.ACL_PUBLIC_READ_WRITE.toString();
         return this;
     }
 
     public ObjectAclGrant setAclAuthRead() {
-        this.acl = ACLConst.ACL_AUTH_READ;
+        this.acl = ACLType.ACL_AUTHENTICATED_READ.toString();
         return this;
     }
 
     public ObjectAclGrant setAclBucketOwnerRead() {
-        this.acl = ACLConst.ACL_BUCKET_OWNER_READ;
+        this.acl = ACLType.ACL_BUCKET_OWNER_READ.toString();
         return this;
     }
 
     public ObjectAclGrant setAclBucketOwnerFullControl() {
-        this.acl = ACLConst.ACL_BUCKET_OWNER_FULL_CONTROL;
+        this.acl = ACLType.ACL_BUCKET_OWNER_FULL_CONTROL.toString();
         return this;
     }
-
-    public ObjectAclGrant setAclLogDeliveryWrite() {
-        this.acl = ACLConst.ACL_LOG_DELIVERY_WRITE;
-        return this;
-    }
-
 
     public String getGrantFullControl() {
         return grantFullControl;
@@ -72,7 +69,7 @@ public class ObjectAclGrant {
     }
 
     public ObjectAclGrant setGrantFullControl() {
-        this.grantFullControl = ACLConst.PERMISSION_TYPE_FULL_CONTROL;
+        this.grantFullControl = PermissionType.PERMISSION_FULL_CONTROL.toString();
         return this;
     }
 
@@ -87,7 +84,7 @@ public class ObjectAclGrant {
     }
 
     public ObjectAclGrant setGrantRead() {
-        this.grantRead = ACLConst.PERMISSION_TYPE_READ;
+        this.grantRead = PermissionType.PERMISSION_READ.toString();
         return this;
     }
 
@@ -102,7 +99,7 @@ public class ObjectAclGrant {
     }
 
     public ObjectAclGrant setGrantReadAcp() {
-        this.grantReadAcp = ACLConst.PERMISSION_TYPE_READ_ACP;
+        this.grantReadAcp = PermissionType.PERMISSION_READ_ACP.toString();
         return this;
     }
 
@@ -117,7 +114,7 @@ public class ObjectAclGrant {
     }
 
     public ObjectAclGrant setGrantWrite() {
-        this.grantWrite = ACLConst.PERMISSION_TYPE_WRITE;
+        this.grantWrite = PermissionType.PERMISSION_WRITE.toString();
         return this;
     }
 
@@ -132,7 +129,7 @@ public class ObjectAclGrant {
     }
 
     public ObjectAclGrant setGrantWriteAcp() {
-        this.grantWriteAcp = ACLConst.PERMISSION_TYPE_WRITE_ACP;
+        this.grantWriteAcp = PermissionType.PERMISSION_WRITE_ACP.toString();
         return this;
     }
 }

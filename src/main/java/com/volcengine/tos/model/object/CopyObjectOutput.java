@@ -4,6 +4,9 @@ import com.volcengine.tos.model.RequestInfo;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.Date;
+
+@Deprecated
 public class CopyObjectOutput {
     @JsonIgnore
     private RequestInfo requestInfo;
@@ -14,7 +17,7 @@ public class CopyObjectOutput {
     @JsonProperty("ETag")
     private String etag;
     @JsonProperty("LastModified")
-    private String lastModified;
+    private Date lastModified;
     private String crc64;
 
     public RequestInfo getRequestInfo() {
@@ -53,11 +56,11 @@ public class CopyObjectOutput {
         return this;
     }
 
-    public String getLastModified() {
+    public Date getLastModified() {
         return lastModified;
     }
 
-    public CopyObjectOutput setLastModified(String lastModified) {
+    public CopyObjectOutput setLastModified(Date lastModified) {
         this.lastModified = lastModified;
         return this;
     }

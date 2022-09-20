@@ -1,8 +1,9 @@
 package com.volcengine.tos.auth;
 
 import com.volcengine.tos.Consts;
-import com.volcengine.tos.TosRequest;
+import com.volcengine.tos.internal.TosRequest;
 import com.volcengine.tos.comm.HttpMethod;
+import com.volcengine.tos.internal.util.TosUtils;
 import okhttp3.HttpUrl;
 import org.testng.Assert;
 import org.testng.annotations.Test;
@@ -14,26 +15,9 @@ import java.util.Map;
 
 public class SignV4Test {
     static final DateTimeFormatter iso8601Layout = DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss'Z'");
-    @Test
-    public void URIEncodeTest(){
-        String out = SignV4.uriEncode("23i23+___", true);
-        Assert.assertEquals(out, "23i23%2B___");
-
-        out = SignV4.uriEncode("23i23 ___", true);
-        Assert.assertEquals(out, "23i23%20___");
-
-        out = SignV4.uriEncode("23i23 /___", true);
-        Assert.assertEquals(out, "23i23%20%2F___");
-
-        out = SignV4.uriEncode("23i23 /___", false);
-        Assert.assertEquals(out, "23i23%20/___");
-
-        out = SignV4.uriEncode("/中文测试/", true);
-        Assert.assertEquals(out, "%2F%E4%B8%AD%E6%96%87%E6%B5%8B%E8%AF%95%2F");
-    }
 
     @Test
-    public void TimeParseTest(){
+    public void timeParseTest(){
         OffsetDateTime now = Instant.now().atOffset(ZoneOffset.UTC);
         String date = now.format(iso8601Layout);
         Consts.LOG.info("Format Date: {}", date);
@@ -44,7 +28,7 @@ public class SignV4Test {
     }
 
     @Test
-    public void AlgV4Test(){
+    public void signV4Test(){
         String date = "20210721T104454Z";
         LocalDateTime parse = LocalDateTime.parse(date, iso8601Layout);
 

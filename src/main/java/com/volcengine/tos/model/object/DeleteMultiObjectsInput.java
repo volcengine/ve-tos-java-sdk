@@ -4,11 +4,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.Arrays;
 
+@Deprecated
 public class DeleteMultiObjectsInput {
-    @JsonProperty("Objects")
-    private ObjectTobeDeleted[] objectTobeDeleteds;
     @JsonProperty("Quiet")
     private boolean quiet;
+    @JsonProperty("Objects")
+    private ObjectTobeDeleted[] objectTobeDeleteds;
 
     public DeleteMultiObjectsInput() {
     }
@@ -39,8 +40,9 @@ public class DeleteMultiObjectsInput {
     @Override
     public String toString() {
         return "DeleteMultiObjectsInput{" +
-                "objectTobeDeleteds=" + Arrays.toString(objectTobeDeleteds) +
-                ", quiet=" + quiet +
+                "quiet=" + quiet +
+                ", objectTobeDeleteds=" + Arrays.toString(objectTobeDeleteds) +
                 '}';
     }
+
 }

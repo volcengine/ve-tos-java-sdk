@@ -1,6 +1,7 @@
 package com.volcengine.tos.model.object;
 
 
+@Deprecated
 public class ListMultipartUploadsInput {
     private String prefix;
     private String delimiter;

@@ -2,6 +2,7 @@ package com.volcengine.tos.model.object;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+@Deprecated
 public class multipartUpload {
     @JsonProperty("Bucket")
     private String bucket;

@@ -1,6 +1,6 @@
 package com.volcengine.tos.model.bucket;
 
-
+@Deprecated
 public class CreateBucketInput {
     private String bucket;
     private String acl;

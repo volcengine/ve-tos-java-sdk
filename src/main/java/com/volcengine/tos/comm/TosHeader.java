@@ -38,6 +38,7 @@ public interface TosHeader {
     String HEADER_SSE = "x-tos-server-side-encryption";
     String HEADER_CRC64 = "x-tos-hash-crc64ecma";
     String HEADER_REQUEST_ID = "X-Tos-Request-Id";
+    String HEADER_ID_2 = "X-Tos-Id-2";
     String HEADER_BUCKET_REGION = "X-Tos-Bucket-Region";
     String HEADER_ACL = "X-Tos-Acl";
     String HEADER_GRANT_FULL_CONTROL = "X-Tos-Grant-Full-Control";
@@ -55,17 +56,21 @@ public interface TosHeader {
     String HEADER_COPY_SOURCE_IF_UNMODIFIED_SINCE = "X-Tos-Copy-Source-If-Unmodified-Since";
     String HEADER_COPY_SOURCE_RANGE = "X-Tos-Copy-Source-Range";
     String HEADER_COPY_SOURCE_VERSION_ID = "X-Tos-Copy-Source-Version-Id";
+    String HEADER_COPY_SOURCE_SSE_CUSTOMER_ALGORITHM = "x-tos-copy-source-server-side-encryption-customer-algorithm";
+    String HEADER_COPY_SOURCE_SSE_CUSTOMER_KEY_MD5 = "x-tos-copy-source-server-side-encryption-customer-key-MD5";
+    String HEADER_COPY_SOURCE_SSE_CUSTOMER_KEY = "x-tos-copy-source-server-side-encryption-customer-key";
+
+    /**
+     *  only for getObject() method headers
+     */
+    String HEADER_RESPONSE_CONTENT_TYPE = "Response-Content-Type";
+    String HEADER_RESPONSE_CONTENT_LANGUAGE = "Response-Content-Language";
+    String HEADER_RESPONSE_CONTENT_ENCODING = "Response-Content-Encoding";
+    String HEADER_RESPONSE_CONTENT_DISPOSITION = "Response-Content-Disposition";
+    String HEADER_RESPONSE_CACHE_CONTROL = "Response-Cache-Control";
+    String HEADER_RESPONSE_EXPIRES = "Response-Expires";
+
     String HEADER_WEBSITE_REDIRECT_LOCATION = "X-Tos-Website-Redirect-Location";
     String HEADER_CS_TYPE = "X-Tos-Cs-Type";
     String HEADER_META_PREFIX = "X-Tos-Meta-";
-
-    /**
-     * replace source object metadata when calling copyObject
-     */
-    String METADATA_DIRECTIVE_REPLACE = "REPLACE";
-
-    /**
-     * copy source object metadata when calling copyObject
-     */
-    String METADATA_DIRECTIVE_COPY = "COPY";
 }

@@ -1,19 +1,21 @@
 package com.volcengine.tos.model.object;
 
-import com.volcengine.tos.TosResponse;
+import com.volcengine.tos.internal.TosResponse;
 import com.volcengine.tos.model.RequestInfo;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.Serializable;
 
+@Deprecated
 public class GetObjectOutput implements Closeable, Serializable {
     @JsonIgnore
     private RequestInfo requestInfo;
     private String contentRange;
     @JsonIgnore
-    private transient TosObjectInputStream content;
+    private transient InputStream content;
     private ObjectMeta objectMeta;
 
     public GetObjectOutput setObjectMetaFromResponse(TosResponse response) {
@@ -46,11 +48,11 @@ public class GetObjectOutput implements Closeable, Serializable {
         return this;
     }
 
-    public TosObjectInputStream getContent() {
+    public InputStream getContent() {
         return content;
     }
 
-    public GetObjectOutput setContent(TosObjectInputStream content) {
+    public GetObjectOutput setContent(InputStream content) {
         this.content = content;
         return this;
     }

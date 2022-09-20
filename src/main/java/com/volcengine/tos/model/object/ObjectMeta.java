@@ -1,12 +1,13 @@
 package com.volcengine.tos.model.object;
 
-import com.volcengine.tos.TosResponse;
+import com.volcengine.tos.internal.TosResponse;
 import com.volcengine.tos.comm.TosHeader;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
+@Deprecated
 public class ObjectMeta {
     private long contentLength;
     private String contentType;
@@ -33,26 +34,26 @@ public class ObjectMeta {
 
     public ObjectMeta fromResponse(TosResponse res) {
         this.contentLength = res.getContentLength();
-        this.contentType = res.getHeaders().get(TosHeader.HEADER_CONTENT_TYPE);
-        this.contentMD5 = res.getHeaders().get(TosHeader.HEADER_CONTENT_MD5);
-        this.contentLanguage = res.getHeaders().get(TosHeader.HEADER_CONTENT_LANGUAGE);
-        this.contentEncoding = res.getHeaders().get(TosHeader.HEADER_CONTENT_ENCODING);
-        this.contentDisposition = res.getHeaders().get(TosHeader.HEADER_CONTENT_DISPOSITION);
-        this.lastModified = res.getHeaders().get(TosHeader.HEADER_LAST_MODIFIED);
-        this.cacheControl = res.getHeaders().get(TosHeader.HEADER_CACHE_CONTROL);
-        this.expires = res.getHeaders().get(TosHeader.HEADER_EXPIRES);
-        this.etags = res.getHeaders().get(TosHeader.HEADER_ETAG);
-        this.versionID = res.getHeaders().get(TosHeader.HEADER_VERSIONID);
-        this.deleteMarker = Boolean.parseBoolean(res.getHeaders().get(TosHeader.HEADER_DELETE_MARKER));
-        this.objectType = res.getHeaders().get(TosHeader.HEADER_OBJECT_TYPE);
-        this.storageClass = res.getHeaders().get(TosHeader.HEADER_STORAGE_CLASS);
-        this.restore = res.getHeaders().get(TosHeader.HEADER_RESTORE);
+        this.contentType = res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_CONTENT_TYPE);
+        this.contentMD5 = res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_CONTENT_MD5);
+        this.contentLanguage = res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_CONTENT_LANGUAGE);
+        this.contentEncoding = res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_CONTENT_ENCODING);
+        this.contentDisposition = res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_CONTENT_DISPOSITION);
+        this.lastModified = res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_LAST_MODIFIED);
+        this.cacheControl = res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_CACHE_CONTROL);
+        this.expires = res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_EXPIRES);
+        this.etags = res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_ETAG);
+        this.versionID = res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_VERSIONID);
+        this.deleteMarker = Boolean.parseBoolean(res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_DELETE_MARKER));
+        this.objectType = res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_OBJECT_TYPE);
+        this.storageClass = res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_STORAGE_CLASS);
+        this.restore = res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_RESTORE);
         this.metadata = userMetadata(res.getHeaders());
-        this.mirrorTag = res.getHeaders().get(TosHeader.HEADER_MIRROR_TAG);
-        this.sseCustomerAlgorithm = res.getHeaders().get(TosHeader.HEADER_SSE_CUSTOMER_ALGORITHM);
-        this.sseCustomerKeyMD5 = res.getHeaders().get(TosHeader.HEADER_SSE_CUSTOMER_KEY_MD5);
-        this.csType = res.getHeaders().get(TosHeader.HEADER_CS_TYPE);
-        this.crc64 = res.getHeaders().get(TosHeader.HEADER_CRC64);
+        this.mirrorTag = res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_MIRROR_TAG);
+        this.sseCustomerAlgorithm = res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_SSE_CUSTOMER_ALGORITHM);
+        this.sseCustomerKeyMD5 = res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_SSE_CUSTOMER_KEY_MD5);
+        this.csType = res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_CS_TYPE);
+        this.crc64 = res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_CRC64);
         return this;
     }
 
@@ -85,7 +86,7 @@ public class ObjectMeta {
     private Map<String, String> userMetadata(Map<String, String> headers){
         Map<String, String> meta = new HashMap<>();
         for (String key : headers.keySet()) {
-            if (key.startsWith(TosHeader.HEADER_META_PREFIX)){
+            if (key.startsWith(TosHeader.HEADER_META_PREFIX.toLowerCase())){
                 String kk = key.substring(TosHeader.HEADER_META_PREFIX.length());
                 meta.put(kk, headers.get(key));
             }

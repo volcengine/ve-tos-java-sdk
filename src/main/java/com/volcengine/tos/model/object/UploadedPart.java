@@ -2,6 +2,7 @@ package com.volcengine.tos.model.object;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+@Deprecated
 public class UploadedPart {
     @JsonProperty("PartNumber")
     private int partNumber;

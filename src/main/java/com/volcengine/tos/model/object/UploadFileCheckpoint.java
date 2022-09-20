@@ -7,7 +7,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.Serializable;
 import java.util.List;
-import java.util.Objects;
 
 public class UploadFileCheckpoint implements Serializable{
     private String bucket;
@@ -22,9 +21,9 @@ public class UploadFileCheckpoint implements Serializable{
     public boolean isValid(long uploadFileSize, long uploadFileLastModifiedTime,
                            String bucket, String objectKey, String uploadFilePath) {
         if (StringUtils.isEmpty(this.uploadID) ||
-                !Objects.equals(this.bucket, bucket) ||
-                !Objects.equals(this.key, objectKey) ||
-                !Objects.equals(this.fileInfo.getFilePath(), uploadFilePath)) {
+                !StringUtils.equals(this.bucket, bucket) ||
+                !StringUtils.equals(this.key, objectKey) ||
+                !StringUtils.equals(this.fileInfo.getFilePath(), uploadFilePath)) {
             return false;
         }
         return this.fileInfo.getFileSize() == uploadFileSize &&
@@ -108,6 +107,20 @@ public class UploadFileCheckpoint implements Serializable{
     public UploadFileCheckpoint setPartInfoList(List<UploadFilePartInfo> uploadFilePartInfoList) {
         this.uploadFilePartInfoList = uploadFilePartInfoList;
         return this;
+    }
+
+    @Override
+    public String toString() {
+        return "UploadFileCheckpoint{" +
+                "bucket='" + bucket + '\'' +
+                ", key='" + key + '\'' +
+                ", partSize=" + partSize +
+                ", uploadID='" + uploadID + '\'' +
+                ", sseAlgorithm='" + sseAlgorithm + '\'' +
+                ", sseKeyMd5='" + sseKeyMd5 + '\'' +
+                ", fileInfo=" + fileInfo +
+                ", uploadFilePartInfoList=" + uploadFilePartInfoList +
+                '}';
     }
 }
 
