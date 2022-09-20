@@ -1,5 +1,6 @@
 package com.volcengine.tos;
 
+import com.volcengine.tos.internal.RequestOptionsBuilder;
 import com.volcengine.tos.model.acl.GetObjectAclOutput;
 import com.volcengine.tos.model.acl.PutObjectAclInput;
 import com.volcengine.tos.model.acl.PutObjectAclOutput;
@@ -12,6 +13,7 @@ import java.time.Duration;
 /**
  * @author volcengine tos
  */
+@Deprecated
 public interface TOS {
     /**
      * create a new bucket

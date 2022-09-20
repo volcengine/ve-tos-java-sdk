@@ -1,20 +1,25 @@
 package com.volcengine.tos;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
-public class UnexpectedStatusCodeException extends TosException{
+public class UnexpectedStatusCodeException extends TosException {
     private int statusCode;
     private List<Integer> expectedCodes = new ArrayList<>();
     private String requestID;
 
-    public UnexpectedStatusCodeException(int statusCode, int expectedCode, int ...expectedCodes){
+    public UnexpectedStatusCodeException(int statusCode, int expectedCode, String requestID){
         super();
         this.statusCode = statusCode;
         this.expectedCodes.add(expectedCode);
-        this.expectedCodes.addAll(Arrays.stream(expectedCodes).boxed().collect(Collectors.toList()));
+        this.requestID = requestID;
+    }
+
+    public UnexpectedStatusCodeException(int statusCode, List<Integer> expectedCodes, String requestID){
+        super();
+        this.statusCode = statusCode;
+        this.expectedCodes.addAll(expectedCodes);
+        this.requestID = requestID;
     }
 
     public UnexpectedStatusCodeException withRequestID(String requestID){
@@ -31,6 +36,7 @@ public class UnexpectedStatusCodeException extends TosException{
         return expectedCodes;
     }
 
+    @Deprecated
     public String getRequestID() {
         return requestID;
     }

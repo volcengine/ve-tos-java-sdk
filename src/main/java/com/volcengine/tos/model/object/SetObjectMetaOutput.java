@@ -13,4 +13,11 @@ public class SetObjectMetaOutput {
         this.requestInfo = requestInfo;
         return this;
     }
+
+    @Override
+    public String toString() {
+        return "SetObjectMetaOutput{" +
+                "requestInfo=" + requestInfo +
+                '}';
+    }
 }

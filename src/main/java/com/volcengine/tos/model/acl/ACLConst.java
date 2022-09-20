@@ -1,5 +1,9 @@
 package com.volcengine.tos.model.acl;
 
+/**
+ * deprecated, use ACLType instead
+ */
+@Deprecated
 public interface ACLConst {
     String ACL_PRIVATE = "private";
     String ACL_PUBLIC_READ = "public-read";

@@ -1,6 +1,6 @@
 package com.volcengine.tos.model.object;
 
-
+@Deprecated
 public class UploadPartCopyInput {
     private String uploadID;
     private String destinationKey;

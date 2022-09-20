@@ -12,7 +12,9 @@ public class PutObjectOutput {
     private String etag;
     @JsonProperty("VersionId")
     private String versionID;
+    @Deprecated
     private String crc64;
+    private String hashCrc64ecma;
     private String sseCustomerAlgorithm;
     private String sseCustomerKeyMD5;
     private String sseCustomerKey;
@@ -44,12 +46,23 @@ public class PutObjectOutput {
         return this;
     }
 
+    @Deprecated
     public String getCrc64() {
-        return crc64;
+        return hashCrc64ecma;
     }
 
+    @Deprecated
     public PutObjectOutput setCrc64(String crc64) {
-        this.crc64 = crc64;
+        this.hashCrc64ecma = crc64;
+        return this;
+    }
+
+    public String getHashCrc64ecma() {
+        return hashCrc64ecma;
+    }
+
+    public PutObjectOutput setHashCrc64ecma(String hashCrc64ecma) {
+        this.hashCrc64ecma = hashCrc64ecma;
         return this;
     }
 
@@ -86,7 +99,7 @@ public class PutObjectOutput {
                 "requestInfo=" + requestInfo +
                 ", etag='" + etag + '\'' +
                 ", versionID='" + versionID + '\'' +
-                ", crc64=" + crc64 +
+                ", hashCrc64ecma=" + hashCrc64ecma +
                 ", sseCustomerAlgorithm='" + sseCustomerAlgorithm + '\'' +
                 ", sseCustomerKeyMD5='" + sseCustomerKeyMD5 + '\'' +
                 ", sseCustomerKey='" + sseCustomerKey + '\'' +

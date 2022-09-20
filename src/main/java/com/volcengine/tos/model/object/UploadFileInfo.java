@@ -33,4 +33,13 @@ public class UploadFileInfo implements Serializable {
         this.fileSize = fileSize;
         return this;
     }
+
+    @Override
+    public String toString() {
+        return "UploadFileInfo{" +
+                "filePath='" + filePath + '\'' +
+                ", lastModified=" + lastModified +
+                ", fileSize=" + fileSize +
+                '}';
+    }
 }

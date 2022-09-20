@@ -1,12 +1,15 @@
 package com.volcengine.tos;
 
 import com.volcengine.tos.comm.TosHeader;
+import com.volcengine.tos.internal.RequestOptionsBuilder;
+import com.volcengine.tos.internal.model.HttpRange;
 
 import java.time.Duration;
 import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 
+@Deprecated
 public class RequestOptions {
 
     /**
@@ -126,8 +129,7 @@ public class RequestOptions {
 
     public static RequestOptionsBuilder withRange(long start, long end){
         return builder -> {
-            builder.setRange(new HttpRange().setStart(start).setEnd(end));
-            builder.withHeader(TosHeader.HEADER_RANGE, builder.getRange().toString());
+            builder.withHeader(TosHeader.HEADER_RANGE, new HttpRange().setStart(start).setEnd(end).toString());
         };
     }
 

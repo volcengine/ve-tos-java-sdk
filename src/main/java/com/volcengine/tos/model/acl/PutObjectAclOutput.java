@@ -2,6 +2,7 @@ package com.volcengine.tos.model.acl;
 
 import com.volcengine.tos.model.RequestInfo;
 
+@Deprecated
 public class PutObjectAclOutput {
 
     private RequestInfo requestInfo;

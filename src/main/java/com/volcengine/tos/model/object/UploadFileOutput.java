@@ -41,4 +41,14 @@ public class UploadFileOutput {
         this.uploadID = uploadID;
         return this;
     }
+
+    @Override
+    public String toString() {
+        return "UploadFileOutput{" +
+                "completeMultipartUploadOutput=" + completeMultipartUploadOutput +
+                ", bucket='" + bucket + '\'' +
+                ", objectKey='" + objectKey + '\'' +
+                ", uploadID='" + uploadID + '\'' +
+                '}';
+    }
 }
