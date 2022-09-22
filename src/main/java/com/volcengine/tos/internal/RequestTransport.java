@@ -11,7 +11,7 @@ import okhttp3.internal.Util;
 import okio.BufferedSink;
 import okio.Okio;
 import okio.Source;
-import org.apache.commons.lang3.StringUtils;
+import com.volcengine.tos.internal.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -172,7 +172,7 @@ public class RequestTransport implements Transport {
     }
 
     private MediaType getMediaType(TosRequest request) {
-        String type = StringUtils.EMPTY;
+        String type = "";
         if (request.getHeaders() != null) {
             type = request.getHeaders().get(TosHeader.HEADER_CONTENT_TYPE);
         }

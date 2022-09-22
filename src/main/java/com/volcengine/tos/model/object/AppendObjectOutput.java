@@ -1,7 +1,6 @@
 package com.volcengine.tos.model.object;
 
 import com.volcengine.tos.model.RequestInfo;
-import org.apache.commons.lang3.StringUtils;
 
 public class AppendObjectOutput {
     private RequestInfo requestInfo;

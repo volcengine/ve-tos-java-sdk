@@ -8,9 +8,9 @@ import com.volcengine.tos.comm.HttpStatus;
 import com.volcengine.tos.comm.TosHeader;
 import com.volcengine.tos.internal.util.ParamsChecker;
 import com.volcengine.tos.internal.util.PayloadConverter;
+import com.volcengine.tos.internal.util.StringUtils;
 import com.volcengine.tos.internal.util.TypeConverter;
 import com.volcengine.tos.model.bucket.*;
-import org.apache.commons.io.IOUtils;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -94,7 +94,7 @@ public class TosBucketRequestHandlerImpl implements TosBucketRequestHandler {
         return bucketHandler.doRequest(req, HttpStatus.OK, res -> {
             GetBucketPolicyOutput ret = new GetBucketPolicyOutput().setRequestInfo(res.RequestInfo());
             try{
-                ret.setPolicy(IOUtils.toString(res.getInputStream(), StandardCharsets.UTF_8));
+                ret.setPolicy(StringUtils.toString(res.getInputStream()));
             } catch (IOException e) {
                 throw new TosClientException("read bucket policy failed", e);
             }

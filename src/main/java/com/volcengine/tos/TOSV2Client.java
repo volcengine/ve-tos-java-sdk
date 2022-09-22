@@ -11,7 +11,7 @@ import com.volcengine.tos.model.acl.PutObjectAclOutput;
 import com.volcengine.tos.model.bucket.*;
 import com.volcengine.tos.model.object.*;
 import com.volcengine.tos.internal.Transport;
-import org.apache.commons.lang3.StringUtils;
+import com.volcengine.tos.internal.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

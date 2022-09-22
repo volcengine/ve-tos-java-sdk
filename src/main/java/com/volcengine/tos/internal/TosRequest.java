@@ -3,10 +3,9 @@ package com.volcengine.tos.internal;
 import com.volcengine.tos.comm.io.TosRepeatableBoundedFileInputStream;
 import com.volcengine.tos.comm.io.TosRepeatableFileInputStream;
 import com.volcengine.tos.comm.io.TosRepeatableInputStream;
+import com.volcengine.tos.internal.util.StringUtils;
 import com.volcengine.tos.internal.util.TosUtils;
 import okhttp3.HttpUrl;
-import org.apache.commons.lang3.ArrayUtils;
-import org.apache.commons.lang3.StringUtils;
 
 import java.io.InputStream;
 import java.util.Collections;
@@ -26,7 +25,7 @@ public class TosRequest {
      *  only for POST data
      *  only used in ClientV1, deprecated in ClientV2
       */
-    private byte[] data = ArrayUtils.EMPTY_BYTE_ARRAY;
+    private byte[] data = new byte[0];
 
     public TosRequest(){
 

@@ -3,7 +3,6 @@ package com.volcengine.tos.internal.util;
 import com.volcengine.tos.comm.common.ACLType;
 import com.volcengine.tos.comm.common.MetadataDirectiveType;
 import com.volcengine.tos.comm.common.StorageClassType;
-import org.apache.commons.lang3.StringUtils;
 
 import static com.volcengine.tos.comm.common.Consts.*;
 

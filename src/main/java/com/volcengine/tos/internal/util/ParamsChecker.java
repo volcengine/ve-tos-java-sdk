@@ -2,7 +2,6 @@ package com.volcengine.tos.internal.util;
 
 import com.volcengine.tos.internal.Consts;
 import okhttp3.HttpUrl;
-import org.apache.commons.lang3.StringUtils;
 
 import java.io.UnsupportedEncodingException;
 import java.util.*;

@@ -1,8 +1,7 @@
 package com.volcengine.tos.auth;
 
 import com.volcengine.tos.internal.TosRequest;
-import com.volcengine.tos.internal.util.TosUtils;
-import org.apache.commons.lang3.StringUtils;
+import com.volcengine.tos.internal.util.StringUtils;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -199,7 +198,6 @@ public class SignV4 implements Signer {
                 String kk = key.toLowerCase();
                 if (this.signingHeader.isSigningHeader(kk, isSignedQuery)) {
                     value = value == null ? "" : value;
-                    value = StringUtils.join(StringUtils.split(value), " "); // 目前只支持一个header value
                     signed.add(new SimpleEntry<>(kk, value));
                 }
             }

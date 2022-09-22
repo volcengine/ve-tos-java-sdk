@@ -8,7 +8,7 @@ import com.volcengine.tos.internal.model.HttpRange;
 import com.volcengine.tos.internal.util.DateConverter;
 import com.volcengine.tos.internal.util.TosUtils;
 import com.volcengine.tos.internal.util.TypeConverter;
-import org.apache.commons.lang3.StringUtils;
+import com.volcengine.tos.internal.util.StringUtils;
 
 import java.util.Date;
 import java.util.HashMap;
