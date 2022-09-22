@@ -5,8 +5,8 @@ import com.volcengine.tos.internal.TosResponse;
 import com.volcengine.tos.comm.HttpMethod;
 import com.volcengine.tos.comm.TosHeader;
 import com.volcengine.tos.internal.Transport;
+import com.volcengine.tos.internal.util.StringUtils;
 import okhttp3.*;
-import org.apache.commons.lang3.StringUtils;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -38,7 +38,7 @@ public class DefaultTransport implements Transport {
 
 
     private MediaType getMediaType(TosRequest request) {
-        String type = StringUtils.EMPTY;
+        String type = "";
         if (request.getHeaders() != null) {
             type = request.getHeaders().get(TosHeader.HEADER_CONTENT_TYPE);
         }

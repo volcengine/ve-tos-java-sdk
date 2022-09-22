@@ -10,10 +10,9 @@ import com.volcengine.tos.TosServerException;
 import com.volcengine.tos.UnexpectedStatusCodeException;
 import com.volcengine.tos.comm.Code;
 import com.volcengine.tos.comm.HttpStatus;
-import org.apache.commons.io.IOUtils;
+import com.volcengine.tos.internal.util.StringUtils;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 class RequestHandler {
@@ -79,7 +78,7 @@ class RequestHandler {
         // other cases, throw exception
         String s = null;
         try{
-            s = IOUtils.toString(res.getInputStream(), StandardCharsets.UTF_8);
+            s = StringUtils.toString(res.getInputStream());
         } catch (IOException e) {
             throw new TosClientException("read response body failed", e);
         }

@@ -1,7 +1,6 @@
 package com.volcengine.tos.internal.util;
 
 import com.volcengine.tos.TosClientException;
-import org.apache.commons.lang3.StringUtils;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;

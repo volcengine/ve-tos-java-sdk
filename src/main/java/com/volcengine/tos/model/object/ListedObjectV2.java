@@ -1,10 +1,7 @@
 package com.volcengine.tos.model.object;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.volcengine.tos.comm.common.StorageClassType;
-import com.volcengine.tos.internal.util.TypeConverter;
 import com.volcengine.tos.model.acl.Owner;
-import org.apache.commons.lang3.StringUtils;
 
 import java.util.Date;
 

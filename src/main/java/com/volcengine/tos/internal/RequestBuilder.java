@@ -4,7 +4,7 @@ import com.volcengine.tos.TosClientException;
 import com.volcengine.tos.auth.Signer;
 import com.volcengine.tos.comm.TosHeader;
 import com.volcengine.tos.internal.model.HttpRange;
-import org.apache.commons.lang3.StringUtils;
+import com.volcengine.tos.internal.util.StringUtils;
 
 import java.io.IOException;
 import java.io.InputStream;

@@ -1,15 +1,10 @@
 package com.volcengine.tos;
 
-import com.volcengine.tos.auth.StaticCredentials;
-import com.volcengine.tos.comm.MimeType;
 import com.volcengine.tos.comm.TosHeader;
 import com.volcengine.tos.internal.RequestBuilder;
-import com.volcengine.tos.model.object.HeadObjectOutput;
-import org.apache.commons.lang3.RandomStringUtils;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
-import java.io.ByteArrayInputStream;
 import java.util.HashMap;
 
 
