@@ -7,15 +7,14 @@ import com.volcengine.tos.comm.HttpStatus;
 import com.volcengine.tos.comm.common.MetadataDirectiveType;
 import com.volcengine.tos.comm.common.StorageClassType;
 import com.volcengine.tos.comm.io.TosRepeatableBoundedFileInputStream;
+import com.volcengine.tos.internal.util.StringUtils;
 import com.volcengine.tos.internal.util.DateConverter;
 import com.volcengine.tos.model.bucket.CreateBucketV2Input;
 import com.volcengine.tos.model.bucket.HeadBucketV2Input;
 import com.volcengine.tos.model.bucket.HeadBucketV2Output;
 import com.volcengine.tos.model.object.*;
 import org.apache.commons.codec.binary.Hex;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.RandomStringUtils;
-import org.apache.commons.lang3.StringUtils;
+
 import org.testng.Assert;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
@@ -29,7 +28,7 @@ import java.util.*;
 
 
 public class TosObjectRequestHandlerAppendMultipartCopyTest {
-    private static final String sampleData = RandomStringUtils.randomAlphanumeric(128 << 10);
+    private static final String sampleData = StringUtils.randomString(128 << 10);
     private static final String ssecKey = "Y2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2M=";
     private static final String ssecKeyMD5 = "ACdH+Fu9K3HlXdIUBu8GdA==";
     private static final String ssecAlgorithm = "AES256";
@@ -41,7 +40,7 @@ public class TosObjectRequestHandlerAppendMultipartCopyTest {
         return ClientInstance.getObjectRequestHandlerInstance();
     }
     private String getUniqueObjectKey() {
-        return RandomStringUtils.randomAlphanumeric(10);
+        return StringUtils.randomString(10);
     }
 
     @BeforeTest
@@ -91,7 +90,7 @@ public class TosObjectRequestHandlerAppendMultipartCopyTest {
     @Test
     void appendObjectTest() {
         String key = Consts.internalObjectAppendPrefix + getUniqueObjectKey();
-        String data = sampleData + RandomStringUtils.randomAlphanumeric(new Random().nextInt(128));
+        String data = sampleData + StringUtils.randomString(new Random().nextInt(128));
         try{
             AppendObjectInput input = AppendObjectInput.builder()
                     .contentLength(data.length())
@@ -108,13 +107,13 @@ public class TosObjectRequestHandlerAppendMultipartCopyTest {
                 Assert.assertNotNull(getRes.getGetObjectBasicOutput());
                 Assert.assertEquals(getRes.getGetObjectBasicOutput().getContentLength(), data.length());
                 Assert.assertEquals(getRes.getGetObjectBasicOutput().getObjectType(), "Appendable");
-                validateDataSame(data, IOUtils.toString(getRes.getContent(), StandardCharsets.UTF_8));
+                validateDataSame(data, StringUtils.toString(getRes.getContent()));
             } catch (IOException e) {
                 testFailed(e);
             }
 
             long nextAppendOffset = appendRes.getNextAppendOffset();
-            String data2 = sampleData + sampleData + RandomStringUtils.randomAlphanumeric(new Random().nextInt(128));;
+            String data2 = sampleData + sampleData + StringUtils.randomString(new Random().nextInt(128));;
             input = AppendObjectInput.builder()
                     .contentLength(data2.length())
                     .offset(nextAppendOffset)
@@ -131,7 +130,7 @@ public class TosObjectRequestHandlerAppendMultipartCopyTest {
                 Assert.assertNotNull(getRes.getGetObjectBasicOutput());
                 Assert.assertEquals(getRes.getGetObjectBasicOutput().getContentLength(), data.length() + data2.length());
                 Assert.assertEquals(getRes.getGetObjectBasicOutput().getObjectType(), "Appendable");
-                validateDataSame(data + data2, IOUtils.toString(getRes.getContent(), StandardCharsets.UTF_8));
+                validateDataSame(data + data2, StringUtils.toString(getRes.getContent()));
             } catch (IOException e) {
                 testFailed(e);
             }
@@ -150,7 +149,7 @@ public class TosObjectRequestHandlerAppendMultipartCopyTest {
     @Test
     void putAndAppendObjectTest(){
         String key = Consts.internalObjectAppendPrefix + getUniqueObjectKey();
-        String data = sampleData + RandomStringUtils.randomAlphanumeric(new Random().nextInt(128));
+        String data = sampleData + StringUtils.randomString(new Random().nextInt(128));
         try{
             PutObjectBasicInput basicInput = PutObjectBasicInput.builder()
                     .bucket(Consts.bucket)
@@ -165,7 +164,7 @@ public class TosObjectRequestHandlerAppendMultipartCopyTest {
         }
         try {
             long nextAppendOffset = data.length();
-            String data2 = sampleData + sampleData + RandomStringUtils.randomAlphanumeric(new Random().nextInt(128));;
+            String data2 = sampleData + sampleData + StringUtils.randomString(new Random().nextInt(128));;
             AppendObjectInput input = AppendObjectInput.builder()
                     .contentLength(data2.length())
                     .offset(nextAppendOffset)
@@ -190,7 +189,7 @@ public class TosObjectRequestHandlerAppendMultipartCopyTest {
     @Test
     void copyObjectInSameBucketTest() {
         String key = Consts.internalObjectCopyPrefix + getUniqueObjectKey();
-        String data = sampleData + RandomStringUtils.randomAlphanumeric(new Random().nextInt(128));
+        String data = sampleData + StringUtils.randomString(new Random().nextInt(128));
         PutObjectOutput put = null;
         try{
             PutObjectBasicInput basicInput = PutObjectBasicInput.builder()
@@ -229,7 +228,7 @@ public class TosObjectRequestHandlerAppendMultipartCopyTest {
                 Assert.assertEquals(getRes.getGetObjectBasicOutput().getContentLength(), data.length());
                 Assert.assertEquals(getRes.getGetObjectBasicOutput().getEtag(), output1.getEtag());
                 Assert.assertEquals(getRes.getGetObjectBasicOutput().getHashCrc64ecma(), output1.getHashCrc64ecma());
-                validateDataSame(data, IOUtils.toString(getRes.getContent(), StandardCharsets.UTF_8));
+                validateDataSame(data, StringUtils.toString(getRes.getContent()));
             } catch (IOException e) {
                 testFailed(e);
             }
@@ -244,7 +243,7 @@ public class TosObjectRequestHandlerAppendMultipartCopyTest {
     @Test
     void copyObjectInDifferentBucketTest() {
         String key = Consts.internalObjectCopyPrefix + getUniqueObjectKey();
-        String data = sampleData + RandomStringUtils.randomAlphanumeric(new Random().nextInt(128));
+        String data = sampleData + StringUtils.randomString(new Random().nextInt(128));
         PutObjectOutput put = null;
         try{
             PutObjectBasicInput basicInput = PutObjectBasicInput.builder()
@@ -284,7 +283,7 @@ public class TosObjectRequestHandlerAppendMultipartCopyTest {
                 Assert.assertEquals(getRes.getGetObjectBasicOutput().getContentLength(), data.length());
                 Assert.assertEquals(getRes.getGetObjectBasicOutput().getEtag(), output1.getEtag());
                 Assert.assertEquals(getRes.getGetObjectBasicOutput().getHashCrc64ecma(), output1.getHashCrc64ecma());
-                validateDataSame(data, IOUtils.toString(getRes.getContent(), StandardCharsets.UTF_8));
+                validateDataSame(data, StringUtils.toString(getRes.getContent()));
             } catch (IOException e) {
                 testFailed(e);
             }
@@ -311,7 +310,7 @@ public class TosObjectRequestHandlerAppendMultipartCopyTest {
                 Assert.assertEquals(getRes.getGetObjectBasicOutput().getContentLength(), data.length());
                 Assert.assertEquals(getRes.getGetObjectBasicOutput().getEtag(), output2.getEtag());
                 Assert.assertEquals(getRes.getGetObjectBasicOutput().getHashCrc64ecma(), output2.getHashCrc64ecma());
-                validateDataSame(data, IOUtils.toString(getRes.getContent(), StandardCharsets.UTF_8));
+                validateDataSame(data, StringUtils.toString(getRes.getContent()));
             } catch (IOException e) {
                 testFailed(e);
             }
@@ -327,7 +326,7 @@ public class TosObjectRequestHandlerAppendMultipartCopyTest {
     @Test
     void copyObjectWithReplaceTest() {
         String key = Consts.internalObjectCopyPrefix + getUniqueObjectKey();
-        String data = sampleData + RandomStringUtils.randomAlphanumeric(new Random().nextInt(128));
+        String data = sampleData + StringUtils.randomString(new Random().nextInt(128));
         PutObjectOutput put = null;
         Map<String, String> cus = new HashMap<>(2);
         cus.put("custom", "volc");
@@ -370,7 +369,7 @@ public class TosObjectRequestHandlerAppendMultipartCopyTest {
                 Assert.assertNotNull(getRes.getGetObjectBasicOutput().getCustomMetadata());
                 Assert.assertEquals(getRes.getGetObjectBasicOutput().getCustomMetadata().get("custom"), "volc");
                 Assert.assertEquals(getRes.getGetObjectBasicOutput().getCustomMetadata().get("custom1"), "volc_test");
-                validateDataSame(data, IOUtils.toString(getRes.getContent(), StandardCharsets.UTF_8));
+                validateDataSame(data, StringUtils.toString(getRes.getContent()));
             } catch (IOException e) {
                 testFailed(e);
             }
@@ -403,7 +402,7 @@ public class TosObjectRequestHandlerAppendMultipartCopyTest {
                 Assert.assertNotNull(getRes.getGetObjectBasicOutput().getCustomMetadata());
                 Assert.assertEquals(getRes.getGetObjectBasicOutput().getCustomMetadata().get("custom"), "volc_replace");
                 Assert.assertEquals(getRes.getGetObjectBasicOutput().getCustomMetadata().get("custom1"), "volc_test_replace");
-                validateDataSame(data, IOUtils.toString(getRes.getContent(), StandardCharsets.UTF_8));
+                validateDataSame(data, StringUtils.toString(getRes.getContent()));
             } catch (IOException e) {
                 testFailed(e);
             }
@@ -419,7 +418,7 @@ public class TosObjectRequestHandlerAppendMultipartCopyTest {
     @Test
     void copyObjectWithIfConditionTest() {
         String key = getUniqueObjectKey();
-        String data = sampleData + RandomStringUtils.randomAlphanumeric(new Random().nextInt(128));
+        String data = sampleData + StringUtils.randomString(new Random().nextInt(128));
         InputStream content = new ByteArrayInputStream(data.getBytes(StandardCharsets.UTF_8));
         String copyKey = key + "-copy";
         Date lastModified = null;

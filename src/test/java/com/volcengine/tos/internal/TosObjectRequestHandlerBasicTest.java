@@ -18,9 +18,7 @@ import com.volcengine.tos.model.bucket.CreateBucketV2Input;
 import com.volcengine.tos.model.bucket.HeadBucketV2Input;
 import com.volcengine.tos.model.bucket.HeadBucketV2Output;
 import com.volcengine.tos.model.object.*;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.RandomStringUtils;
-import org.apache.commons.lang3.StringUtils;
+import com.volcengine.tos.internal.util.StringUtils;
 import org.apache.commons.codec.binary.Base64;
 import org.testng.Assert;
 import org.testng.annotations.BeforeTest;
@@ -39,7 +37,7 @@ import java.util.*;
 import static com.volcengine.tos.Consts.*;
 
 public class TosObjectRequestHandlerBasicTest {
-    private static final String sampleData = RandomStringUtils.randomAlphanumeric(128 << 10);
+    private static final String sampleData = StringUtils.randomString(128 << 10);
     private static final String ssecKey = "Y2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2M=";
     private static final String ssecKeyMD5 = "ACdH+Fu9K3HlXdIUBu8GdA==";
     private static final String ssecAlgorithm = "AES256";
@@ -121,7 +119,7 @@ public class TosObjectRequestHandlerBasicTest {
 
 
         // invalid length
-        String longLengthObjectKey = RandomStringUtils.randomAlphanumeric(697);
+        String longLengthObjectKey = StringUtils.randomString(697);
         List<String> invalidKeyList = Arrays.asList(null, "", longLengthObjectKey);
         for (String key : invalidKeyList) {
             try {
@@ -198,7 +196,7 @@ public class TosObjectRequestHandlerBasicTest {
                         .bucket(Consts.bucket)
                         .key(s)
                         .build())){
-                    validateDataSame(sampleData, IOUtils.toString(got.getContent(), StandardCharsets.UTF_8));
+                    validateDataSame(sampleData, StringUtils.toString(got.getContent()));
                 } catch (Exception e) {
                     testFailed(e);
                 }
@@ -214,7 +212,7 @@ public class TosObjectRequestHandlerBasicTest {
     void basicObjectCRUDTest() {
         // basic crud
         String key = getUniqueObjectKey();
-        String data = sampleData + RandomStringUtils.randomAlphanumeric(new Random().nextInt(128));
+        String data = sampleData + StringUtils.randomString(new Random().nextInt(128));
         InputStream content = new ByteArrayInputStream(data.getBytes(StandardCharsets.UTF_8));
         try{
             PutObjectBasicInput basicInput = PutObjectBasicInput.builder()
@@ -243,7 +241,7 @@ public class TosObjectRequestHandlerBasicTest {
                 Assert.assertEquals(getRes.getGetObjectBasicOutput().getContentLength(), data.length());
                 Assert.assertEquals(getRes.getGetObjectBasicOutput().getEtag(), putRes.getEtag());
                 Assert.assertEquals(getRes.getGetObjectBasicOutput().getVersionID(), putRes.getVersionID());
-                validateDataSame(data, IOUtils.toString(getRes.getContent(), StandardCharsets.UTF_8));
+                validateDataSame(data, StringUtils.toString(getRes.getContent()));
             } catch (IOException e) {
                 testFailed(e);
             }
@@ -273,7 +271,7 @@ public class TosObjectRequestHandlerBasicTest {
                 Assert.assertEquals(got.getGetObjectBasicOutput().getContentLength(), 0);
                 Assert.assertEquals(got.getGetObjectBasicOutput().getEtag(), putRes.getEtag());
                 Assert.assertEquals(got.getGetObjectBasicOutput().getVersionID(), putRes.getVersionID());
-                Assert.assertEquals(IOUtils.toString(got.getContent(), StandardCharsets.UTF_8).length(), 0);
+                Assert.assertEquals(StringUtils.toString(got.getContent()).length(), 0);
             } catch (IOException e) {
                 testFailed(e);
             }
@@ -287,7 +285,7 @@ public class TosObjectRequestHandlerBasicTest {
     @Test
     void completeObjectCRUDTest() {
         String key = getUniqueObjectKey();
-        String data = sampleData + RandomStringUtils.randomAlphanumeric(new Random().nextInt(128));
+        String data = sampleData + StringUtils.randomString(new Random().nextInt(128));
         InputStream content = new ByteArrayInputStream(data.getBytes(StandardCharsets.UTF_8));
         Date dt = Date.from(LocalDateTime.now().plusMinutes(10).toInstant(ZoneOffset.UTC));
         String md5 = getContentMD5(data);
@@ -368,7 +366,7 @@ public class TosObjectRequestHandlerBasicTest {
                 Assert.assertEquals(got.getGetObjectBasicOutput().getSsecAlgorithm(), ssecAlgorithm);
                 Assert.assertEquals(got.getGetObjectBasicOutput().getSsecKeyMD5(), ssecKeyMD5);
                 Assert.assertEquals(got.getGetObjectBasicOutput().getStorageClass(), StorageClassType.STORAGE_CLASS_IA);
-                validateDataSame(data, IOUtils.toString(got.getContent(), StandardCharsets.UTF_8));
+                validateDataSame(data, StringUtils.toString(got.getContent()));
             } catch (IOException e) {
                 testFailed(e);
             }
@@ -382,7 +380,7 @@ public class TosObjectRequestHandlerBasicTest {
     @Test
     void CustomAndChineseHeaderTest() {
         String key = getUniqueObjectKey();
-        String data = sampleData + RandomStringUtils.randomAlphanumeric(new Random().nextInt(128));
+        String data = sampleData + StringUtils.randomString(new Random().nextInt(128));
         InputStream content = new ByteArrayInputStream(data.getBytes(StandardCharsets.UTF_8));
         Map<String, String> custom = new HashMap<>(2);
         custom.put("custom1", "中文1");
@@ -424,7 +422,7 @@ public class TosObjectRequestHandlerBasicTest {
                 Assert.assertEquals(headRes.getHeadObjectBasicOutput().getCustomMetadata().get("custom2"), "中文 空格");
                 Assert.assertEquals(headRes.getHeadObjectBasicOutput().getCustomMetadata().get("custom3"), "aabb-cc%20");
                 Assert.assertEquals(headRes.getHeadObjectBasicOutput().getContentDisposition(), "attachment;filename=中文测试.txt");
-                validateDataSame(data, IOUtils.toString(getRes.getContent(), StandardCharsets.UTF_8));
+                validateDataSame(data, StringUtils.toString(getRes.getContent()));
             } catch (IOException e) {
                 testFailed(e);
             }
@@ -438,7 +436,7 @@ public class TosObjectRequestHandlerBasicTest {
     @Test
     void rangeGetObjectTest() {
         String key = getUniqueObjectKey();
-        String data = sampleData + RandomStringUtils.randomAlphanumeric(new Random().nextInt(128));
+        String data = sampleData + StringUtils.randomString(new Random().nextInt(128));
         InputStream content = new ByteArrayInputStream(data.getBytes(StandardCharsets.UTF_8));
         try{
             PutObjectBasicInput basicInput = PutObjectBasicInput.builder()
@@ -458,7 +456,7 @@ public class TosObjectRequestHandlerBasicTest {
                     .build())){
                 Assert.assertNotNull(getRes.getGetObjectBasicOutput());
                 Assert.assertEquals(getRes.getGetObjectBasicOutput().getContentLength(), 31);
-                validateDataSame(data.substring(1,32), IOUtils.toString(getRes.getContent(), StandardCharsets.UTF_8));
+                validateDataSame(data.substring(1,32), StringUtils.toString(getRes.getContent()));
             } catch (IOException e) {
                 testFailed(e);
             }
@@ -471,7 +469,7 @@ public class TosObjectRequestHandlerBasicTest {
                     .build())){
                 Assert.assertNotNull(getRes.getGetObjectBasicOutput());
                 Assert.assertEquals(getRes.getGetObjectBasicOutput().getContentLength(), 32);
-                validateDataSame(data.substring(0,32), IOUtils.toString(getRes.getContent(), StandardCharsets.UTF_8));
+                validateDataSame(data.substring(0,32), StringUtils.toString(getRes.getContent()));
             } catch (IOException e) {
                 testFailed(e);
             }
@@ -484,7 +482,7 @@ public class TosObjectRequestHandlerBasicTest {
                     .build())){
                 Assert.assertNotNull(getRes.getGetObjectBasicOutput());
                 Assert.assertEquals(getRes.getGetObjectBasicOutput().getContentLength(), data.length()-1);
-                validateDataSame(data.substring(1, data.length()), IOUtils.toString(getRes.getContent(), StandardCharsets.UTF_8));
+                validateDataSame(data.substring(1, data.length()), StringUtils.toString(getRes.getContent()));
             } catch (IOException e) {
                 testFailed(e);
             }
@@ -497,7 +495,7 @@ public class TosObjectRequestHandlerBasicTest {
                     .build())){
                 Assert.assertNotNull(getRes.getGetObjectBasicOutput());
                 Assert.assertEquals(getRes.getGetObjectBasicOutput().getContentLength(), data.length());
-                validateDataSame(data, IOUtils.toString(getRes.getContent(), StandardCharsets.UTF_8));
+                validateDataSame(data, StringUtils.toString(getRes.getContent()));
             } catch (IOException e) {
                 testFailed(e);
             }
@@ -511,11 +509,11 @@ public class TosObjectRequestHandlerBasicTest {
     @Test
     void objectCRUDWithWrongParamsTest() {
         String key = getUniqueObjectKey();
-        String data = sampleData + RandomStringUtils.randomAlphanumeric(new Random().nextInt(128));
+        String data = sampleData + StringUtils.randomString(new Random().nextInt(128));
         InputStream content = new ByteArrayInputStream(data.getBytes(StandardCharsets.UTF_8));
         try{
             String md5 = getContentMD5(data);
-            String wrongMd5 = md5 + RandomStringUtils.randomAlphanumeric(new Random().nextInt(3));
+            String wrongMd5 = md5 + StringUtils.randomString(new Random().nextInt(3));
             ObjectMetaRequestOptions options = ObjectMetaRequestOptions.builder()
                     .contentMD5(wrongMd5).build();
             PutObjectBasicInput basicInput = PutObjectBasicInput.builder()
@@ -608,7 +606,7 @@ public class TosObjectRequestHandlerBasicTest {
     @Test
     void getObjectWithIfConditionTest() {
         String key = getUniqueObjectKey();
-        String data = sampleData + RandomStringUtils.randomAlphanumeric(new Random().nextInt(128));
+        String data = sampleData + StringUtils.randomString(new Random().nextInt(128));
         InputStream content = new ByteArrayInputStream(data.getBytes(StandardCharsets.UTF_8));
         String putContentType = "application/json";
         try{
@@ -696,7 +694,7 @@ public class TosObjectRequestHandlerBasicTest {
     void objectCRUDInNotFoundBucketTest() {
         String notFoundBucket = "notfoundbucket-"+System.currentTimeMillis();
         String key = getUniqueObjectKey();
-        String data = sampleData + RandomStringUtils.randomAlphanumeric(new Random().nextInt(128));
+        String data = sampleData + StringUtils.randomString(new Random().nextInt(128));
         InputStream content = new ByteArrayInputStream(data.getBytes(StandardCharsets.UTF_8));
         try{
             PutObjectBasicInput basicInput = PutObjectBasicInput.builder()
@@ -906,7 +904,7 @@ public class TosObjectRequestHandlerBasicTest {
     @Test
     void setObjectMetaTest() {
         String key = getUniqueObjectKey();
-        String data = sampleData + RandomStringUtils.randomAlphanumeric(new Random().nextInt(128));
+        String data = sampleData + StringUtils.randomString(new Random().nextInt(128));
         InputStream content = new ByteArrayInputStream(data.getBytes(StandardCharsets.UTF_8));
         Date dt = Date.from(LocalDateTime.now().plusMinutes(10).toInstant(ZoneOffset.UTC));
         String md5 = getContentMD5(data);
@@ -991,7 +989,7 @@ public class TosObjectRequestHandlerBasicTest {
     @Test
     void objectACLTest() {
         String key = getUniqueObjectKey();
-        String data = sampleData + RandomStringUtils.randomAlphanumeric(new Random().nextInt(128));
+        String data = sampleData + StringUtils.randomString(new Random().nextInt(128));
         InputStream content = new ByteArrayInputStream(data.getBytes(StandardCharsets.UTF_8));
         try{
             PutObjectBasicInput basicInput = PutObjectBasicInput.builder()
@@ -1132,7 +1130,7 @@ public class TosObjectRequestHandlerBasicTest {
     }
 
     private String getUniqueObjectKey() {
-        return internalObjectCrudPrefix + RandomStringUtils.randomAlphanumeric(10);
+        return internalObjectCrudPrefix + StringUtils.randomString(10);
     }
     
     private String getContentMD5(String data) {

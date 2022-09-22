@@ -1,7 +1,7 @@
 package com.volcengine.tos.model.object;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.apache.commons.lang3.StringUtils;
+import com.volcengine.tos.internal.util.StringUtils;
 
 import java.io.FileOutputStream;
 import java.io.IOException;

@@ -10,7 +10,7 @@ public interface Consts {
     String SCHEME_HTTP = "http";
     String SCHEME_HTTPS = "https";
     String SDK_NAME = "ve-tos-java-sdk";
-    String SDK_VERSION = "v2.1.1";
+    String SDK_VERSION = "v2.1.2";
 
     int MIN_PART_NUM = 1;
     int MAX_PART_NUM = 10000;
