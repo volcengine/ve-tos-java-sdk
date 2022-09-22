@@ -11,8 +11,7 @@ import com.volcengine.tos.model.object.*;
 import com.volcengine.tos.session.Session;
 import com.volcengine.tos.session.SessionOptions;
 import com.volcengine.tos.transport.TransportConfig;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.RandomStringUtils;
+import com.volcengine.tos.internal.util.StringUtils;
 import org.testng.Assert;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
@@ -20,7 +19,6 @@ import org.testng.annotations.Test;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.zip.CRC32;
@@ -274,7 +272,7 @@ public class TOSV2ClientTest {
 
     @Test
     void BucketCopyObjectTest(){
-        String srcData = RandomStringUtils.randomAlphanumeric(1024);
+        String srcData = StringUtils.randomString(1024);
         String key = "object-copy-"+System.currentTimeMillis();
         String cpKey = "object-copy-data-"+System.currentTimeMillis();
 
@@ -299,8 +297,8 @@ public class TOSV2ClientTest {
 
     @Test
     void BucketCopyObjectToTest(){
-        String srcData = RandomStringUtils.randomAlphanumeric(1024);
-        String dstData = RandomStringUtils.randomAlphanumeric(2048);
+        String srcData = StringUtils.randomString(1024);
+        String dstData = StringUtils.randomString(2048);
         String key = "object-copy-to-"+System.currentTimeMillis();
         String cpKey = "object-copy-to-data-"+System.currentTimeMillis();
         try{
@@ -330,8 +328,8 @@ public class TOSV2ClientTest {
     void BucketCopyObjectFrom(){
         // special case
 
-        String srcData = RandomStringUtils.randomAlphanumeric(1024);
-        String dstData = RandomStringUtils.randomAlphanumeric(2048);
+        String srcData = StringUtils.randomString(1024);
+        String dstData = StringUtils.randomString(2048);
         String key = "object-copy-from-"+System.currentTimeMillis();
         String cpKey = "object-copy-from-data-"+System.currentTimeMillis();
         try{
@@ -375,7 +373,7 @@ public class TOSV2ClientTest {
 
     @Test
     void BucketUploadPartCopyTest(){
-        String srcData = RandomStringUtils.randomAlphanumeric(20*1024*1024+888);
+        String srcData = StringUtils.randomString(20*1024*1024+888);
         String key = "object-upload-part-copy-"+System.currentTimeMillis();
         String dstKey = "objectUploadPartCopy.data";
         try{
@@ -410,7 +408,7 @@ public class TOSV2ClientTest {
 
             try(GetObjectOutput got = client.getObject(Consts.bucketCopy, dstKey)){
                 Assert.assertEquals(srcData.length(), got.getObjectMeta().getContentLength());
-                Assert.assertEquals(srcData, IOUtils.toString(got.getContent(), Charset.defaultCharset()));
+                Assert.assertEquals(srcData, StringUtils.toString(got.getContent()));
             }
         } catch (TosException | IOException e){
             Consts.LOG.error(e.toString(), e);
@@ -433,7 +431,7 @@ public class TOSV2ClientTest {
             Assert.assertEquals(data.length(), head.getObjectMeta().getContentLength());
 
             GetObjectOutput got = client.getObject(bucket, object);
-            String content = IOUtils.toString(got.getContent(), Charset.defaultCharset());
+            String content = StringUtils.toString(got.getContent());
             Assert.assertEquals(data, content);
         } catch (TosException | IOException e){
             Consts.LOG.error(e.toString(), e);
@@ -444,7 +442,7 @@ public class TOSV2ClientTest {
     @Test
     void MultipartTest(){
         String key = "multipart-test-"+System.currentTimeMillis();
-        byte[] data = RandomStringUtils.randomAlphanumeric(5 << 20).getBytes(StandardCharsets.UTF_8);
+        byte[] data = StringUtils.randomString(5 << 20).getBytes(StandardCharsets.UTF_8);
         CreateMultipartUploadOutput upload = null;
         try{
             upload = client.createMultipartUpload(Consts.bucket, key);
@@ -506,7 +504,7 @@ public class TOSV2ClientTest {
             PutObjectOutput put = clientCRUD.putObject(bucket, key, stream);
             GetObjectOutput got = clientCRUD.getObject(bucket, key);
             // NOTICE: 注意在对象很大的时候不要这样一次性读取
-            Assert.assertEquals(crc32Check(data.getBytes()), crc32Check(IOUtils.toByteArray(got.getContent())));
+            Assert.assertEquals(crc32Check(data.getBytes()), crc32Check(StringUtils.toByteArray(got.getContent())));
             Assert.assertEquals(put.getEtag(), got.getObjectMeta().getEtags());
 
             HeadObjectOutput head = clientCRUD.headObject(bucket, key);
@@ -528,14 +526,14 @@ public class TOSV2ClientTest {
 
     @Test
     void SetObjectMetaTest(){
-        String data = RandomStringUtils.randomAlphanumeric(1024);
+        String data = StringUtils.randomString(1024);
         String key = "object-meta-"+System.currentTimeMillis();
         try{
             PutObjectOutput put = client.putObject(Consts.bucket, key, new ByteArrayInputStream(data.getBytes(StandardCharsets.UTF_8))
                     , RequestOptions.withContentType("image"));
             GetObjectOutput got = client.getObject(Consts.bucket, key);
             // NOTICE: 注意在对象很大的时候不要这样一次性读取
-            Assert.assertEquals(crc32Check(data.getBytes()), crc32Check(IOUtils.toByteArray(got.getContent())));
+            Assert.assertEquals(crc32Check(data.getBytes()), crc32Check(StringUtils.toByteArray(got.getContent())));
             Assert.assertEquals(put.getEtag(), got.getObjectMeta().getEtags());
 
             HeadObjectOutput head = client.headObject(Consts.bucket, key);
@@ -545,7 +543,7 @@ public class TOSV2ClientTest {
             head = client.headObject(Consts.bucket, key);
             Assert.assertEquals("video", head.getObjectMeta().getContentType());
             got = client.getObject(Consts.bucket, key);
-            Assert.assertEquals(data, IOUtils.toString(got.getContent(), Charset.defaultCharset()));
+            Assert.assertEquals(data, StringUtils.toString(got.getContent()));
             Assert.assertEquals(put.getEtag(), got.getObjectMeta().getEtags());
             Assert.assertEquals("video", got.getObjectMeta().getContentType());
 
@@ -553,7 +551,7 @@ public class TOSV2ClientTest {
             head = client.headObject(Consts.bucket, key);
             Assert.assertEquals("image/png", head.getObjectMeta().getContentType());
             got = client.getObject(Consts.bucket, key);
-            Assert.assertEquals(data, IOUtils.toString(got.getContent(), Charset.defaultCharset()));
+            Assert.assertEquals(data, StringUtils.toString(got.getContent()));
             Assert.assertEquals(put.getEtag(), got.getObjectMeta().getEtags());
             Assert.assertEquals("image/png", got.getObjectMeta().getContentType());
         } catch (TosException | IOException e){
@@ -582,7 +580,7 @@ public class TOSV2ClientTest {
                 GetObjectOutput got = client.getObject(Consts.bucket, objectPrefix + i);
                 // NOTICE: 注意在对象很大的时候不要这样一次性读取
                 Assert.assertNotNull(put.getEtag());
-                Assert.assertEquals(crc32Check(data.getBytes()), crc32Check(IOUtils.toByteArray(got.getContent())));
+                Assert.assertEquals(crc32Check(data.getBytes()), crc32Check(StringUtils.toByteArray(got.getContent())));
                 Assert.assertEquals(put.getEtag(), got.getObjectMeta().getEtags());
             }
             for (int i = 0; i < 10 && hasMore; i++) {
@@ -620,7 +618,7 @@ public class TOSV2ClientTest {
         String key = "object-list-version-"+System.currentTimeMillis();
         String[] versionID = new String[number];
         try{
-            String buf = RandomStringUtils.randomAlphanumeric(1024);
+            String buf = StringUtils.randomString(1024);
             boolean hasMore = true;
             String startAfter = "";
             for (int i = 0; i < number; i++) {
@@ -628,7 +626,7 @@ public class TOSV2ClientTest {
                 versionID[i] = put.getVersionID();
 
                 GetObjectOutput got = client.getObject(bucketName, key, RequestOptions.withVersionID(put.getVersionID()));
-                Assert.assertEquals(buf, IOUtils.toString(got.getContent(), Charset.defaultCharset()));
+                Assert.assertEquals(buf, StringUtils.toString(got.getContent()));
                 Assert.assertEquals(put.getEtag(), got.getObjectMeta().getEtags());
                 Assert.assertEquals(put.getVersionID(), got.getObjectMeta().getVersionID());
             }
@@ -664,7 +662,7 @@ public class TOSV2ClientTest {
     @Test
     void AppendObjectTest(){
         String key = "append-object-"+System.currentTimeMillis();
-        String data = RandomStringUtils.randomAlphanumeric(128 << 10);
+        String data = StringUtils.randomString(128 << 10);
         try{
             AppendObjectOutput result = client.appendObject(Consts.bucket, key, new ByteArrayInputStream(data.getBytes()), 0);
 //            AppendObjectOutput result = client.appendObject(
@@ -672,16 +670,16 @@ public class TOSV2ClientTest {
 //                            .content(new ByteArrayInputStream(data.getBytes())).build());
             GetObjectOutput got = client.getObject(Consts.bucket, key);
             // NOTICE: 注意在对象很大的时候不要这样一次性读取
-            Assert.assertEquals(crc32Check(data.getBytes()), crc32Check(IOUtils.toByteArray(got.getContent())));
+            Assert.assertEquals(crc32Check(data.getBytes()), crc32Check(StringUtils.toByteArray(got.getContent())));
 
-            String data2 = RandomStringUtils.randomAlphanumeric(256 << 10);
+            String data2 = StringUtils.randomString(256 << 10);
             client.appendObject(
                     AppendObjectInput.builder().contentLength(data2.length()).bucket(Consts.bucket).key(key)
                             .content(new ByteArrayInputStream(data2.getBytes())).offset(result.getNextAppendOffset()).build());
             got = client.getObject(Consts.bucket, key);
             // NOTICE: 注意在对象很大的时候不要这样一次性读取
             Assert.assertEquals(data.length()+data2.length(), got.getObjectMeta().getContentLength());
-            Assert.assertEquals(crc32Check((data+data2).getBytes()), crc32Check(IOUtils.toByteArray(got.getContent())));
+            Assert.assertEquals(crc32Check((data+data2).getBytes()), crc32Check(StringUtils.toByteArray(got.getContent())));
         } catch (TosException | IOException e){
             Consts.LOG.error(e.toString(), e);
             Assert.fail();
@@ -697,7 +695,7 @@ public class TOSV2ClientTest {
 
     @Test
     void DeleteMultiObjectsTest(){
-        String data = RandomStringUtils.randomAlphanumeric(1024);
+        String data = StringUtils.randomString(1024);
         String objectPrefix = "delete-multi-objects-"+System.currentTimeMillis();
         int number = 12;
         ObjectTobeDeleted[] objectTobeDeleteds = new ObjectTobeDeleted[number];
@@ -705,7 +703,7 @@ public class TOSV2ClientTest {
             for (int i = 0; i < number; i++) {
                 PutObjectOutput put = client.putObject(Consts.bucket, objectPrefix+i, new ByteArrayInputStream(data.getBytes()));
                 GetObjectOutput got = client.getObject(Consts.bucket, objectPrefix+i);
-                Assert.assertEquals(data, IOUtils.toString(got.getContent(), StandardCharsets.UTF_8));
+                Assert.assertEquals(data, StringUtils.toString(got.getContent()));
                 Assert.assertEquals(put.getEtag(), got.getObjectMeta().getEtags());
                 objectTobeDeleteds[i] = new ObjectTobeDeleted().setKey(objectPrefix+i);
             }
@@ -730,7 +728,7 @@ public class TOSV2ClientTest {
 
     @Test
     void GetLargeObjectTest() {
-        String data = RandomStringUtils.randomAlphanumeric(16 << 20);
+        String data = StringUtils.randomString(16 << 20);
         String key = "object-large-"+System.currentTimeMillis();
         try {
             client.putObject(Consts.bucket, key, new ByteArrayInputStream(data.getBytes()));
@@ -778,7 +776,7 @@ public class TOSV2ClientTest {
             PutObjectOutput put = client.putObject(Consts.bucket, key, stream);
             GetObjectOutput got = client.getObject(Consts.bucket, key, RequestOptions.withRange(0, 7));
             // NOTICE: 注意在对象很大的时候不要这样一次性读取
-            Assert.assertEquals(crc32Check(data.substring(0, 8).getBytes()), crc32Check(IOUtils.toByteArray(got.getContent())));
+            Assert.assertEquals(crc32Check(data.substring(0, 8).getBytes()), crc32Check(StringUtils.toByteArray(got.getContent())));
             Assert.assertEquals(put.getEtag(), got.getObjectMeta().getEtags());
         } catch (TosException | IOException e) {
             Consts.LOG.error(e.toString(), e);
@@ -805,10 +803,10 @@ public class TOSV2ClientTest {
         String key = "object-acl-"+System.currentTimeMillis();
         try{
 
-            String data = RandomStringUtils.randomAlphanumeric(1024);
+            String data = StringUtils.randomString(1024);
             PutObjectOutput put = client.putObject(Consts.bucket, key, new ByteArrayInputStream(data.getBytes()));
             GetObjectOutput got = client.getObject(Consts.bucket, key);
-            Assert.assertEquals(data, IOUtils.toString(got.getContent(), Charset.defaultCharset()));
+            Assert.assertEquals(data, StringUtils.toString(got.getContent()));
             Assert.assertEquals(put.getEtag(), got.getObjectMeta().getEtags());
 
             GetObjectAclOutput gotAcl = client.getObjectAcl(Consts.bucket, key);
@@ -844,7 +842,7 @@ public class TOSV2ClientTest {
     void PutObjectPrivateACLTest(){
         String key = "object-acl-"+System.currentTimeMillis();
         try {
-            String data = RandomStringUtils.randomAlphanumeric(1024);
+            String data = StringUtils.randomString(1024);
             client.putObject(Consts.bucket, key, new ByteArrayInputStream(data.getBytes()));
             PutObjectAclInput input = new PutObjectAclInput().setKey(key)
                     .setAclGrant(new ObjectAclGrant().setAcl(ACLConst.ACL_PRIVATE));

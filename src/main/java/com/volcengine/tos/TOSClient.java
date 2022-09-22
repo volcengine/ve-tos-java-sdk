@@ -25,8 +25,7 @@ import com.volcengine.tos.session.SessionTransport;
 import com.volcengine.tos.transport.DefaultTransport;
 import com.volcengine.tos.internal.Transport;
 import com.volcengine.tos.transport.TransportConfig;
-import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.StringUtils;
+import com.volcengine.tos.internal.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,7 +44,7 @@ public class TOSClient implements TOS{
 
     private static final Logger LOG = LoggerFactory.getLogger(TOSClient.class);
 
-    private static final String VERSION = "v2.1.1";
+    private static final String VERSION = "v2.1.2";
     private static final String SDK_NAME = "ve-tos-java-sdk";
     private static final String USER_AGENT = String.format("%s/%s (%s/%s;%s)", SDK_NAME, VERSION,
             System.getProperty("os.name"), System.getProperty("os.arch"), System.getProperty("java.version", "0"));
@@ -155,7 +154,7 @@ public class TOSClient implements TOS{
         }
         try {
             if (res.getStatusCode() >= HttpStatus.BAD_REQUEST) {
-                String s = IOUtils.toString(res.getInputStream(), StandardCharsets.UTF_8);
+                String s = StringUtils.toString(res.getInputStream());
                 if (s.length() > 0) {
                     try{
                         ServerExceptionJson se = JSON.readValue(s, new TypeReference<ServerExceptionJson>(){});
@@ -246,7 +245,7 @@ public class TOSClient implements TOS{
         TosResponse res = roundTrip(req, HttpStatus.OK);
         GetBucketPolicyOutput ret = new GetBucketPolicyOutput().setRequestInfo(res.RequestInfo());
         try{
-            ret.setPolicy(IOUtils.toString(res.getInputStream(), StandardCharsets.UTF_8));
+            ret.setPolicy(StringUtils.toString(res.getInputStream()));
         } catch (IOException e) {
             throw new TosClientException("read bucket policy failed", e);
         }

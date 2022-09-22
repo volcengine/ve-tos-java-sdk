@@ -7,7 +7,7 @@ import com.volcengine.tos.comm.HttpStatus;
 import com.volcengine.tos.comm.common.ACLType;
 import com.volcengine.tos.comm.common.StorageClassType;
 import com.volcengine.tos.model.bucket.*;
-import org.apache.commons.lang3.RandomStringUtils;
+import com.volcengine.tos.internal.util.StringUtils;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
@@ -117,7 +117,7 @@ public class TosBucketRequestHandlerTest {
 
     @Test
     void bucketNameValidateTest() {
-        String longLengthBucketName = RandomStringUtils.randomAlphanumeric(64);
+        String longLengthBucketName = StringUtils.randomString(64);
         List<String> bucketNameInvalidList = Arrays.asList(null, "", "1", longLengthBucketName);
         for (String name :bucketNameInvalidList) {
             try{

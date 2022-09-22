@@ -12,7 +12,7 @@ import com.volcengine.tos.internal.model.UploadPartCopyOutputJson;
 import com.volcengine.tos.internal.util.ParamsChecker;
 import com.volcengine.tos.internal.util.PayloadConverter;
 import com.volcengine.tos.model.object.*;
-import org.apache.commons.lang3.StringUtils;
+import com.volcengine.tos.internal.util.StringUtils;
 
 import java.io.InputStream;
 import java.util.ArrayList;
