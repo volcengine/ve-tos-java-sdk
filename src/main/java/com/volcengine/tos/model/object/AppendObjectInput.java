@@ -1,6 +1,7 @@
 package com.volcengine.tos.model.object;
 
 import com.volcengine.tos.comm.event.DataTransferListener;
+import com.volcengine.tos.comm.ratelimit.RateLimiter;
 
 import java.io.InputStream;
 import java.util.Map;
@@ -19,6 +20,9 @@ public class AppendObjectInput {
     private DataTransferListener dataTransferListener;
 
     private String preHashCrc64ecma;
+
+    /** 客户端限速，单位 Byte/s **/
+    private RateLimiter rateLimiter;
 
     public Map<String, String> getAllSettedHeaders() {
         return Objects.isNull(options) ? null : options.headers();
@@ -96,6 +100,15 @@ public class AppendObjectInput {
         return this;
     }
 
+    public RateLimiter getRateLimiter() {
+        return rateLimiter;
+    }
+
+    public AppendObjectInput setRateLimiter(RateLimiter rateLimiter) {
+        this.rateLimiter = rateLimiter;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "AppendObjectInput{" +
@@ -107,6 +120,7 @@ public class AppendObjectInput {
                 ", options=" + options +
                 ", dataTransferListener=" + dataTransferListener +
                 ", preHashCrc64ecma='" + preHashCrc64ecma + '\'' +
+                ", rateLimit=" + rateLimiter +
                 '}';
     }
 
@@ -123,6 +137,7 @@ public class AppendObjectInput {
         private ObjectMetaRequestOptions options;
         private DataTransferListener dataTransferListener;
         private String preHashCrc64ecma;
+        private RateLimiter rateLimiter;
 
         private AppendObjectInputBuilder() {
         }
@@ -167,6 +182,11 @@ public class AppendObjectInput {
             return this;
         }
 
+        public AppendObjectInputBuilder rateLimit(RateLimiter rateLimiter) {
+            this.rateLimiter = rateLimiter;
+            return this;
+        }
+
         public AppendObjectInput build() {
             AppendObjectInput appendObjectInput = new AppendObjectInput();
             appendObjectInput.key = this.key;
@@ -176,6 +196,7 @@ public class AppendObjectInput {
             appendObjectInput.contentLength = this.contentLength;
             appendObjectInput.bucket = this.bucket;
             appendObjectInput.dataTransferListener = this.dataTransferListener;
+            appendObjectInput.rateLimiter = this.rateLimiter;
             appendObjectInput.options = this.options;
             return appendObjectInput;
         }

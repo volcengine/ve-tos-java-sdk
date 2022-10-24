@@ -129,13 +129,15 @@ public interface TOSV2 extends TOS {
      */
     GetObjectToFileOutput getObjectToFile(GetObjectToFileInput input) throws TosException;
 
-//    UploadFileOutput uploadFile(String bucket, UploadFileInput input) throws TosException;
+    UploadFileV2Output uploadFile(UploadFileV2Input input) throws TosException;
+
+    DownloadFileOutput downloadFile(DownloadFileInput input) throws TosException;
 
     /**
      * get metadata of an object with its data stream
      *
      * @param input set head object options
-     * @return {@link HeadObjectOutput}
+     * @return {@link HeadObjectV2Output}
      * @throws TosException
      */
     HeadObjectV2Output headObject(HeadObjectV2Input input) throws TosException;

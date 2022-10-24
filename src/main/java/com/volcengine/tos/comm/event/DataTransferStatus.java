@@ -3,6 +3,9 @@ package com.volcengine.tos.comm.event;
 public class DataTransferStatus {
     private long consumedBytes;
     private long totalBytes;
+    /**
+     * rwOnceBytes has value when DataTransferType is DATA_TRANSFER_RW
+     */
     private long rwOnceBytes;
     private DataTransferType type;
 
@@ -40,5 +43,15 @@ public class DataTransferStatus {
     public DataTransferStatus setType(DataTransferType type) {
         this.type = type;
         return this;
+    }
+
+    @Override
+    public String toString() {
+        return "DataTransferStatus{" +
+                "consumedBytes=" + consumedBytes +
+                ", totalBytes=" + totalBytes +
+                ", rwOnceBytes=" + rwOnceBytes +
+                ", type=" + type +
+                '}';
     }
 }

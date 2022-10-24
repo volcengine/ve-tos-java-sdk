@@ -11,14 +11,13 @@ import com.volcengine.tos.UnexpectedStatusCodeException;
 import com.volcengine.tos.comm.Code;
 import com.volcengine.tos.comm.HttpStatus;
 import com.volcengine.tos.internal.util.StringUtils;
+import com.volcengine.tos.internal.util.TosUtils;
 
 import java.io.IOException;
 import java.util.List;
 
 class RequestHandler {
     private Transport transport;
-    private static final ObjectMapper JSON = new ObjectMapper()
-            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
     RequestHandler(Transport transport) {
         this.transport = transport;
@@ -32,7 +31,7 @@ class RequestHandler {
             checkException(res);
             throw new UnexpectedStatusCodeException(res.getStatusCode(), expectedCode, res.getRequesID());
         } catch (IOException e) {
-            throw new TosClientException("close failed", e);
+            throw new TosClientException("tos: close body failed", e);
         }
     }
 
@@ -40,7 +39,7 @@ class RequestHandler {
         try (TosResponse res = doRequest(request, expectedCodes)) {
             return action.apply(res);
         } catch (IOException e) {
-            throw new TosClientException("close failed", e);
+            throw new TosClientException("tos: close body failed", e);
         }
     }
 
@@ -56,12 +55,11 @@ class RequestHandler {
     }
 
     private TosResponse doRequest(TosRequest request) throws TosException {
-        // add retries
         TosResponse res;
         try{
             res = transport.roundTrip(request);
         } catch (IOException e){
-            throw new TosClientException("request exception", e);
+            throw new TosClientException("tos: request exception", e);
         }
         return res;
     }
@@ -80,17 +78,17 @@ class RequestHandler {
         try{
             s = StringUtils.toString(res.getInputStream());
         } catch (IOException e) {
-            throw new TosClientException("read response body failed", e);
+            throw new TosClientException("tos: read response body failed", e);
         }
         if (s.length() > 0) {
             ServerExceptionJson se = null;
             try{
-                se = JSON.readValue(s, new TypeReference<ServerExceptionJson>(){});
+                se = TosUtils.JSON.readValue(s, new TypeReference<ServerExceptionJson>(){});
             } catch (JsonProcessingException e) {
                 if (res.getStatusCode() == HttpStatus.BAD_REQUEST) {
-                    throw new TosClientException("bad request" + s, null);
+                    throw new TosClientException("tos: bad request" + s, null);
                 }
-                throw new TosClientException("parse server exception failed"+ s, null);
+                throw new TosClientException("tos: parse server exception failed"+ s, null);
             }
             throw new TosServerException(res.getStatusCode(), se.getCode(), se.getMessage(), se.getRequestID(), se.getHostID());
         }

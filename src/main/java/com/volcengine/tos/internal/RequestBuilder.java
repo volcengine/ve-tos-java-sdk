@@ -2,6 +2,7 @@ package com.volcengine.tos.internal;
 
 import com.volcengine.tos.TosClientException;
 import com.volcengine.tos.auth.Signer;
+import com.volcengine.tos.comm.HttpMethod;
 import com.volcengine.tos.comm.TosHeader;
 import com.volcengine.tos.internal.model.HttpRange;
 import com.volcengine.tos.internal.util.StringUtils;
@@ -129,6 +130,12 @@ public class RequestBuilder {
                 }
             } else {
                 request.setContentLength(-1L);
+            }
+            if (StringUtils.equals(method, HttpMethod.PUT)) {
+                if (!stream.markSupported()) {
+                    request.setRetryableOnClientException(false);
+                    request.setRetryableOnServerException(false);
+                }
             }
         }
         return request;

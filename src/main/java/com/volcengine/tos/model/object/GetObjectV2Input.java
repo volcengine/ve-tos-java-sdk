@@ -2,6 +2,7 @@ package com.volcengine.tos.model.object;
 
 import com.volcengine.tos.comm.TosHeader;
 import com.volcengine.tos.comm.event.DataTransferListener;
+import com.volcengine.tos.comm.ratelimit.RateLimiter;
 import com.volcengine.tos.internal.util.DateConverter;
 
 import java.util.Collections;
@@ -27,6 +28,11 @@ public class GetObjectV2Input {
      * 进度条
      */
     private DataTransferListener dataTransferListener;
+
+    /**
+     * 客户端限速，单位 Byte/s
+     */
+    private RateLimiter rateLimiter;
 
     public String getBucket() {
         return bucket;
@@ -127,6 +133,15 @@ public class GetObjectV2Input {
         return this;
     }
 
+    public RateLimiter getRateLimiter() {
+        return rateLimiter;
+    }
+
+    public GetObjectV2Input setRateLimiter(RateLimiter rateLimiter) {
+        this.rateLimiter = rateLimiter;
+        return this;
+    }
+
     public Map<String, String> getAllSettedHeaders() {
         Map<String, String> allHeaders = new HashMap<>(options == null ? Collections.emptyMap() : options.headers());
         addRespHeaders(allHeaders);
@@ -168,6 +183,7 @@ public class GetObjectV2Input {
                 ", responseContentType='" + responseContentType + '\'' +
                 ", responseExpires=" + responseExpires +
                 ", dataTransferListener=" + dataTransferListener +
+                ", rateLimit=" + rateLimiter +
                 '}';
     }
 
@@ -187,6 +203,7 @@ public class GetObjectV2Input {
         private String responseContentType;
         private Date responseExpires;
         private DataTransferListener dataTransferListener;
+        private RateLimiter rateLimiter;
 
         private GetObjectV2InputBuilder() {
         }
@@ -246,6 +263,11 @@ public class GetObjectV2Input {
             return this;
         }
 
+        public GetObjectV2InputBuilder rateLimiter(RateLimiter rateLimiter) {
+            this.rateLimiter = rateLimiter;
+            return this;
+        }
+
         public GetObjectV2Input build() {
             GetObjectV2Input getObjectV2Input = new GetObjectV2Input();
             getObjectV2Input.bucket = this.bucket;
@@ -259,6 +281,7 @@ public class GetObjectV2Input {
             getObjectV2Input.responseContentEncoding = this.responseContentEncoding;
             getObjectV2Input.responseContentLanguage = this.responseContentLanguage;
             getObjectV2Input.responseExpires = this.responseExpires;
+            getObjectV2Input.rateLimiter = this.rateLimiter;
             return getObjectV2Input;
         }
     }

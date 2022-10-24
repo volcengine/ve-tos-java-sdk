@@ -1,8 +1,10 @@
 package com.volcengine.tos.internal;
 
+import com.volcengine.tos.comm.event.DataTransferListener;
 import com.volcengine.tos.comm.io.TosRepeatableBoundedFileInputStream;
 import com.volcengine.tos.comm.io.TosRepeatableFileInputStream;
 import com.volcengine.tos.comm.io.TosRepeatableInputStream;
+import com.volcengine.tos.comm.ratelimit.RateLimiter;
 import com.volcengine.tos.internal.util.StringUtils;
 import com.volcengine.tos.internal.util.TosUtils;
 import okhttp3.HttpUrl;
@@ -16,8 +18,21 @@ public class TosRequest {
     private String method;
     private String host;
     private String path;
+    private int port;
     private long contentLength;
+    private boolean retryableOnClientException;
+    private boolean retryableOnServerException;
+    /**
+     * only used for putObject/uploadPart/appendObject
+     */
+    private boolean enableCrcCheck;
+    /**
+     * only used for appendObject
+     */
+    private long crc64InitValue;
     private transient InputStream content;
+    private RateLimiter rateLimiter;
+    private DataTransferListener dataTransferListener;
     private Map<String, String> headers = Collections.emptyMap();
     private Map<String, String> query = Collections.emptyMap();
 
@@ -54,6 +69,9 @@ public class TosRequest {
         }
         this.query = query;
         this.headers = headers;
+        // default retry
+        this.retryableOnClientException = true;
+        this.retryableOnServerException = true;
     }
 
     public HttpUrl toURL() {
@@ -66,7 +84,11 @@ public class TosRequest {
         }
         // path 带了'/'，addPathSegment 会自动添加'/'，因此这里移除之
         String escapePath = StringUtils.removeStart(path, "/");
-        return builder.scheme(scheme).host(host).addPathSegment(escapePath).build();
+        builder = builder.scheme(scheme).host(host).addPathSegment(escapePath);
+        if (port != 0) {
+            builder.port(port);
+        }
+        return builder.build();
     }
 
     public String getScheme() {
@@ -147,6 +169,69 @@ public class TosRequest {
 
     public TosRequest setData(byte[] data) {
         this.data = data;
+        return this;
+    }
+
+    public int getPort() {
+        return port;
+    }
+
+    public TosRequest setPort(int port) {
+        this.port = port;
+        return this;
+    }
+
+    public boolean isRetryableOnClientException() {
+        return retryableOnClientException;
+    }
+
+    public TosRequest setRetryableOnClientException(boolean retryableOnClientException) {
+        this.retryableOnClientException = retryableOnClientException;
+        return this;
+    }
+
+    public boolean isRetryableOnServerException() {
+        return retryableOnServerException;
+    }
+
+    public TosRequest setRetryableOnServerException(boolean retryableOnServerException) {
+        this.retryableOnServerException = retryableOnServerException;
+        return this;
+    }
+
+    public boolean isEnableCrcCheck() {
+        return enableCrcCheck;
+    }
+
+    public TosRequest setEnableCrcCheck(boolean enableCrcCheck) {
+        this.enableCrcCheck = enableCrcCheck;
+        return this;
+    }
+
+    public long getCrc64InitValue() {
+        return crc64InitValue;
+    }
+
+    public TosRequest setCrc64InitValue(long crc64InitValue) {
+        this.crc64InitValue = crc64InitValue;
+        return this;
+    }
+
+    public RateLimiter getRateLimiter() {
+        return rateLimiter;
+    }
+
+    public TosRequest setRateLimiter(RateLimiter rateLimiter) {
+        this.rateLimiter = rateLimiter;
+        return this;
+    }
+
+    public DataTransferListener getDataTransferListener() {
+        return dataTransferListener;
+    }
+
+    public TosRequest setDataTransferListener(DataTransferListener dataTransferListener) {
+        this.dataTransferListener = dataTransferListener;
         return this;
     }
 }

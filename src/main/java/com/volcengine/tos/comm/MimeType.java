@@ -31,7 +31,7 @@ public class MimeType {
                 mimetype.loadMimetypesFromFile(mimeTypesStream);
             }
         } catch (IOException e) {
-            throw new TosClientException("failed to load mime types from file", e);
+            throw new TosClientException("tos: failed to load mime types from file", e);
         }
         return mimetype;
     }
