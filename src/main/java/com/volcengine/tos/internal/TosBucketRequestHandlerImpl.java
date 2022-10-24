@@ -27,7 +27,7 @@ public class TosBucketRequestHandlerImpl implements TosBucketRequestHandler {
 
     @Override
     public CreateBucketV2Output createBucket(CreateBucketV2Input input) throws TosException {
-        ParamsChecker.isValidInput(input, "CreateBucketV2Input");
+        ParamsChecker.ensureNotNull(input, "CreateBucketV2Input");
         ParamsChecker.isValidBucketName(input.getBucket());
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null)
                 .withHeader(TosHeader.HEADER_ACL, input.getAcl() == null ? null : input.getAcl().toString())
@@ -37,14 +37,14 @@ public class TosBucketRequestHandlerImpl implements TosBucketRequestHandler {
                 .withHeader(TosHeader.HEADER_GRANT_WRITE, input.getGrantWrite())
                 .withHeader(TosHeader.HEADER_GRANT_WRITE_ACP, input.getGrantWriteAcp())
                 .withHeader(TosHeader.HEADER_STORAGE_CLASS, input.getStorageClass() == null ? null : input.getStorageClass().toString());
-        TosRequest req = this.factory.build(builder, HttpMethod.PUT, null);
+        TosRequest req = this.factory.build(builder, HttpMethod.PUT, null).setRetryableOnClientException(false);
         return bucketHandler.doRequest(req, HttpStatus.OK, res -> new CreateBucketV2Output(res.RequestInfo(),
                         res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_LOCATION)));
     }
 
     @Override
     public HeadBucketV2Output headBucket(HeadBucketV2Input input) throws TosException {
-        ParamsChecker.isValidInput(input, "HeadBucketInput");
+        ParamsChecker.ensureNotNull(input, "HeadBucketInput");
         ParamsChecker.isValidBucketName(input.getBucket());
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null);
         TosRequest req = this.factory.build(builder, HttpMethod.HEAD, null);
@@ -56,16 +56,16 @@ public class TosBucketRequestHandlerImpl implements TosBucketRequestHandler {
 
     @Override
     public DeleteBucketOutput deleteBucket(DeleteBucketInput input) throws TosException {
-        ParamsChecker.isValidInput(input, "DeleteBucketInput");
+        ParamsChecker.ensureNotNull(input, "DeleteBucketInput");
         ParamsChecker.isValidBucketName(input.getBucket());
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null);
-        TosRequest req = this.factory.build(builder, HttpMethod.DELETE, null);
+        TosRequest req = this.factory.build(builder, HttpMethod.DELETE, null).setRetryableOnClientException(false);
         return bucketHandler.doRequest(req, HttpStatus.NO_CONTENT, res -> new DeleteBucketOutput(res.RequestInfo()));
     }
 
     @Override
     public ListBucketsV2Output listBuckets(ListBucketsV2Input input) throws TosException {
-        ParamsChecker.isValidInput(input, "ListBucketsV2Input");
+        ParamsChecker.ensureNotNull(input, "ListBucketsV2Input");
         RequestBuilder builder = this.factory.init("", "", null);
         TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
         return bucketHandler.doRequest(req, HttpStatus.OK,
@@ -75,8 +75,8 @@ public class TosBucketRequestHandlerImpl implements TosBucketRequestHandler {
 
     @Override
     public PutBucketPolicyOutput putBucketPolicy(PutBucketPolicyInput input) throws TosException {
-        ParamsChecker.isValidInput(input, "PutBucketPolicyInput");
-        ParamsChecker.isValidInput(input.getPolicy(), "policy");
+        ParamsChecker.ensureNotNull(input, "PutBucketPolicyInput");
+        ParamsChecker.ensureNotNull(input.getPolicy(), "policy");
         ParamsChecker.isValidBucketName(input.getBucket());
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("policy", "");
         TosRequest req = this.factory.build(builder, HttpMethod.PUT,
@@ -87,7 +87,7 @@ public class TosBucketRequestHandlerImpl implements TosBucketRequestHandler {
 
     @Override
     public GetBucketPolicyOutput getBucketPolicy(GetBucketPolicyInput input) throws TosException {
-        ParamsChecker.isValidInput(input, "GetBucketPolicyInput");
+        ParamsChecker.ensureNotNull(input, "GetBucketPolicyInput");
         ParamsChecker.isValidBucketName(input.getBucket());
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("policy", "");
         TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
@@ -96,7 +96,7 @@ public class TosBucketRequestHandlerImpl implements TosBucketRequestHandler {
             try{
                 ret.setPolicy(StringUtils.toString(res.getInputStream()));
             } catch (IOException e) {
-                throw new TosClientException("read bucket policy failed", e);
+                throw new TosClientException("tos: read bucket policy failed", e);
             }
             return ret;
         });
@@ -104,7 +104,7 @@ public class TosBucketRequestHandlerImpl implements TosBucketRequestHandler {
 
     @Override
     public DeleteBucketPolicyOutput deleteBucketPolicy(DeleteBucketPolicyInput input) throws TosException {
-        ParamsChecker.isValidInput(input, "DeleteBucketPolicyInput");
+        ParamsChecker.ensureNotNull(input, "DeleteBucketPolicyInput");
         ParamsChecker.isValidBucketName(input.getBucket());
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("policy", "");
         TosRequest req = this.factory.build(builder, HttpMethod.DELETE, null);

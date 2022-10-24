@@ -10,7 +10,7 @@ public class StringUtils {
     private static final String ALPHANUMERIC_STR="0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
     public static String removeStart(String str, String remove) {
-        if (!isEmpty(str) && !isEmpty(remove)) {
+        if (isNotEmpty(str) && isNotEmpty(remove)) {
             return str.startsWith(remove) ? str.substring(remove.length()) : str;
         } else {
             return str;

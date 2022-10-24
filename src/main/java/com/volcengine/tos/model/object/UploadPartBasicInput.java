@@ -1,6 +1,7 @@
 package com.volcengine.tos.model.object;
 
 import com.volcengine.tos.comm.event.DataTransferListener;
+import com.volcengine.tos.comm.ratelimit.RateLimiter;
 
 import java.util.Map;
 
@@ -13,6 +14,9 @@ public class UploadPartBasicInput {
     private ObjectMetaRequestOptions options;
 
     private DataTransferListener dataTransferListener;
+
+    /** 客户端限速，单位 KB/s **/
+    private RateLimiter rateLimiter;
 
     public String getBucket() {
         return bucket;
@@ -63,6 +67,15 @@ public class UploadPartBasicInput {
         return this;
     }
 
+    public RateLimiter getRateLimiter() {
+        return rateLimiter;
+    }
+
+    public UploadPartBasicInput setRateLimiter(RateLimiter rateLimiter) {
+        this.rateLimiter = rateLimiter;
+        return this;
+    }
+
     public UploadPartBasicInput setDataTransferListener(DataTransferListener dataTransferListener) {
         this.dataTransferListener = dataTransferListener;
         return this;
@@ -81,6 +94,7 @@ public class UploadPartBasicInput {
                 ", partNumber=" + partNumber +
                 ", options=" + options +
                 ", dataTransferListener=" + dataTransferListener +
+                ", rateLimit=" + rateLimiter +
                 '}';
     }
 
@@ -95,6 +109,7 @@ public class UploadPartBasicInput {
         private int partNumber;
         private ObjectMetaRequestOptions options;
         private DataTransferListener dataTransferListener;
+        private RateLimiter rateLimiter;
 
         private UploadPartBasicInputBuilder() {
         }
@@ -129,6 +144,11 @@ public class UploadPartBasicInput {
             return this;
         }
 
+        public UploadPartBasicInputBuilder rateLimiter(RateLimiter rateLimiter) {
+            this.rateLimiter = rateLimiter;
+            return this;
+        }
+
         public UploadPartBasicInput build() {
             UploadPartBasicInput uploadPartBasicInput = new UploadPartBasicInput();
             uploadPartBasicInput.bucket = this.bucket;
@@ -137,6 +157,7 @@ public class UploadPartBasicInput {
             uploadPartBasicInput.key = this.key;
             uploadPartBasicInput.uploadID = this.uploadID;
             uploadPartBasicInput.options = this.options;
+            uploadPartBasicInput.rateLimiter = this.rateLimiter;
             return uploadPartBasicInput;
         }
     }

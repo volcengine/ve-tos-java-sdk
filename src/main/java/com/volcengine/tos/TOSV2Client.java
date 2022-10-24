@@ -38,9 +38,9 @@ public class TOSV2Client implements TOSV2 {
     }
 
     private void validateAndInitConfig(TOSClientConfiguration conf) {
-        ParamsChecker.isValidInput(conf, "TOSClientConfiguration");
-        ParamsChecker.isValidInput(conf.getRegion(), "region");
-        ParamsChecker.isValidInput(conf.getCredentials(), "credentials");
+        ParamsChecker.ensureNotNull(conf, "TOSClientConfiguration");
+        ParamsChecker.ensureNotNull(conf.getRegion(), "region");
+        ParamsChecker.ensureNotNull(conf.getCredentials(), "credentials");
         this.config = conf;
         if (StringUtils.isEmpty(this.config.getEndpoint())) {
             if (TosUtils.getSupportedRegion().containsKey(this.config.getRegion())) {
@@ -63,8 +63,10 @@ public class TOSV2Client implements TOSV2 {
         }
         this.bucketRequestHandler = new TosBucketRequestHandlerImpl(this.transport, this.factory);
         this.objectRequestHandler = new TosObjectRequestHandlerImpl(this.transport, this.factory)
-                .setClientAutoRecognizeContentType(this.config.isClientAutoRecognizeContentType());
-        this.fileRequestHandler = new TosFileRequestHandlerImpl(objectRequestHandler, this.transport, this.factory);
+                .setClientAutoRecognizeContentType(this.config.isClientAutoRecognizeContentType())
+                .setEnableCrcCheck(this.config.isEnableCrc());
+        this.fileRequestHandler = new TosFileRequestHandlerImpl(objectRequestHandler, this.transport, this.factory)
+                .setEnableCrcCheck(this.config.isEnableCrc());
     }
 
     private void initV1Client() {
@@ -145,10 +147,15 @@ public class TOSV2Client implements TOSV2 {
         return fileRequestHandler.getObjectToFile(input);
     }
 
-//    @Override
-//    public UploadFileOutput uploadFile(String bucket, UploadFileInput input) throws TosException {
-//        return null;
-//    }
+    @Override
+    public UploadFileV2Output uploadFile(UploadFileV2Input input) throws TosException {
+        return fileRequestHandler.uploadFile(input);
+    }
+
+    @Override
+    public DownloadFileOutput downloadFile(DownloadFileInput input) throws TosException {
+        return fileRequestHandler.downloadFile(input);
+    }
 
     @Override
     public HeadObjectV2Output headObject(HeadObjectV2Input input) throws TosException {
@@ -252,7 +259,7 @@ public class TOSV2Client implements TOSV2 {
 
     @Override
     public PreSignedURLOutput preSignedURL(PreSignedURLInput input) throws TosException {
-        ParamsChecker.isValidInput(input, "PreSignedURLInput");
+        ParamsChecker.ensureNotNull(input, "PreSignedURLInput");
         ParamsChecker.isValidBucketNameAndKey(input.getBucket(), input.getKey());
         RequestBuilder builder = this.factory.init(input.getBucket(), "", input.getHeader());
         if (input.getQuery() != null) {

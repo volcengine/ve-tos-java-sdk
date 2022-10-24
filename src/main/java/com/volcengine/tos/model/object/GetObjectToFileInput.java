@@ -44,6 +44,10 @@ public class GetObjectToFileInput {
         return this;
     }
 
+    public static GetObjectToFileInputBuilder builder() {
+        return new GetObjectToFileInputBuilder();
+    }
+
     @Override
     public String toString() {
         return "GetObjectToFileInput{" +
@@ -59,10 +63,6 @@ public class GetObjectToFileInput {
         private File file;
 
         private GetObjectToFileInputBuilder() {
-        }
-
-        public static GetObjectToFileInputBuilder aGetObjectToFileInput() {
-            return new GetObjectToFileInputBuilder();
         }
 
         public GetObjectToFileInputBuilder getObjectInputV2(GetObjectV2Input getObjectInputV2) {

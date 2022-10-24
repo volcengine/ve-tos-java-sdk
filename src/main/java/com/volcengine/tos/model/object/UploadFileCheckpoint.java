@@ -1,6 +1,8 @@
 package com.volcengine.tos.model.object;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.volcengine.tos.TosClientException;
 import com.volcengine.tos.internal.util.StringUtils;
 
 import java.io.FileOutputStream;
@@ -8,6 +10,7 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.util.List;
 
+@Deprecated
 public class UploadFileCheckpoint implements Serializable{
     private String bucket;
     private String key;
@@ -31,9 +34,10 @@ public class UploadFileCheckpoint implements Serializable{
     }
 
     public synchronized void writeToFile(String checkpointFile, ObjectMapper om) throws IOException {
-        try(FileOutputStream fos = new FileOutputStream(checkpointFile))
-        {
+        try(FileOutputStream fos = new FileOutputStream(checkpointFile)) {
             fos.write(om.writeValueAsBytes(this));
+        } catch (JsonProcessingException e) {
+            throw new TosClientException("tos: unable to do serialization", e);
         }
     }
 

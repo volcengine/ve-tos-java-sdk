@@ -34,6 +34,7 @@ public interface HttpStatus {
     int UNPROCESSABLE_ENTITY = 422;
     int LOCKED = 423;
     int FAILED_DEPENDENCY = 424;
+    int TOO_MANY_REQUESTS = 429;
     int INTERNAL_SERVER_ERROR = 500;
     int NOT_IMPLEMENTED = 501;
     int BAD_GATEWAY = 502;

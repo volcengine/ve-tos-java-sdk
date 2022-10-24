@@ -30,7 +30,11 @@ public class TosBucketRequestHandlerTest {
         } catch (Exception e) {
             testFailed(e);
         } finally{
-            getHandler().deleteBucket(DeleteBucketInput.builder().bucket(bucketName).build());
+            try{
+                getHandler().deleteBucket(DeleteBucketInput.builder().bucket(bucketName).build());
+            } catch (TosException e) {
+                // ignore
+            }
         }
     }
 

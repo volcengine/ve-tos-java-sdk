@@ -44,7 +44,7 @@ public class TOSClient implements TOS{
 
     private static final Logger LOG = LoggerFactory.getLogger(TOSClient.class);
 
-    private static final String VERSION = "v2.1.2";
+    private static final String VERSION = "v2.2.0";
     private static final String SDK_NAME = "ve-tos-java-sdk";
     private static final String USER_AGENT = String.format("%s/%s (%s/%s;%s)", SDK_NAME, VERSION,
             System.getProperty("os.name"), System.getProperty("os.arch"), System.getProperty("java.version", "0"));
@@ -158,11 +158,11 @@ public class TOSClient implements TOS{
                 if (s.length() > 0) {
                     try{
                         ServerExceptionJson se = JSON.readValue(s, new TypeReference<ServerExceptionJson>(){});
+                        throw new TosServerException(res.getStatusCode(), se.getCode(), se.getMessage(), se.getRequestID(), se.getHostID());
+                    } catch (JsonProcessingException e) {
                         if (res.getStatusCode() == HttpStatus.BAD_REQUEST) {
                             throw new TosClientException("bad request, " + s, null);
                         }
-                        throw new TosServerException(res.getStatusCode(), se.getCode(), se.getMessage(), se.getRequestID(), se.getHostID());
-                    } catch (JsonProcessingException e) {
                         throw new TosClientException("parse server exception failed", e);
                     }
                 }
@@ -363,7 +363,7 @@ public class TOSClient implements TOS{
         isValidBucketName(bucket);
         isValidKey(input.getObjectKey());
 
-        if (input.getPartSize() < Consts.MIN_PART_SIZE || input.getPartSize() > Consts.MIN_PART_SIZE * 1024L) {
+        if (input.getPartSize() < Consts.MIN_PART_SIZE || input.getPartSize() > Consts.MAX_PART_SIZE) {
             throw new IllegalArgumentException("The input part size is invalid, please set it range from 5MB to 5GB");
         }
         if (input.getTaskNum() > 1000) {
