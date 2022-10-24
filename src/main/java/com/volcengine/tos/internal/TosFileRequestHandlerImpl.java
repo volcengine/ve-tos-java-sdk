@@ -2,16 +2,22 @@ package com.volcengine.tos.internal;
 
 import com.volcengine.tos.TosClientException;
 import com.volcengine.tos.TosException;
+import com.volcengine.tos.internal.model.CRC64Checksum;
+import com.volcengine.tos.internal.taskman.DownloadFileTaskHandler;
+import com.volcengine.tos.internal.taskman.UploadFileTaskHandler;
 import com.volcengine.tos.internal.util.FileUtils;
 import com.volcengine.tos.internal.util.ParamsChecker;
+import com.volcengine.tos.internal.util.StringUtils;
 import com.volcengine.tos.model.object.*;
 
 import java.io.*;
+import java.util.zip.CheckedInputStream;
 
 public class TosFileRequestHandlerImpl implements TosFileRequestHandler {
     private RequestHandler fileHandler;
     private TosObjectRequestHandler objectHandler;
     private TosRequestFactory factory;
+    private boolean enableCrcCheck;
 
     public TosFileRequestHandlerImpl(TosObjectRequestHandler objectHandler, Transport transport,
                                      TosRequestFactory factory) {
@@ -20,37 +26,69 @@ public class TosFileRequestHandlerImpl implements TosFileRequestHandler {
         this.factory = factory;
     }
 
+    public TosFileRequestHandlerImpl setEnableCrcCheck(boolean enableCrcCheck) {
+        this.enableCrcCheck = enableCrcCheck;
+        return this;
+    }
+
     @Override
     public GetObjectToFileOutput getObjectToFile(GetObjectToFileInput input) throws TosException {
-        ParamsChecker.isValidInput(input, "GetObjectToFileInput");
+        ParamsChecker.ensureNotNull(input, "GetObjectToFileInput");
         GetObjectV2Output output = objectHandler.getObject(input.getGetObjectInputV2());
+        String filePath = getFilePath(input);
+        String newFilePath = FileUtils.parseFilePath(filePath, input.getGetObjectInputV2().getKey());
+        if (StringUtils.isEmpty(newFilePath)) {
+            // the key ends with "/", need to download a directory
+            return null;
+        }
+        File srcFile = new File(newFilePath);
+        File tmpFile = new File(newFilePath + Consts.TEMP_FILE_SUFFIX);
         if (output.getContent() != null) {
-            File file = input.getFile();
-            if (file == null) {
-                file = new File(input.getFilePath());
-            }
-            try(FileOutputStream writer = new FileOutputStream(file)) {
+            try(FileOutputStream writer = new FileOutputStream(tmpFile);
+                InputStream inputStream = this.enableCrcCheck ?
+                        new CheckedInputStream(output.getContent(), new CRC64Checksum()) : output.getContent()) {
                 int once = 0;
                 byte[] buffer = new byte[4096];
-                InputStream inputStream = output.getContent();
                 while ((once = inputStream.read(buffer)) > 0) {
                     writer.write(buffer, 0, once);
                 }
             } catch (IOException e) {
-                throw new TosClientException("write data to local file failed", e);
+                throw new TosClientException("tos: write data to local file failed", e);
             }
+        } else {
+            try{
+                tmpFile.createNewFile();
+            } catch (IOException e) {
+                throw new TosClientException("tos: create new local file failed", e);
+            }
+        }
+        if (!tmpFile.renameTo(srcFile)) {
+            throw new TosClientException("tos: move temp file to dst file failed, src: " + tmpFile.getPath()
+                    + ", dst: " + srcFile.getPath(), null);
         }
         return new GetObjectToFileOutput(output.getGetObjectBasicOutput());
     }
 
+    private String getFilePath(GetObjectToFileInput input) {
+        String filePath = input.getFilePath();
+        if (StringUtils.isEmpty(filePath)) {
+            File file = input.getFile();
+            if (file == null) {
+                throw new TosClientException("tos: file path is null", null);
+            }
+            filePath = file.getPath();
+        }
+        return filePath;
+    }
+
     @Override
     public PutObjectFromFileOutput putObjectFromFile(PutObjectFromFileInput input) throws TosException {
-        ParamsChecker.isValidInput(input, "PutObjectFromFileInput");
+        ParamsChecker.ensureNotNull(input, "PutObjectFromFileInput");
         InputStream content = null;
         try{
             content = FileUtils.getFileContent(input.getFileInputStream(), input.getFile(), input.getFilePath());
         } catch (FileNotFoundException e) {
-            throw new TosClientException("get file content failed", e);
+            throw new TosClientException("tos: get file content failed", e);
         }
         PutObjectOutput putObjectOutput = objectHandler.putObject(PutObjectInput.builder()
                 .putObjectBasicInput(input.getPutObjectBasicInput())
@@ -61,13 +99,13 @@ public class TosFileRequestHandlerImpl implements TosFileRequestHandler {
 
     @Override
     public UploadPartFromFileOutput uploadPartFromFile(UploadPartFromFileInput input) throws TosException {
-        ParamsChecker.isValidInput(input, "UploadPartFromFileInput");
+        ParamsChecker.ensureNotNull(input, "UploadPartFromFileInput");
         InputStream content = null;
         try{
             content = FileUtils.getBoundedFileContent(input.getFileInputStream(), input.getFile(),
                     input.getFilePath(), input.getOffset(), input.getPartSize());
         } catch (IOException e) {
-            throw new TosClientException("get file content failed", e);
+            throw new TosClientException("tos: get file content failed", e);
         }
         UploadPartV2Output uploadPartV2Output = objectHandler.uploadPart(UploadPartV2Input.builder()
                 .uploadPartBasicInput(input.getUploadPartBasicInput())
@@ -75,5 +113,21 @@ public class TosFileRequestHandlerImpl implements TosFileRequestHandler {
                 .contentLength(input.getPartSize())
                 .build());
         return new UploadPartFromFileOutput(uploadPartV2Output);
+    }
+
+    @Override
+    public UploadFileV2Output uploadFile(UploadFileV2Input input) throws TosException {
+        UploadFileTaskHandler handler = new UploadFileTaskHandler(input, this.objectHandler, this.enableCrcCheck);
+        handler.initTask();
+        handler.dispatch();
+        return handler.handle();
+    }
+
+    @Override
+    public DownloadFileOutput downloadFile(DownloadFileInput input) throws TosException {
+        DownloadFileTaskHandler handler = new DownloadFileTaskHandler(input, this.objectHandler, this.enableCrcCheck);
+        handler.initTask();
+        handler.dispatch();
+        return handler.handle();
     }
 }

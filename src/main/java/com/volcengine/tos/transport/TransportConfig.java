@@ -51,6 +51,11 @@ public class TransportConfig {
      */
     private int dnsCacheTimeMills;
 
+    /**
+     * 最大重试次数，默认为 3 次
+     */
+    private int maxRetryCount;
+
     public int getMaxConnections() {
         return maxConnections;
     }
@@ -150,6 +155,15 @@ public class TransportConfig {
         return this;
     }
 
+    public int getMaxRetryCount() {
+        return maxRetryCount;
+    }
+
+    public TransportConfig setMaxRetryCount(int maxRetryCount) {
+        this.maxRetryCount = maxRetryCount;
+        return this;
+    }
+
     public static TransportConfigBuilder builder() {
         return new TransportConfigBuilder();
     }
@@ -166,6 +180,7 @@ public class TransportConfig {
         private String proxyPassword;
         private boolean enableVerifySSL;
         private int dnsCacheTimeMills;
+        private int maxRetryCount;
 
         private TransportConfigBuilder() {
             this.maxConnections = 1024;
@@ -231,6 +246,11 @@ public class TransportConfig {
             return this;
         }
 
+        public TransportConfigBuilder maxRetryCount(int maxRetryCounts) {
+            this.maxRetryCount = maxRetryCounts;
+            return this;
+        }
+
         public TransportConfig build() {
             TransportConfig transportConfig = new TransportConfig();
             transportConfig.setMaxConnections(maxConnections);
@@ -244,6 +264,7 @@ public class TransportConfig {
             transportConfig.setProxyPassword(proxyPassword);
             transportConfig.setEnableVerifySSL(enableVerifySSL);
             transportConfig.setDnsCacheTimeMills(dnsCacheTimeMills);
+            transportConfig.setMaxRetryCount(maxRetryCount);
             return transportConfig;
         }
     }

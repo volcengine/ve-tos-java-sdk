@@ -9,6 +9,9 @@ public class PutObjectFromFileInput {
     private File file;
     private FileInputStream fileInputStream;
 
+    public PutObjectFromFileInput() {
+    }
+
     public PutObjectFromFileInput(PutObjectBasicInput putObjectBasicInput, String filePath) {
         this.putObjectBasicInput = putObjectBasicInput;
         this.filePath = filePath;
@@ -66,7 +69,49 @@ public class PutObjectFromFileInput {
                 "putObjectBasicInput=" + putObjectBasicInput +
                 ", filePath='" + filePath + '\'' +
                 ", file=" + file +
-                ", fileInputStream=" + fileInputStream +
                 '}';
+    }
+
+    public static PutObjectFromFileInputBuilder builder() {
+        return new PutObjectFromFileInputBuilder();
+    }
+
+    public static final class PutObjectFromFileInputBuilder {
+        private PutObjectBasicInput putObjectBasicInput;
+        private String filePath;
+        private File file;
+        private FileInputStream fileInputStream;
+
+        private PutObjectFromFileInputBuilder() {
+        }
+
+        public PutObjectFromFileInputBuilder putObjectBasicInput(PutObjectBasicInput putObjectBasicInput) {
+            this.putObjectBasicInput = putObjectBasicInput;
+            return this;
+        }
+
+        public PutObjectFromFileInputBuilder filePath(String filePath) {
+            this.filePath = filePath;
+            return this;
+        }
+
+        public PutObjectFromFileInputBuilder file(File file) {
+            this.file = file;
+            return this;
+        }
+
+        public PutObjectFromFileInputBuilder fileInputStream(FileInputStream fileInputStream) {
+            this.fileInputStream = fileInputStream;
+            return this;
+        }
+
+        public PutObjectFromFileInput build() {
+            PutObjectFromFileInput putObjectFromFileInput = new PutObjectFromFileInput();
+            putObjectFromFileInput.setPutObjectBasicInput(putObjectBasicInput);
+            putObjectFromFileInput.setFilePath(filePath);
+            putObjectFromFileInput.setFile(file);
+            putObjectFromFileInput.setFileInputStream(fileInputStream);
+            return putObjectFromFileInput;
+        }
     }
 }

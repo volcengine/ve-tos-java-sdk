@@ -290,6 +290,164 @@ public class ObjectMetaRequestOptions {
         return TypeConverter.convertStorageClassType(headers.get(TosHeader.HEADER_STORAGE_CLASS));
     }
 
+    public ObjectMetaRequestOptions setCacheControl(String cacheControl) {
+        withHeader(TosHeader.HEADER_CACHE_CONTROL, cacheControl);
+        return this;
+    }
+
+    public ObjectMetaRequestOptions setContentDisposition(String contentDisposition) {
+        withHeader(TosHeader.HEADER_CONTENT_DISPOSITION, contentDisposition);
+        return this;
+    }
+
+    public ObjectMetaRequestOptions setContentEncoding(String contentEncoding) {
+        withHeader(TosHeader.HEADER_CONTENT_ENCODING, contentEncoding);
+        return this;
+    }
+
+    public ObjectMetaRequestOptions setContentLanguage(String contentLanguage) {
+        withHeader(TosHeader.HEADER_CONTENT_LANGUAGE, contentLanguage);
+        return this;
+    }
+
+    public ObjectMetaRequestOptions setContentType(String contentType) {
+        withHeader(TosHeader.HEADER_CONTENT_TYPE, contentType);
+        return this;
+    }
+
+    public ObjectMetaRequestOptions setExpires(Date expires) {
+        if (expires == null) {
+            return this;
+        }
+        withHeader(TosHeader.HEADER_EXPIRES, DateConverter.dateToRFC1123String(expires));
+        return this;
+    }
+
+    public ObjectMetaRequestOptions setIfMatch(String ifMatch) {
+        withHeader(TosHeader.HEADER_IF_MATCH, ifMatch);
+        return this;
+    }
+
+    public ObjectMetaRequestOptions setIfModifiedSince(Date ifModifiedSince) {
+        if (ifModifiedSince == null) {
+            return this;
+        }
+        withHeader(TosHeader.HEADER_IF_MODIFIED_SINCE, DateConverter.dateToRFC1123String(ifModifiedSince));
+        return this;
+    }
+
+    public ObjectMetaRequestOptions setIfNoneMatch(String ifNoneMatch) {
+        withHeader(TosHeader.HEADER_IF_NONE_MATCH, ifNoneMatch);
+        return this;
+    }
+
+    public ObjectMetaRequestOptions setIfUnmodifiedSince(Date ifUnmodifiedSince) {
+        if (ifUnmodifiedSince == null) {
+            return this;
+        }
+        withHeader(TosHeader.HEADER_IF_UNMODIFIED_SINCE, DateConverter.dateToRFC1123String(ifUnmodifiedSince));
+        return this;
+    }
+
+    public ObjectMetaRequestOptions setContentLength(long contentLength) {
+        withHeader(TosHeader.HEADER_CONTENT_LENGTH, String.valueOf(contentLength));
+        return this;
+    }
+
+    public ObjectMetaRequestOptions setContentMD5(String contentMD5) {
+        withHeader(TosHeader.HEADER_CONTENT_MD5, contentMD5);
+        return this;
+    }
+
+    public ObjectMetaRequestOptions setRange(long rangeStart, long rangeEnd) {
+        withHeader(TosHeader.HEADER_RANGE, new HttpRange().setStart(rangeStart).setEnd(rangeEnd).toString());
+        return this;
+    }
+
+    public ObjectMetaRequestOptions setCustomMetadata(Map<String, String> customMetadata) {
+        this.customMetadata = customMetadata;
+        return this;
+    }
+
+    public ObjectMetaRequestOptions setAclType(ACLType aclType) {
+        withHeader(TosHeader.HEADER_ACL, aclType == null ? null : aclType.toString());
+        return this;
+    }
+
+    public ObjectMetaRequestOptions setGrantFullControl(String grantFullControl) {
+        withHeader(TosHeader.HEADER_GRANT_FULL_CONTROL, grantFullControl);
+        return this;
+    }
+
+    public ObjectMetaRequestOptions setGrantRead(String grantRead) {
+        withHeader(TosHeader.HEADER_GRANT_READ, grantRead);
+        return this;
+    }
+
+    public ObjectMetaRequestOptions setGrantReadAcp(String grantReadAcp) {
+        withHeader(TosHeader.HEADER_GRANT_READ_ACP, grantReadAcp);
+        return this;
+    }
+
+    public ObjectMetaRequestOptions setGrantWrite(String grantWrite) {
+        withHeader(TosHeader.HEADER_GRANT_WRITE, grantWrite);
+        return this;
+    }
+
+    public ObjectMetaRequestOptions setGrantWriteAcp(String grantWriteAcp) {
+        withHeader(TosHeader.HEADER_GRANT_WRITE_ACP, grantWriteAcp);
+        return this;
+    }
+
+    public ObjectMetaRequestOptions setSsecAlgorithm(String ssecAlgorithm) {
+        // only support AES256
+        if (StringUtils.isNotEmpty(ssecAlgorithm) &&
+                Consts.CUSTOM_SERVER_SIDE_ENCRYPTION_ALGORITHM_LIST.contains(ssecAlgorithm)) {
+            withHeader(TosHeader.HEADER_SSE_CUSTOMER_ALGORITHM, ssecAlgorithm);
+        } else {
+            throw new IllegalArgumentException("invalid encryption-decryption algorithm");
+        }
+        return this;
+    }
+
+    public ObjectMetaRequestOptions setSsecKey(String ssecKey) {
+        withHeader(TosHeader.HEADER_SSE_CUSTOMER_KEY, ssecKey);
+        return this;
+    }
+
+    public ObjectMetaRequestOptions setSsecKeyMD5(String ssecKeyMD5) {
+        withHeader(TosHeader.HEADER_SSE_CUSTOMER_KEY_MD5, ssecKeyMD5);
+        return this;
+    }
+
+    public ObjectMetaRequestOptions setServerSideEncryption(String serverSideEncryption) {
+        // only support AES256
+        if (StringUtils.isNotEmpty(serverSideEncryption) &&
+                Consts.CUSTOM_SERVER_SIDE_ENCRYPTION_ALGORITHM_LIST.contains(serverSideEncryption)) {
+            withHeader(TosHeader.HEADER_SSE, serverSideEncryption);
+        } else {
+            throw new IllegalArgumentException("invalid serverSideEncryption input, only support AES256");
+        }
+        return this;
+    }
+
+    public ObjectMetaRequestOptions setWebsiteRedirectLocation(String websiteRedirectLocation) {
+        withHeader(TosHeader.HEADER_WEBSITE_REDIRECT_LOCATION, websiteRedirectLocation);
+        return this;
+    }
+
+    public ObjectMetaRequestOptions setStorageClass(StorageClassType storageClass) {
+        withHeader(TosHeader.HEADER_STORAGE_CLASS, storageClass == null ? null : storageClass.toString());
+        return this;
+    }
+
+    private void withHeader(String key, String value){
+        if(value != null){
+            value = TosUtils.tryEncodeValue(key, value);
+            this.headers.put(key, value);
+        }
+    }
+
     public static final class ObjectMetaRequestOptionsBuilder {
         private Map<String, String> headers;
         private Map<String, String> customMetaData;
@@ -411,7 +569,7 @@ public class ObjectMetaRequestOptions {
         public ObjectMetaRequestOptionsBuilder ssecAlgorithm(String ssecAlgorithm) {
             // only support AES256
             if (StringUtils.isNotEmpty(ssecAlgorithm) &&
-                    Consts.customServerSideEncryptionAlgorithmList.contains(ssecAlgorithm)) {
+                    Consts.CUSTOM_SERVER_SIDE_ENCRYPTION_ALGORITHM_LIST.contains(ssecAlgorithm)) {
                 withHeader(TosHeader.HEADER_SSE_CUSTOMER_ALGORITHM, ssecAlgorithm);
             } else {
                 throw new IllegalArgumentException("invalid encryption-decryption algorithm");
@@ -432,7 +590,7 @@ public class ObjectMetaRequestOptions {
         public ObjectMetaRequestOptionsBuilder serverSideEncryption(String serverSideEncryption) {
             // only support AES256
             if (StringUtils.isNotEmpty(serverSideEncryption) &&
-                    Consts.customServerSideEncryptionAlgorithmList.contains(serverSideEncryption)) {
+                    Consts.CUSTOM_SERVER_SIDE_ENCRYPTION_ALGORITHM_LIST.contains(serverSideEncryption)) {
                 withHeader(TosHeader.HEADER_SSE, serverSideEncryption);
             } else {
                 throw new IllegalArgumentException("invalid serverSideEncryption input, only support AES256");

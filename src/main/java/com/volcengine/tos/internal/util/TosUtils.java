@@ -1,5 +1,7 @@
 package com.volcengine.tos.internal.util;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.volcengine.tos.TosClientException;
 
 import java.io.UnsupportedEncodingException;
@@ -7,6 +9,7 @@ import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 
 import static com.volcengine.tos.internal.Consts.SDK_NAME;
 import static com.volcengine.tos.internal.Consts.SDK_VERSION;
@@ -14,8 +17,15 @@ import static com.volcengine.tos.internal.Consts.SDK_VERSION;
 public class TosUtils {
     private static final String USER_AGENT = String.format("%s/%s (%s/%s;%s)", SDK_NAME, SDK_VERSION,
             System.getProperty("os.name"), System.getProperty("os.arch"), System.getProperty("java.version", "0"));
+    public static final ObjectMapper JSON = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
     private static Map<String, List<String>> SUPPORTED_REGION = null;
+
+    private static final int baseDelay = 1;
+    private static final int maxDelay = 10;
+    private static final double factor = 1.6;
+    private static final double jitter = 0.2;
+    private static final ThreadLocalRandom random = ThreadLocalRandom.current();
 
     public static String getUserAgent() {
         return USER_AGENT;
@@ -51,7 +61,7 @@ public class TosUtils {
                         .replace("~", "%7E")
                         .replace("/", "%2F");
             } catch (UnsupportedEncodingException e) {
-                throw new TosClientException("unsupported http header value in key: "+key, e);
+                throw new TosClientException("tos: unsupported http header value in key: "+key, e);
             }
         }
         return encodedValue;
@@ -73,7 +83,7 @@ public class TosUtils {
                 decodedValue = decodedValue.replace(" ", "+");
             }
         } catch (UnsupportedEncodingException e) {
-            throw new TosClientException("unsupported http header value in key: "+key, e);
+            throw new TosClientException("tos: unsupported http header value in key: "+key, e);
         }
         return decodedValue;
     }
@@ -153,5 +163,25 @@ public class TosUtils {
             }
         }
         return new String(encoded, StandardCharsets.UTF_8);
+    }
+
+    public static long backoff(int retries) {
+        // return in mill seconds
+        if (retries == 0) {
+            return baseDelay * 1000;
+        }
+        double backoff = baseDelay, max = maxDelay;
+        while (backoff < max && retries > 0) {
+            backoff *= factor;
+            retries--;
+        }
+        if (backoff > max) {
+            backoff = max;
+        }
+        backoff *= 1 + jitter*(random.nextDouble(1) * 2 - 1);
+        if (backoff < 0) {
+            return 0;
+        }
+        return (long)(backoff * 1000);
     }
 }

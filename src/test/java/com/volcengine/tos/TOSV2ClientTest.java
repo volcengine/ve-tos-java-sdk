@@ -673,9 +673,9 @@ public class TOSV2ClientTest {
             Assert.assertEquals(crc32Check(data.getBytes()), crc32Check(StringUtils.toByteArray(got.getContent())));
 
             String data2 = StringUtils.randomString(256 << 10);
-            client.appendObject(
-                    AppendObjectInput.builder().contentLength(data2.length()).bucket(Consts.bucket).key(key)
-                            .content(new ByteArrayInputStream(data2.getBytes())).offset(result.getNextAppendOffset()).build());
+            client.appendObject(AppendObjectInput.builder().contentLength(data2.length())
+                    .bucket(Consts.bucket).key(key).content(new ByteArrayInputStream(data2.getBytes()))
+                    .offset(result.getNextAppendOffset()).preHashCrc64ecma(result.getHashCrc64ecma()).build());
             got = client.getObject(Consts.bucket, key);
             // NOTICE: 注意在对象很大的时候不要这样一次性读取
             Assert.assertEquals(data.length()+data2.length(), got.getObjectMeta().getContentLength());

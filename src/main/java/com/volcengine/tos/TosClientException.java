@@ -10,7 +10,6 @@ public class TosClientException extends TosException{
     public String toString() {
         return "TosClientException{" +
                 "cause=" + getCause() +
-                ", message='" + getMessage() + '\'' +
-                '}';
+                ", message='" + getMessage() + '}';
     }
 }

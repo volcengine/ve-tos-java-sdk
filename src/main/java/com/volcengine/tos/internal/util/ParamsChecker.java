@@ -13,7 +13,7 @@ public class ParamsChecker {
     private static final List<String> INVALID_OBJECT_KEY_LIST = Arrays.asList(".", "..", "%2e", "%2e.", ".%2e", "%2e%2e");
 
     public static List<String> parseFromEndpoint(String endpoint) {
-        Objects.requireNonNull(endpoint, "endpoint is null");
+        ensureNotNull(endpoint, "endpoint is null");
         List<String> ret = new ArrayList<>(2);
         String scheme = Consts.SCHEME_HTTPS;
         String host = null;
@@ -93,8 +93,8 @@ public class ParamsChecker {
         isValidKey(key);
     }
 
-    public static void isValidInput(Object object, String paramName) {
-        Objects.requireNonNull(object, paramName + " is null");
+    public static void ensureNotNull(Object object, String paramName) {
+        Objects.requireNonNull(object, "null " + paramName);
     }
 
     public static void isValidPartNumber(int partNum) {

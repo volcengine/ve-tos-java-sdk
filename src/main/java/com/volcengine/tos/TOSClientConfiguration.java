@@ -25,10 +25,6 @@ public class TOSClientConfiguration {
      * 客户端对上传对象开启 CRC 校验
      */
     private boolean enableCrc;
-    /**
-     * 客户端的自动重试机制
-     */
-    private int maxRetryCount;
 
     public boolean isClientAutoRecognizeContentType() {
         return clientAutoRecognizeContentType;
@@ -36,10 +32,6 @@ public class TOSClientConfiguration {
 
     public boolean isEnableCrc() {
         return enableCrc;
-    }
-
-    public int getMaxRetryCount() {
-        return maxRetryCount;
     }
 
     public TransportConfig getTransportConfig() {
@@ -73,13 +65,13 @@ public class TOSClientConfiguration {
         private TransportConfig transportConfig;
         private boolean clientAutoRecognizeContentType;
         private boolean enableCrc;
-        private int maxRetryCount;
 
         private TosClientConfigurationBuilder() {
-            this.transportConfig = TransportConfig.builder().enableVerifySSL(DEFAULT_ENABLE_VERIFY_SSL).build();
+            this.transportConfig = TransportConfig.builder()
+                    .enableVerifySSL(DEFAULT_ENABLE_VERIFY_SSL)
+                    .maxRetryCount(DEFAULT_MAX_RETRY_COUNT).build();
             this.clientAutoRecognizeContentType = DEFAULT_AUTO_RECOGNIZE_CONTENT_TYPE;
             this.enableCrc = DEFAULT_ENABLE_CRC;
-            this.maxRetryCount = DEFAULT_MAX_RETRY_COUNT;
             this.region = "";
             this.endpoint = "";
             this.credentials = new StaticCredentials("", "");
@@ -115,17 +107,11 @@ public class TOSClientConfiguration {
             return this;
         }
 
-        public TosClientConfigurationBuilder maxRetryCount(int maxRetryCount) {
-            this.maxRetryCount = maxRetryCount;
-            return this;
-        }
-
         public TOSClientConfiguration build() {
             TOSClientConfiguration tosClientConfiguration = new TOSClientConfiguration();
             tosClientConfiguration.enableCrc = this.enableCrc;
             tosClientConfiguration.endpoint = this.endpoint;
             tosClientConfiguration.transportConfig = this.transportConfig;
-            tosClientConfiguration.maxRetryCount = this.maxRetryCount;
             tosClientConfiguration.credentials = this.credentials;
             tosClientConfiguration.region = this.region;
             tosClientConfiguration.clientAutoRecognizeContentType = this.clientAutoRecognizeContentType;

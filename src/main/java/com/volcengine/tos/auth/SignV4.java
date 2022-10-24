@@ -1,6 +1,7 @@
 package com.volcengine.tos.auth;
 
 import com.volcengine.tos.internal.TosRequest;
+import com.volcengine.tos.internal.util.ParamsChecker;
 import com.volcengine.tos.internal.util.StringUtils;
 
 import javax.crypto.Mac;
@@ -79,7 +80,7 @@ public class SignV4 implements Signer {
 
     @Override
     public Map<String, String> signHeader(TosRequest req) {
-        Objects.requireNonNull(req.getHost(), "request host is null");
+        ParamsChecker.ensureNotNull(req.getHost(), "host");
         Map<String, String> signed = new HashMap<>(4);
         OffsetDateTime now = this.now.get().atOffset(ZoneOffset.UTC);
         String date = now.format(iso8601Layout);

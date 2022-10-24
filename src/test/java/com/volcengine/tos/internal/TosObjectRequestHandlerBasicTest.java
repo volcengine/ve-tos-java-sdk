@@ -6,11 +6,14 @@ import com.volcengine.tos.TosServerException;
 import com.volcengine.tos.UnexpectedStatusCodeException;
 import com.volcengine.tos.comm.Code;
 import com.volcengine.tos.comm.HttpStatus;
+import com.volcengine.tos.comm.Utils;
 import com.volcengine.tos.comm.common.CannedType;
 import com.volcengine.tos.comm.common.GranteeType;
 import com.volcengine.tos.comm.common.PermissionType;
 import com.volcengine.tos.comm.common.StorageClassType;
+import com.volcengine.tos.internal.util.CRC64Utils;
 import com.volcengine.tos.internal.util.DateConverter;
+import com.volcengine.tos.internal.util.ratelimit.DefaultRateLimiter;
 import com.volcengine.tos.model.acl.GrantV2;
 import com.volcengine.tos.model.acl.GranteeV2;
 import com.volcengine.tos.model.acl.Owner;
@@ -25,6 +28,7 @@ import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
@@ -33,6 +37,7 @@ import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.*;
+import java.util.zip.CheckedInputStream;
 
 import static com.volcengine.tos.Consts.*;
 
@@ -1110,6 +1115,123 @@ public class TosObjectRequestHandlerBasicTest {
                     getHandler().deleteObject(DeleteObjectInput.builder().bucket(bucket).key(key).build());
                 }
             }
+        }
+    }
+
+    @Test
+    void getObjectWithCrcTest() {
+        // basic crud
+        String key = getUniqueObjectKey();
+        String data = sampleData + StringUtils.randomString(new Random().nextInt(128));
+        InputStream content = new ByteArrayInputStream(data.getBytes(StandardCharsets.UTF_8));
+        try{
+            PutObjectBasicInput basicInput = PutObjectBasicInput.builder()
+                    .bucket(Consts.bucket)
+                    .key(key)
+                    .build();
+            PutObjectOutput putRes = getHandler().putObject(PutObjectInput.builder()
+                    .putObjectBasicInput(basicInput)
+                    .content(content)
+                    .build());
+
+            HeadObjectV2Output headRes = getHandler().headObject(HeadObjectV2Input.builder()
+                    .bucket(Consts.bucket)
+                    .key(key)
+                    .build());
+            Assert.assertNotNull(headRes.getHeadObjectBasicOutput());
+            Assert.assertEquals(headRes.getHeadObjectBasicOutput().getContentLength(), data.length());
+            Assert.assertEquals(headRes.getHeadObjectBasicOutput().getEtag(), putRes.getEtag());
+            Assert.assertEquals(headRes.getHeadObjectBasicOutput().getVersionID(), putRes.getVersionID());
+
+            try(GetObjectV2Output getRes = getHandler().getObject(GetObjectV2Input.builder()
+                    .bucket(Consts.bucket)
+                    .key(key)
+                    .build())){
+                Assert.assertNotNull(getRes.getGetObjectBasicOutput());
+                Assert.assertEquals(getRes.getGetObjectBasicOutput().getContentLength(), data.length());
+                Assert.assertEquals(getRes.getGetObjectBasicOutput().getEtag(), putRes.getEtag());
+                Assert.assertEquals(getRes.getGetObjectBasicOutput().getVersionID(), putRes.getVersionID());
+                // consume the inputStream, it will calculate crc64 auto.
+                String readData = StringUtils.toString(getRes.getContent());
+                validateDataSame(data, readData);
+            } catch (IOException e) {
+                testFailed(e);
+            }
+            ObjectMetaRequestOptions options = ObjectMetaRequestOptions.builder()
+                    .range(0, 127).build();
+            try(GetObjectV2Output getRes = getHandler().getObject(GetObjectV2Input.builder()
+                    .bucket(Consts.bucket)
+                    .key(key)
+                    .options(options)
+                    .build())) {
+                Assert.assertNotNull(getRes.getGetObjectBasicOutput());
+                Assert.assertEquals(getRes.getGetObjectBasicOutput().getContentLength(), 128);
+                Assert.assertFalse(getRes.getContent() instanceof CheckedInputStream);
+            }
+        } catch (Exception e) {
+            testFailed(e);
+        } finally{
+            clearData(key);
+        }
+    }
+
+    @Test
+    void putObjectWithRateLimitTest() {
+        String key = getUniqueObjectKey();
+        String data = sampleData + StringUtils.randomString(new Random().nextInt(128));
+        InputStream content = new ByteArrayInputStream(data.getBytes(StandardCharsets.UTF_8));
+        try{
+            long start = System.currentTimeMillis();
+            PutObjectBasicInput basicInput = PutObjectBasicInput.builder()
+                    .bucket(Consts.bucket)
+                    .key(key)
+                    .rateLimiter(new DefaultRateLimiter(16 * 1024))
+                    .build();
+            PutObjectOutput putRes = getHandler().putObject(PutObjectInput.builder()
+                    .putObjectBasicInput(basicInput)
+                    .content(content)
+                    .build());
+            long end = System.currentTimeMillis();
+            LOG.info("putObject cost {} ms", end-start);
+            Assert.assertTrue((end-start) > 7000);
+
+            HeadObjectV2Output headRes = getHandler().headObject(HeadObjectV2Input.builder()
+                    .bucket(Consts.bucket)
+                    .key(key)
+                    .build());
+            Assert.assertNotNull(headRes.getHeadObjectBasicOutput());
+            Assert.assertEquals(headRes.getHeadObjectBasicOutput().getContentLength(), data.length());
+            Assert.assertEquals(headRes.getHeadObjectBasicOutput().getEtag(), putRes.getEtag());
+            Assert.assertEquals(headRes.getHeadObjectBasicOutput().getVersionID(), putRes.getVersionID());
+
+            start = System.currentTimeMillis();
+            try(GetObjectV2Output getRes = getHandler().getObject(GetObjectV2Input.builder()
+                    .bucket(Consts.bucket)
+                    .key(key)
+                    .rateLimiter(new DefaultRateLimiter(10 * 1024))
+                    .build());
+                InputStream stream = getRes.getContent();
+                ByteArrayOutputStream result = new ByteArrayOutputStream()){
+                Assert.assertNotNull(getRes.getGetObjectBasicOutput());
+                Assert.assertEquals(getRes.getGetObjectBasicOutput().getContentLength(), data.length());
+                Assert.assertEquals(getRes.getGetObjectBasicOutput().getEtag(), putRes.getEtag());
+                Assert.assertEquals(getRes.getGetObjectBasicOutput().getVersionID(), putRes.getVersionID());
+                byte[] tmp = new byte[1024];
+                int once = 0;
+                while((once = stream.read(tmp)) != -1) {
+                    result.write(tmp, 0, once);
+                }
+                validateDataSame(data, result.toString());
+                end = System.currentTimeMillis();
+                LOG.info("getObject cost {} ms", end-start);
+                Assert.assertTrue((end-start) > 10000);
+            } catch (IOException e) {
+                testFailed(e);
+            }
+        } catch (Exception e) {
+            testFailed(e);
+        } finally{
+            clearData(key);
         }
     }
 
