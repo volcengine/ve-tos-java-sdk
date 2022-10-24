@@ -121,6 +121,13 @@ public class TosObjectRequestHandlerAppendMultipartCopyTest {
                     .key(key)
                     .content(new ByteArrayInputStream(data2.getBytes()))
                     .build();
+            try{
+                appendRes = getHandler().appendObject(input);
+            } catch (TosException e) {
+                Assert.assertNotNull(e);
+                Assert.assertEquals(e.getMessage(), "tos: client enable crc64 check but preHashCrc64ecma is not set");
+            }
+            input.setPreHashCrc64ecma(appendRes.getHashCrc64ecma());
             appendRes = getHandler().appendObject(input);
             Assert.assertEquals(appendRes.getNextAppendOffset(), data2.length() + nextAppendOffset);
             try(GetObjectV2Output getRes = getHandler().getObject(GetObjectV2Input.builder()
@@ -150,15 +157,17 @@ public class TosObjectRequestHandlerAppendMultipartCopyTest {
     void putAndAppendObjectTest(){
         String key = Consts.internalObjectAppendPrefix + getUniqueObjectKey();
         String data = sampleData + StringUtils.randomString(new Random().nextInt(128));
+        String preHash64 = null;
         try{
             PutObjectBasicInput basicInput = PutObjectBasicInput.builder()
                     .bucket(Consts.bucket)
                     .key(key)
                     .build();
-            getHandler().putObject(PutObjectInput.builder()
+            PutObjectOutput output = getHandler().putObject(PutObjectInput.builder()
                     .putObjectBasicInput(basicInput)
                     .content(new ByteArrayInputStream(data.getBytes()))
                     .build());
+            preHash64 = output.getHashCrc64ecma();
         }catch (Exception e) {
             testFailed(e);
         }
@@ -168,6 +177,7 @@ public class TosObjectRequestHandlerAppendMultipartCopyTest {
             AppendObjectInput input = AppendObjectInput.builder()
                     .contentLength(data2.length())
                     .offset(nextAppendOffset)
+                    .preHashCrc64ecma(preHash64)
                     .bucket(Consts.bucket)
                     .key(key)
                     .content(new ByteArrayInputStream(data2.getBytes()))

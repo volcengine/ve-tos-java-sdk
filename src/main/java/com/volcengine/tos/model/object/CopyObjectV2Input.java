@@ -100,7 +100,7 @@ public class CopyObjectV2Input {
         withHeader(TosHeader.HEADER_COPY_SOURCE_IF_MATCH, copySourceIfMatch);
         withHeader(TosHeader.HEADER_COPY_SOURCE_IF_NONE_MATCH, copySourceIfNoneMatch);
         if (StringUtils.isNotEmpty(copySourceSSECAlgorithm)) {
-            if (Consts.customServerSideEncryptionAlgorithmList.contains(copySourceSSECAlgorithm)) {
+            if (Consts.CUSTOM_SERVER_SIDE_ENCRYPTION_ALGORITHM_LIST.contains(copySourceSSECAlgorithm)) {
                 withHeader(TosHeader.HEADER_SSE_CUSTOMER_ALGORITHM, copySourceSSECAlgorithm);
             } else {
                 throw new IllegalArgumentException("invalid copySourceSSECAlgorithm input, only support AES256");

@@ -2,6 +2,7 @@ package com.volcengine.tos.transport;
 
 import com.volcengine.tos.internal.Consts;
 import com.volcengine.tos.comm.io.TosRepeatableInputStream;
+import com.volcengine.tos.internal.util.ParamsChecker;
 import com.volcengine.tos.model.object.TosObjectInputStream;
 import okhttp3.MediaType;
 import okhttp3.RequestBody;
@@ -22,7 +23,7 @@ class InputStreamRequestBody extends RequestBody implements Closeable {
     private long contentLength;
 
     InputStreamRequestBody(MediaType contentType, InputStream inputStream, long contentLength) {
-        Objects.requireNonNull(inputStream, "inputStream is null");
+        ParamsChecker.ensureNotNull(inputStream, "inputStream");
         this.contentType = contentType;
         this.contentLength = contentLength;
         if (this.contentLength < -1L) {

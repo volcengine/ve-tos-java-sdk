@@ -28,7 +28,7 @@ public class TosRepeatableFileInputStream extends TosObjectInputStream {
         try {
             this.markPos = fileChannel.position();
         } catch (IOException e) {
-            throw new TosClientException("Failed to get file position", e);
+            throw new TosClientException("tos: failed to get file position", e);
         }
     }
 
@@ -67,7 +67,7 @@ public class TosRepeatableFileInputStream extends TosObjectInputStream {
         try {
             markPos = fileChannel.position();
         } catch (IOException e) {
-            throw new TosClientException("Failed to mark the file position", e);
+            throw new TosClientException("tos: failed to mark the file position", e);
         }
     }
 

@@ -2,35 +2,38 @@ package com.volcengine.tos.internal;
 
 import com.volcengine.tos.TosClientException;
 import com.volcengine.tos.comm.HttpMethod;
+import com.volcengine.tos.comm.HttpStatus;
 import com.volcengine.tos.comm.TosHeader;
 import com.volcengine.tos.comm.io.TosRepeatableInputStream;
+import com.volcengine.tos.internal.model.CRC64Checksum;
+import com.volcengine.tos.internal.model.SimpleDataTransferListenInputStream;
+import com.volcengine.tos.internal.util.CRC64Utils;
+import com.volcengine.tos.internal.util.ParamsChecker;
+import com.volcengine.tos.internal.util.StringUtils;
+import com.volcengine.tos.internal.util.TosUtils;
+import com.volcengine.tos.internal.util.ratelimit.RateLimitedInputStream;
 import com.volcengine.tos.model.object.TosObjectInputStream;
 import com.volcengine.tos.transport.TransportConfig;
 import okhttp3.*;
+import okhttp3.Authenticator;
 import okhttp3.internal.Util;
 import okio.BufferedSink;
 import okio.Okio;
 import okio.Source;
-import com.volcengine.tos.internal.util.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSocketFactory;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
+import javax.net.ssl.*;
 import java.io.*;
-import java.net.InetSocketAddress;
-import java.net.Proxy;
-import java.net.SocketAddress;
+import java.net.*;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.TimeUnit;
+import java.util.zip.CheckedInputStream;
 
 /**
  * @author volcengine
@@ -47,6 +50,7 @@ public class RequestTransport implements Transport {
     private static final MediaType DEFAULT_MEDIA_TYPE = null;
     private final OkHttpClient client;
     private static final Logger LOG = LoggerFactory.getLogger(RequestTransport.class);
+    private int maxRetries;
 
     public RequestTransport(TransportConfig config){
         ConnectionPool connectionPool = new ConnectionPool(config.getMaxConnections(),
@@ -70,6 +74,10 @@ public class RequestTransport implements Transport {
             }
         }
 
+        this.maxRetries = config.getMaxRetryCount();
+        if (maxRetries < 0) {
+            maxRetries = 0;
+        }
         this.client = builder.dispatcher(dispatcher)
                 .connectionPool(connectionPool)
                 .retryOnConnectionFailure(true)
@@ -79,18 +87,99 @@ public class RequestTransport implements Transport {
                 // 默认关闭重定向
                 .followRedirects(false)
                 .followSslRedirects(false)
+                .eventListenerFactory(new RequestEventListener.RequestEventListenerFactory(LOG))
                 .build();
     }
 
     @Override
     public TosResponse roundTrip(TosRequest tosRequest) throws IOException {
-        Request request = buildRequest(tosRequest);
-        Response response = client.newCall(request).execute();
+        Response response = null;
+        long start = System.currentTimeMillis();
+        int reqTimes = 1;
+        for (int i = 0; i < maxRetries+1; i++, reqTimes++) {
+            try{
+                Request request = buildRequest(tosRequest);
+                response = client.newCall(request).execute();
+                if (response.code() >= HttpStatus.INTERNAL_SERVER_ERROR
+                || response.code() == HttpStatus.TOO_MANY_REQUESTS) {
+                    if (tosRequest.isRetryableOnServerException()) {
+                        if (i != maxRetries) {
+                            // last time does not need to sleep
+                            Thread.sleep(TosUtils.backoff(i));
+                            // close response body before retry
+                            response.close();
+                            if (tosRequest.getContent() != null) {
+                                tosRequest.getContent().reset();
+                            }
+                            continue;
+                        }
+                    }
+                }
+                break;
+            } catch (InterruptedException e) {
+                LOG.debug("tos: request interrupted while sleeping in retry");
+                printAccessLogFailed(e);
+                throw new TosClientException("tos: request interrupted", e);
+            } catch (IOException e) {
+                if (e instanceof SocketException || e instanceof SocketTimeoutException
+                        || e instanceof UnknownHostException || e instanceof SSLException) {
+                    if (tosRequest.isRetryableOnClientException()) {
+                        try{
+                            if (i == maxRetries) {
+                                // last time does not need to sleep
+                                printAccessLogFailed(e);
+                                throw e;
+                            }
+                            Thread.sleep(TosUtils.backoff(i));
+                            if (response != null) {
+                                response.close();
+                            }
+                            if (tosRequest.getContent() != null) {
+                                tosRequest.getContent().reset();
+                            }
+                            continue;
+                        } catch (InterruptedException ie) {
+                            LOG.debug("tos: request interrupted while sleeping in retry");
+                            printAccessLogFailed(e);
+                            throw new TosClientException("tos: request interrupted", e);
+                        }
+                    }
+                }
+                printAccessLogFailed(e);
+                throw e;
+            }
+        }
+        long end = System.currentTimeMillis();
+        ParamsChecker.ensureNotNull(response, "okhttp response");
+        printAccessLogSucceed(response.code(), response.header(TosHeader.HEADER_REQUEST_ID), end-start, reqTimes);
+        checkCrc(tosRequest, response);
         InputStream inputStream = response.body() == null ? null : response.body().byteStream();
         return new TosResponse().setStatusCode(response.code())
                 .setContentLength(getSize(response))
                 .setHeaders(getHeaders(response))
                 .setInputStream(inputStream);
+    }
+
+    private void printAccessLogSucceed(int code, String reqId, long cost, int reqTimes) {
+        LOG.info("tos: status code:{}, request id:{}, request cost {} ms, request {} times\n", code, reqId, cost, reqTimes);
+    }
+
+    private void printAccessLogFailed(Exception e) {
+        LOG.info("tos: request exception: {}\n", e.toString());
+    }
+
+    private void checkCrc(TosRequest tosRequest, Response response) {
+        if (tosRequest.isEnableCrcCheck() && response.code() < HttpStatus.MULTIPLE_CHOICE
+            && tosRequest.getContent() instanceof CheckedInputStream) {
+            // request successful, check crc64
+            long clientCrcLong = ((CheckedInputStream) tosRequest.getContent()).getChecksum().getValue();
+            String clientHashCrc64Ecma = CRC64Utils.longToUnsignedLongString(clientCrcLong);
+            String serverHashCrc64Ecma = response.header(TosHeader.HEADER_CRC64);
+            if (!StringUtils.equals(clientHashCrc64Ecma, serverHashCrc64Ecma)) {
+                throw new TosClientException("tos: crc64 check failed, expected:" + serverHashCrc64Ecma
+                        + ", in fact:" + clientHashCrc64Ecma, null);
+            }
+        }
     }
 
     private Request buildRequest(TosRequest request) throws IOException {
@@ -99,6 +188,7 @@ public class RequestTransport implements Transport {
         if (request.getHeaders() != null) {
             request.getHeaders().forEach(builder::header);
         }
+        wrapInputStream(request);
 
         switch (request.getMethod() == null ? "" : request.getMethod().toUpperCase()) {
             case HttpMethod.GET:
@@ -142,6 +232,22 @@ public class RequestTransport implements Transport {
         return builder.build();
     }
 
+    private void wrapInputStream(TosRequest request) {
+        InputStream wrappedInputStream = request.getContent();
+        if (request.getRateLimiter() != null && request.getContent() != null) {
+            wrappedInputStream = new RateLimitedInputStream(wrappedInputStream, request.getRateLimiter());
+        }
+        if (request.getDataTransferListener() != null && request.getContent() != null) {
+            wrappedInputStream = new SimpleDataTransferListenInputStream(request.getContent(),
+                    request.getDataTransferListener(), request.getContentLength());
+        }
+        if (request.isEnableCrcCheck() && request.getContent() != null) {
+            CRC64Checksum checksum = new CRC64Checksum(request.getCrc64InitValue());
+            wrappedInputStream = new CheckedInputStream(wrappedInputStream, checksum);
+        }
+        request.setContent(wrappedInputStream);
+    }
+
 
     private OkHttpClient.Builder ignoreCertificate(OkHttpClient.Builder builder) throws TosClientException {
         LOG.warn("ignore ssl certificate verification");
@@ -166,7 +272,7 @@ public class RequestTransport implements Transport {
             builder.hostnameVerifier((hostname, session) -> true);
         } catch (NoSuchAlgorithmException | KeyManagementException e) {
             LOG.warn("exception occurred while configuring ignoreSslCertificate");
-            throw new TosClientException("set ignoreCertificate failed", e);
+            throw new TosClientException("tos: set ignoreCertificate failed", e);
         }
         return builder;
     }
@@ -202,7 +308,7 @@ class WrappedTransportRequestBody extends RequestBody implements Closeable {
     private long contentLength;
 
     WrappedTransportRequestBody(MediaType contentType, InputStream inputStream, long contentLength) {
-        Objects.requireNonNull(inputStream, "inputStream is null");
+        ParamsChecker.ensureNotNull(inputStream, "inputStream");
         this.contentType = contentType;
         this.contentLength = contentLength;
         if (this.contentLength < -1L) {
