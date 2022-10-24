@@ -14,6 +14,7 @@ public class ClientInstance {
     private static TosRequestFactory factory;
     private static TosBucketRequestHandler bucketHandler = null;
     private static TosObjectRequestHandler objectHandler = null;
+    private static TosFileRequestHandler fileHandler = null;
 
     public static TosBucketRequestHandler getBucketRequestHandlerInstance() {
         if (bucketHandler != null) {
@@ -32,9 +33,21 @@ public class ClientInstance {
         }
         synchronized (ClientInstance.class) {
             init();
-            objectHandler = new TosObjectRequestHandlerImpl(transport, factory);
+            objectHandler = new TosObjectRequestHandlerImpl(transport, factory).setEnableCrcCheck(true);
         }
         return objectHandler;
+    }
+
+    public static TosFileRequestHandler getFileRequestHandlerInstance() {
+        if (fileHandler != null) {
+            return fileHandler;
+        }
+        synchronized (ClientInstance.class) {
+            init();
+            fileHandler = new TosFileRequestHandlerImpl(getObjectRequestHandlerInstance(), transport, factory)
+                    .setEnableCrcCheck(true);
+        }
+        return fileHandler;
     }
 
     private static void init() {

@@ -14,8 +14,9 @@ import java.io.InputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
+import static com.volcengine.tos.internal.util.TosUtils.JSON;
+
 public class PayloadConverter {
-    private static final ObjectMapper JSON = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     public static TosMarshalResult serializePayloadAndComputeMD5(Object input) throws TosClientException {
         byte[] content;
         String contentMD5;
@@ -25,7 +26,7 @@ public class PayloadConverter {
             byte[] bytes = md.digest(content);
             contentMD5 = new String(Base64.encodeBase64(bytes));
         } catch (JsonProcessingException | NoSuchAlgorithmException e){
-            throw new TosClientException("Marshal Payload Exception", e);
+            throw new TosClientException("tos: unable to do serialization", e);
         }
         return new TosMarshalResult(contentMD5, content);
     }
@@ -35,7 +36,7 @@ public class PayloadConverter {
         try{
             content = JSON.setSerializationInclusion(JsonInclude.Include.NON_NULL).writeValueAsBytes(input);
         } catch (JsonProcessingException e){
-            throw new TosClientException("Marshal Payload Exception", e);
+            throw new TosClientException("tos: unable to do serialization", e);
         }
         return new TosMarshalResult("", content);
     }
@@ -44,7 +45,7 @@ public class PayloadConverter {
         try{
             return JSON.readValue(reader, valueTypeRef);
         } catch (IOException e){
-            throw new TosClientException("Marshal Output Exception", e);
+            throw new TosClientException("tos: unable to do deserialization", e);
         }
     }
 }

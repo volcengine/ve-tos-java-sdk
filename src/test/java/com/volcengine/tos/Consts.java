@@ -25,6 +25,7 @@ public class Consts {
     public static final String internalObjectAppendPrefix = "internal-object-append-test-prefix-";
     public static final String internalObjectCopyPrefix = "internal-object-copy-test-prefix-";
     public static final String internalObjectMultiPartPrefix = "internal-object-multipart-test-prefix-";
+    public static final String internalFileCrudPrefix = "internal-file-crud-test-prefix-";
 
     // for integration test
     public static final String bucketCrudPrefix = "bucket-crud-test-prefix-";

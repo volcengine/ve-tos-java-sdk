@@ -3,14 +3,18 @@ package com.volcengine.tos.internal;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.volcengine.tos.TosClientException;
 import com.volcengine.tos.TosException;
+import com.volcengine.tos.TosServerException;
 import com.volcengine.tos.comm.HttpMethod;
 import com.volcengine.tos.comm.HttpStatus;
 import com.volcengine.tos.comm.MimeType;
 import com.volcengine.tos.comm.TosHeader;
-import com.volcengine.tos.internal.model.CreateMultipartUploadOutputJson;
-import com.volcengine.tos.internal.model.UploadPartCopyOutputJson;
+import com.volcengine.tos.comm.event.DataTransferListener;
+import com.volcengine.tos.comm.ratelimit.RateLimiter;
+import com.volcengine.tos.internal.model.*;
+import com.volcengine.tos.internal.util.CRC64Utils;
 import com.volcengine.tos.internal.util.ParamsChecker;
 import com.volcengine.tos.internal.util.PayloadConverter;
+import com.volcengine.tos.internal.util.ratelimit.RateLimitedInputStream;
 import com.volcengine.tos.model.object.*;
 import com.volcengine.tos.internal.util.StringUtils;
 
@@ -18,11 +22,13 @@ import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.zip.CheckedInputStream;
 
 public class TosObjectRequestHandlerImpl implements TosObjectRequestHandler {
     private RequestHandler objectHandler;
     private TosRequestFactory factory;
     private boolean clientAutoRecognizeContentType;
+    private boolean enableCrcCheck;
 
     public TosObjectRequestHandlerImpl(Transport transport, TosRequestFactory factory) {
         this.objectHandler = new RequestHandler(transport);
@@ -34,15 +40,20 @@ public class TosObjectRequestHandlerImpl implements TosObjectRequestHandler {
         return this;
     }
 
+    public TosObjectRequestHandlerImpl setEnableCrcCheck(boolean enableCrcCheck) {
+        this.enableCrcCheck = enableCrcCheck;
+        return this;
+    }
+
     @Override
     public GetObjectV2Output getObject(GetObjectV2Input input) throws TosException {
-        ParamsChecker.isValidInput(input, "GetObjectV2Input");
+        ParamsChecker.ensureNotNull(input, "GetObjectV2Input");
         ParamsChecker.isValidBucketNameAndKey(input.getBucket(), input.getKey());
         RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(),
                 input.getAllSettedHeaders()).withQuery("versionId", input.getVersionID());
         TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
         TosResponse response = objectHandler.doRequest(req, getExpectedCodes(input.getAllSettedHeaders()));
-        return buildGetObjectV2Output(response);
+        return buildGetObjectV2Output(response, input.getRateLimiter(), input.getDataTransferListener());
     }
 
     private static List<Integer> getExpectedCodes(Map<String, String> headers) {
@@ -59,15 +70,28 @@ public class TosObjectRequestHandlerImpl implements TosObjectRequestHandler {
         return codes;
     }
 
-    private GetObjectV2Output buildGetObjectV2Output(TosResponse response) {
+    private GetObjectV2Output buildGetObjectV2Output(TosResponse response, RateLimiter rateLimiter,
+                                                     DataTransferListener dataTransferListener) {
         GetObjectBasicOutput basicOutput = new GetObjectBasicOutput()
                 .setRequestInfo(response.RequestInfo()).parseFromTosResponse(response);
-        return new GetObjectV2Output(basicOutput, new TosObjectInputStream(response.getInputStream()));
+        InputStream content = response.getInputStream();
+        if (rateLimiter != null) {
+            content = new RateLimitedInputStream(content, rateLimiter);
+        }
+        if (dataTransferListener != null) {
+            content = new SimpleDataTransferListenInputStream(content, dataTransferListener, response.getContentLength());
+        }
+        if (this.enableCrcCheck && response.getStatusCode() != HttpStatus.PARTIAL_CONTENT) {
+            // 开启 crc 校验且非 Range 下载
+            String serverCrc64ecma = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_CRC64);
+            content = new CheckCrc64AutoInputStream(content, new CRC64Checksum(), serverCrc64ecma);
+        }
+        return new GetObjectV2Output(basicOutput, new TosObjectInputStream(content));
     }
 
     @Override
     public HeadObjectV2Output headObject(HeadObjectV2Input input) throws TosException {
-        ParamsChecker.isValidInput(input, "HeadObjectV2Input");
+        ParamsChecker.ensureNotNull(input, "HeadObjectV2Input");
         ParamsChecker.isValidBucketNameAndKey(input.getBucket(), input.getKey());
         RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), input.getAllSettedHeaders());
         TosRequest req = this.factory.build(builder, HttpMethod.HEAD, null);
@@ -78,7 +102,7 @@ public class TosObjectRequestHandlerImpl implements TosObjectRequestHandler {
 
     @Override
     public DeleteObjectOutput deleteObject(DeleteObjectInput input) throws TosException {
-        ParamsChecker.isValidInput(input, "DeleteObjectInput");
+        ParamsChecker.ensureNotNull(input, "DeleteObjectInput");
         ParamsChecker.isValidBucketNameAndKey(input.getBucket(), input.getKey());
         RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), null)
                 .withQuery("versionId", input.getVersionID());
@@ -92,8 +116,8 @@ public class TosObjectRequestHandlerImpl implements TosObjectRequestHandler {
 
     @Override
     public DeleteMultiObjectsV2Output deleteMultiObjects(DeleteMultiObjectsV2Input input) throws TosException {
-        ParamsChecker.isValidInput(input, "DeleteMultiObjectsV2Input");
-        ParamsChecker.isValidInput(input.getObjects(), "objects to be deleted are null");
+        ParamsChecker.ensureNotNull(input, "DeleteMultiObjectsV2Input");
+        ParamsChecker.ensureNotNull(input.getObjects(), "objects to be deleted are null");
         ParamsChecker.isValidBucketName(input.getBucket());
         for (ObjectTobeDeleted objectTobeDeleted : input.getObjects()) {
             ParamsChecker.isValidKey(objectTobeDeleted.getKey());
@@ -110,11 +134,14 @@ public class TosObjectRequestHandlerImpl implements TosObjectRequestHandler {
     }
 
     private PutObjectOutput putObject(PutObjectBasicInput input, InputStream content) {
-        ParamsChecker.isValidInput(input, "PutObjectBasicInput");
+        ParamsChecker.ensureNotNull(input, "PutObjectBasicInput");
         ParamsChecker.isValidBucketNameAndKey(input.getBucket(), input.getKey());
         RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), input.getAllSettedHeaders());
         addContentType(builder, input.getKey());
-        TosRequest req = this.factory.build(builder, HttpMethod.PUT, content);
+        TosRequest req = this.factory.build(builder, HttpMethod.PUT, content)
+                .setEnableCrcCheck(this.enableCrcCheck)
+                .setRateLimiter(input.getRateLimiter())
+                .setDataTransferListener(input.getDataTransferListener());
         return objectHandler.doRequest(req, HttpStatus.OK, this::buildPutObjectOutput);
     }
 
@@ -130,13 +157,16 @@ public class TosObjectRequestHandlerImpl implements TosObjectRequestHandler {
 
     @Override
     public PutObjectOutput putObject(PutObjectInput input) throws TosException {
-        ParamsChecker.isValidInput(input, "PutObjectInput");
+        ParamsChecker.ensureNotNull(input, "PutObjectInput");
         return putObject(input.getPutObjectBasicInput(), input.getContent());
     }
 
     @Override
     public AppendObjectOutput appendObject(AppendObjectInput input) throws TosException {
-        ParamsChecker.isValidInput(input, "AppendObjectInput");
+        ParamsChecker.ensureNotNull(input, "AppendObjectInput");
+        if (this.enableCrcCheck && input.getOffset() > 0 && StringUtils.isEmpty(input.getPreHashCrc64ecma())) {
+            throw new TosClientException("tos: client enable crc64 check but preHashCrc64ecma is not set", null);
+        }
         ParamsChecker.isValidBucketNameAndKey(input.getBucket(), input.getKey());
         // append not support chunked, need to set contentLength
         if (input.getContentLength() < (128 << 10)) {
@@ -147,7 +177,13 @@ public class TosObjectRequestHandlerImpl implements TosObjectRequestHandler {
                 .withQuery("offset", String.valueOf(input.getOffset()))
                 .withContentLength(input.getContentLength());
         addContentType(builder, input.getKey());
-        TosRequest req = this.factory.build(builder, HttpMethod.POST, input.getContent());
+        TosRequest req = this.factory.build(builder, HttpMethod.POST, input.getContent())
+                // appendObject should not retry
+                .setRetryableOnServerException(false).setRetryableOnClientException(false)
+                .setEnableCrcCheck(this.enableCrcCheck)
+                .setCrc64InitValue(CRC64Utils.unsignedLongStringToLong(input.getPreHashCrc64ecma()))
+                .setRateLimiter(input.getRateLimiter())
+                .setDataTransferListener(input.getDataTransferListener());
         return objectHandler.doRequest(req, HttpStatus.OK, this::buildAppendObjectOutput);
     }
 
@@ -157,7 +193,7 @@ public class TosObjectRequestHandlerImpl implements TosObjectRequestHandler {
         try{
             appendOffset = Long.parseLong(nextOffset);
         } catch (NumberFormatException nfe){
-            throw new TosClientException("server return unexpected Next-Append-Offset header: "+nextOffset, nfe);
+            throw new TosClientException("tos: server return unexpected Next-Append-Offset header: "+nextOffset, nfe);
         }
         return new AppendObjectOutput().setRequestInfo(response.RequestInfo())
                 .setNextAppendOffset(appendOffset)
@@ -166,7 +202,7 @@ public class TosObjectRequestHandlerImpl implements TosObjectRequestHandler {
 
     @Override
     public SetObjectMetaOutput setObjectMeta(SetObjectMetaInput input) throws TosException {
-        ParamsChecker.isValidInput(input, "SetObjectMetaInput");
+        ParamsChecker.ensureNotNull(input, "SetObjectMetaInput");
         ParamsChecker.isValidBucketNameAndKey(input.getBucket(), input.getKey());
         RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(),
                 input.getAllSettedHeaders()).withQuery("metadata", "");
@@ -178,7 +214,7 @@ public class TosObjectRequestHandlerImpl implements TosObjectRequestHandler {
 
     @Override
     public ListObjectsV2Output listObjects(ListObjectsV2Input input) throws TosException {
-        ParamsChecker.isValidInput(input, "ListObjectsV2Input");
+        ParamsChecker.ensureNotNull(input, "ListObjectsV2Input");
         ParamsChecker.isValidBucketName(input.getBucket());
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null)
                 .withQuery("prefix", input.getPrefix())
@@ -196,7 +232,7 @@ public class TosObjectRequestHandlerImpl implements TosObjectRequestHandler {
 
     @Override
     public ListObjectVersionsV2Output listObjectVersions(ListObjectVersionsV2Input input) throws TosException {
-        ParamsChecker.isValidInput(input, "ListObjectVersionsV2Input");
+        ParamsChecker.ensureNotNull(input, "ListObjectVersionsV2Input");
         ParamsChecker.isValidBucketName(input.getBucket());
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null)
                 .withQuery("prefix", input.getPrefix())
@@ -214,7 +250,7 @@ public class TosObjectRequestHandlerImpl implements TosObjectRequestHandler {
 
     @Override
     public CopyObjectV2Output copyObject(CopyObjectV2Input input) throws TosException {
-        ParamsChecker.isValidInput(input, "CopyObjectV2Input");
+        ParamsChecker.ensureNotNull(input, "CopyObjectV2Input");
         ParamsChecker.isValidBucketNameAndKey(input.getBucket(), input.getKey());
         ParamsChecker.isValidBucketNameAndKey(input.getSrcBucket(), input.getSrcKey());
         RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), input.getAllSettedHeaders());
@@ -223,8 +259,11 @@ public class TosObjectRequestHandlerImpl implements TosObjectRequestHandler {
     }
 
     private CopyObjectV2Output buildCopyObjectV2Output(TosResponse response) {
-        return PayloadConverter.parsePayload(response.getInputStream(), new TypeReference<CopyObjectV2Output>(){})
-                .setRequestInfo(response.RequestInfo())
+        CopyObjectV2Output output = PayloadConverter.parsePayload(response.getInputStream(), new TypeReference<CopyObjectV2Output>(){});
+        if (StringUtils.isEmpty(output.getEtag())) {
+            throw new TosServerException(response.getStatusCode(), "", "server does not return etag", response.getRequesID(), "");
+        }
+        return output.setRequestInfo(response.RequestInfo())
                 .setVersionID(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_VERSIONID))
                 .setSourceVersionID(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_COPY_SOURCE_VERSION_ID))
                 .setHashCrc64ecma(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_CRC64));
@@ -232,7 +271,7 @@ public class TosObjectRequestHandlerImpl implements TosObjectRequestHandler {
 
     @Override
     public UploadPartCopyV2Output uploadPartCopy(UploadPartCopyV2Input input) throws TosException {
-        ParamsChecker.isValidInput(input, "UploadPartCopyV2Input");
+        ParamsChecker.ensureNotNull(input, "UploadPartCopyV2Input");
         ParamsChecker.isValidBucketNameAndKey(input.getBucket(), input.getKey());
         ParamsChecker.isValidBucketNameAndKey(input.getSourceBucket(), input.getSourceKey());
         RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), input.getAllSettedHeaders())
@@ -246,6 +285,9 @@ public class TosObjectRequestHandlerImpl implements TosObjectRequestHandler {
     private UploadPartCopyV2Output buildUploadPartCopyV2Output(UploadPartCopyV2Input input, TosResponse response) {
         UploadPartCopyOutputJson out = PayloadConverter.parsePayload(response.getInputStream(),
                 new TypeReference<UploadPartCopyOutputJson>(){});
+        if (StringUtils.isEmpty(out.getEtag())) {
+            throw new TosServerException(response.getStatusCode(), "", "server does not return etag", response.getRequesID(), "");
+        }
         return new UploadPartCopyV2Output().requestInfo(response.RequestInfo())
                 .copySourceVersionID(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_COPY_SOURCE_VERSION_ID))
                 .partNumber(input.getPartNumber()).etag(out.getEtag()).lastModified(out.getLastModified());
@@ -253,7 +295,7 @@ public class TosObjectRequestHandlerImpl implements TosObjectRequestHandler {
 
     @Override
     public PutObjectACLOutput putObjectAcl(PutObjectACLInput input) throws TosException {
-        ParamsChecker.isValidInput(input, "PutObjectACLInput");
+        ParamsChecker.ensureNotNull(input, "PutObjectACLInput");
         ParamsChecker.isValidBucketNameAndKey(input.getBucket(), input.getKey());
         byte[] content = null;
         if (input.getObjectAclRules() != null) {
@@ -278,7 +320,7 @@ public class TosObjectRequestHandlerImpl implements TosObjectRequestHandler {
 
     @Override
     public GetObjectACLV2Output getObjectAcl(GetObjectACLV2Input input) throws TosException {
-        ParamsChecker.isValidInput(input, "GetObjectACLV2Input");
+        ParamsChecker.ensureNotNull(input, "GetObjectACLV2Input");
         ParamsChecker.isValidBucketNameAndKey(input.getBucket(), input.getKey());
         RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), null)
                 .withQuery("acl", "");
@@ -294,12 +336,12 @@ public class TosObjectRequestHandlerImpl implements TosObjectRequestHandler {
 
     @Override
     public CreateMultipartUploadOutput createMultipartUpload(CreateMultipartUploadInput input) throws TosException {
-        ParamsChecker.isValidInput(input, "CreateMultipartUploadInput");
+        ParamsChecker.ensureNotNull(input, "CreateMultipartUploadInput");
         ParamsChecker.isValidBucketNameAndKey(input.getBucket(), input.getKey());
         RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), input.getAllSettedHeaders())
                 .withQuery("uploads", "");
         addContentType(builder, input.getKey());
-        TosRequest req = this.factory.build(builder, HttpMethod.POST, null);
+        TosRequest req = this.factory.build(builder, HttpMethod.POST, null).setRetryableOnClientException(false);
         return objectHandler.doRequest(req, HttpStatus.OK, this::buildCreateMultipartUploadOutput);
     }
 
@@ -317,37 +359,41 @@ public class TosObjectRequestHandlerImpl implements TosObjectRequestHandler {
         return new UploadPartV2Output().setRequestInfo(res.RequestInfo())
                 .setPartNumber(partNumber).setEtag(res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_ETAG))
                 .setSsecAlgorithm(res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_SSE_CUSTOMER_ALGORITHM))
-                .setSsecKeyMD5(res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_SSE_CUSTOMER_KEY_MD5));
+                .setSsecKeyMD5(res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_SSE_CUSTOMER_KEY_MD5))
+                .setHashCrc64ecma(res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_CRC64));
     }
 
     private UploadPartV2Output uploadPart(UploadPartBasicInput input, long contentLength, InputStream content) {
-        ParamsChecker.isValidInput(input, "UploadPartBasicInput");
-        ParamsChecker.isValidInput(input.getUploadID(), "uploadID");
+        ParamsChecker.ensureNotNull(input, "UploadPartBasicInput");
+        ParamsChecker.ensureNotNull(input.getUploadID(), "uploadID");
         ParamsChecker.isValidPartNumber(input.getPartNumber());
         ParamsChecker.isValidBucketNameAndKey(input.getBucket(), input.getKey());
         RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), input.getAllSettedHeaders())
                 .withQuery("uploadId", input.getUploadID())
                 .withQuery("partNumber", String.valueOf(input.getPartNumber()))
                 .withContentLength(contentLength);
-        TosRequest req = this.factory.build(builder, HttpMethod.PUT, content);
+        TosRequest req = this.factory.build(builder, HttpMethod.PUT, content)
+                .setEnableCrcCheck(this.enableCrcCheck).setRateLimiter(input.getRateLimiter())
+                .setDataTransferListener(input.getDataTransferListener());
         return objectHandler.doRequest(req, HttpStatus.OK, response -> buildUploadPartV2Output(response, input.getPartNumber()));
     }
 
     @Override
     public UploadPartV2Output uploadPart(UploadPartV2Input input) throws TosException {
-        ParamsChecker.isValidInput(input, "UploadPartV2Input");
+        ParamsChecker.ensureNotNull(input, "UploadPartV2Input");
         return uploadPart(input.getUploadPartBasicInput(), input.getContentLength(), input.getContent());
     }
 
     @Override
     public CompleteMultipartUploadV2Output completeMultipartUpload(CompleteMultipartUploadV2Input input) throws TosException {
-        ParamsChecker.isValidInput(input, "CompleteMultipartUploadV2Input");
-        ParamsChecker.isValidInput(input.getUploadID(), "uploadID");
+        ParamsChecker.ensureNotNull(input, "CompleteMultipartUploadV2Input");
+        ParamsChecker.ensureNotNull(input.getUploadID(), "uploadID");
         ParamsChecker.isValidBucketNameAndKey(input.getBucket(), input.getKey());
         TosMarshalResult data = PayloadConverter.serializePayload(input);
         RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), null)
                 .withQuery("uploadId", input.getUploadID());
-        TosRequest req = this.factory.build(builder, HttpMethod.POST, null).setData(data.getData());
+        TosRequest req = this.factory.build(builder, HttpMethod.POST, null).setData(data.getData())
+                .setRetryableOnClientException(false);
         return objectHandler.doRequest(req, HttpStatus.OK, this::buildCompleteMultipartUploadOutput);
     }
 
@@ -361,12 +407,12 @@ public class TosObjectRequestHandlerImpl implements TosObjectRequestHandler {
 
     @Override
     public AbortMultipartUploadOutput abortMultipartUpload(AbortMultipartUploadInput input) throws TosException {
-        ParamsChecker.isValidInput(input, "AbortMultipartUploadInput");
-        ParamsChecker.isValidInput(input.getUploadID(), "uploadID");
+        ParamsChecker.ensureNotNull(input, "AbortMultipartUploadInput");
+        ParamsChecker.ensureNotNull(input.getUploadID(), "uploadID");
         ParamsChecker.isValidBucketNameAndKey(input.getBucket(), input.getKey());
         RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), null)
                 .withQuery("uploadId", input.getUploadID());
-        TosRequest req = this.factory.build(builder, HttpMethod.DELETE, null);
+        TosRequest req = this.factory.build(builder, HttpMethod.DELETE, null).setRetryableOnClientException(false);
         return objectHandler.doRequest(req, HttpStatus.NO_CONTENT,
                 response -> new AbortMultipartUploadOutput().setRequestInfo(response.RequestInfo())
         );
@@ -374,8 +420,8 @@ public class TosObjectRequestHandlerImpl implements TosObjectRequestHandler {
 
     @Override
     public ListPartsOutput listParts(ListPartsInput input) throws TosException {
-        ParamsChecker.isValidInput(input, "ListPartsInput");
-        ParamsChecker.isValidInput(input.getUploadID(), "uploadID");
+        ParamsChecker.ensureNotNull(input, "ListPartsInput");
+        ParamsChecker.ensureNotNull(input.getUploadID(), "uploadID");
         ParamsChecker.isValidBucketNameAndKey(input.getBucket(), input.getKey());
         if (input.getMaxParts() < 0 || input.getPartNumberMarker() < 0) {
             throw new IllegalArgumentException("ListPartsInput maxParts or partNumberMarker is small than 0");
@@ -393,7 +439,7 @@ public class TosObjectRequestHandlerImpl implements TosObjectRequestHandler {
 
     @Override
     public ListMultipartUploadsV2Output listMultipartUploads(ListMultipartUploadsV2Input input) throws TosException {
-        ParamsChecker.isValidInput(input, "ListMultipartUploadsV2Input");
+        ParamsChecker.ensureNotNull(input, "ListMultipartUploadsV2Input");
         ParamsChecker.isValidBucketName(input.getBucket());
         if (input.getMaxUploads() < 0) {
             throw new IllegalArgumentException("ListMultipartUploadsV2Input maxUploads is small than 0");

@@ -9,6 +9,10 @@ public class TosServerException extends TosException implements Serializable {
     private String requestID;
     private String hostID;
 
+    public TosServerException(int statusCode) {
+        this.statusCode = statusCode;
+    }
+
     public TosServerException(int statusCode, String code, String message, String requestID, String hostID) {
         super();
         this.statusCode = statusCode;
@@ -16,6 +20,39 @@ public class TosServerException extends TosException implements Serializable {
         this.message = message;
         this.requestID = requestID;
         this.hostID = hostID;
+    }
+
+    public TosServerException setStatusCode(int statusCode) {
+        this.statusCode = statusCode;
+        return this;
+    }
+
+    public TosServerException setCode(String code) {
+        this.code = code;
+        return this;
+    }
+
+    public TosServerException setMessage(String message) {
+        this.message = message;
+        return this;
+    }
+
+    public String getRequestID() {
+        return requestID;
+    }
+
+    public TosServerException setRequestID(String requestID) {
+        this.requestID = requestID;
+        return this;
+    }
+
+    public String getHostID() {
+        return hostID;
+    }
+
+    public TosServerException setHostID(String hostID) {
+        this.hostID = hostID;
+        return this;
     }
 
     @Override
