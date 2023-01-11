@@ -1,8 +1,11 @@
 package com.volcengine.tos.internal.util;
 
+import com.volcengine.tos.TosClientException;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
@@ -33,6 +36,14 @@ public class StringUtils {
         }
     }
 
+    public static boolean equals(byte[] src, byte[] dst) {
+        if (src == null) {
+            return dst == null;
+        } else {
+            return Arrays.equals(src, dst);
+        }
+    }
+
     // only for test
     public static String randomString(int length){
         Random random = new Random();
@@ -49,6 +60,9 @@ public class StringUtils {
     }
 
     public static byte[] toByteArray(InputStream stream) throws IOException {
+        if (stream == null) {
+            return null;
+        }
         return readStream(stream).toByteArray();
     }
 
@@ -64,7 +78,7 @@ public class StringUtils {
 
     public static String join(List<String> strs, String concat) {
         if (isEmpty(concat)) {
-            throw new IllegalArgumentException("concat is empty");
+            throw new TosClientException("concat is empty", null);
         }
         if (strs == null || strs.size() == 0) {
             return null;

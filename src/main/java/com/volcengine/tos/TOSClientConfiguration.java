@@ -5,7 +5,6 @@ import com.volcengine.tos.auth.StaticCredentials;
 import com.volcengine.tos.transport.TransportConfig;
 
 public class TOSClientConfiguration {
-    private static final int DEFAULT_MAX_RETRY_COUNT = 3;
     private static final boolean DEFAULT_AUTO_RECOGNIZE_CONTENT_TYPE = true;
     private static final boolean DEFAULT_ENABLE_CRC = true;
     private static final boolean DEFAULT_ENABLE_VERIFY_SSL = true;
@@ -54,6 +53,31 @@ public class TOSClientConfiguration {
         this.endpoint = endpoint;
     }
 
+    public TOSClientConfiguration setCredentials(Credentials credentials) {
+        this.credentials = credentials;
+        return this;
+    }
+
+    public TOSClientConfiguration setRegion(String region) {
+        this.region = region;
+        return this;
+    }
+
+    public TOSClientConfiguration setTransportConfig(TransportConfig transportConfig) {
+        this.transportConfig = transportConfig;
+        return this;
+    }
+
+    public TOSClientConfiguration setClientAutoRecognizeContentType(boolean clientAutoRecognizeContentType) {
+        this.clientAutoRecognizeContentType = clientAutoRecognizeContentType;
+        return this;
+    }
+
+    public TOSClientConfiguration setEnableCrc(boolean enableCrc) {
+        this.enableCrc = enableCrc;
+        return this;
+    }
+
     public static TosClientConfigurationBuilder builder() {
         return new TosClientConfigurationBuilder();
     }
@@ -68,8 +92,7 @@ public class TOSClientConfiguration {
 
         private TosClientConfigurationBuilder() {
             this.transportConfig = TransportConfig.builder()
-                    .enableVerifySSL(DEFAULT_ENABLE_VERIFY_SSL)
-                    .maxRetryCount(DEFAULT_MAX_RETRY_COUNT).build();
+                    .enableVerifySSL(DEFAULT_ENABLE_VERIFY_SSL).build();
             this.clientAutoRecognizeContentType = DEFAULT_AUTO_RECOGNIZE_CONTENT_TYPE;
             this.enableCrc = DEFAULT_ENABLE_CRC;
             this.region = "";

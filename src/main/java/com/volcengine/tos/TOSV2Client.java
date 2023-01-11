@@ -1,5 +1,6 @@
 package com.volcengine.tos;
 
+import com.volcengine.tos.auth.Credentials;
 import com.volcengine.tos.auth.SignV4;
 import com.volcengine.tos.auth.Signer;
 import com.volcengine.tos.internal.*;
@@ -12,20 +13,18 @@ import com.volcengine.tos.model.bucket.*;
 import com.volcengine.tos.model.object.*;
 import com.volcengine.tos.internal.Transport;
 import com.volcengine.tos.internal.util.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.volcengine.tos.transport.TransportConfig;
 
 import java.io.*;
 import java.time.Duration;
 
 public class TOSV2Client implements TOSV2 {
-    private static final Logger LOG = LoggerFactory.getLogger(TOSV2Client.class);
-
-    private TOSClient client;
     private TOSClientConfiguration config;
     private TosBucketRequestHandler bucketRequestHandler;
     private TosObjectRequestHandler objectRequestHandler;
     private TosFileRequestHandler fileRequestHandler;
+    private TosPreSignedRequestHandler preSignedRequestHandler;
+    private TosClientV1Adapter clientV1Adapter;
 
     private Transport transport;
     private Signer signer;
@@ -34,19 +33,22 @@ public class TOSV2Client implements TOSV2 {
     protected TOSV2Client(TOSClientConfiguration conf) {
         validateAndInitConfig(conf);
         initRequestHandler();
-        initV1Client();
+        initV1ClientAdapter();
     }
 
     private void validateAndInitConfig(TOSClientConfiguration conf) {
         ParamsChecker.ensureNotNull(conf, "TOSClientConfiguration");
         ParamsChecker.ensureNotNull(conf.getRegion(), "region");
-        ParamsChecker.ensureNotNull(conf.getCredentials(), "credentials");
         this.config = conf;
+        validateEndpoint();
+    }
+
+    private void validateEndpoint() {
         if (StringUtils.isEmpty(this.config.getEndpoint())) {
             if (TosUtils.getSupportedRegion().containsKey(this.config.getRegion())) {
                 this.config.setEndpoint(TosUtils.getSupportedRegion().get(this.config.getRegion()).get(0));
             } else {
-                throw new IllegalArgumentException("endpoint is null and region is invalid");
+                throw new TosClientException("endpoint is null and region is invalid", null);
             }
         }
     }
@@ -56,85 +58,274 @@ public class TOSV2Client implements TOSV2 {
             if (this.transport == null) {
                 this.transport = new RequestTransport(this.config.getTransportConfig());
             }
-            if (this.signer == null) {
+            if (this.signer == null && this.config.getCredentials() != null) {
+                // 允许 signer 为空，匿名访问
                 this.signer = new SignV4(this.config.getCredentials(), this.config.getRegion());
             }
-            this.factory = new TosRequestFactoryImpl(this.signer, this.config.getEndpoint());
+            this.factory = new TosRequestFactory(this.signer, this.config.getEndpoint());
         }
-        this.bucketRequestHandler = new TosBucketRequestHandlerImpl(this.transport, this.factory);
-        this.objectRequestHandler = new TosObjectRequestHandlerImpl(this.transport, this.factory)
+        this.bucketRequestHandler = new TosBucketRequestHandler(this.transport, this.factory);
+        this.objectRequestHandler = new TosObjectRequestHandler(this.transport, this.factory)
                 .setClientAutoRecognizeContentType(this.config.isClientAutoRecognizeContentType())
                 .setEnableCrcCheck(this.config.isEnableCrc());
-        this.fileRequestHandler = new TosFileRequestHandlerImpl(objectRequestHandler, this.transport, this.factory)
+        this.fileRequestHandler = new TosFileRequestHandler(objectRequestHandler, this.transport, this.factory)
                 .setEnableCrcCheck(this.config.isEnableCrc());
+        this.preSignedRequestHandler = new TosPreSignedRequestHandler(this.factory, this.signer);
     }
 
-    private void initV1Client() {
-        this.client = new TOSClient(this.config.getEndpoint(),
-                ClientOptions.withRegion(this.config.getRegion()),
-                ClientOptions.withCredentials(this.config.getCredentials()),
-                ClientOptions.withTransport(this.transport),
-                ClientOptions.withSigner(this.signer));
+    private void initV1ClientAdapter() {
+        this.clientV1Adapter = new TosClientV1Adapter(bucketRequestHandler, objectRequestHandler,
+                fileRequestHandler, preSignedRequestHandler);
+    }
+
+    @Override
+    public void changeCredentials(Credentials credentials) {
+        this.config.setCredentials(credentials);
+        if (credentials == null) {
+            // 匿名访问
+            this.signer = null;
+        } else {
+            this.signer = new SignV4(credentials, this.config.getRegion());
+        }
+        this.factory.setSigner(this.signer);
+        cascadeUpdateRequestFactory();
+    }
+
+    private void cascadeUpdateRequestFactory() {
+        this.bucketRequestHandler.setFactory(this.factory);
+        this.objectRequestHandler.setFactory(this.factory);
+        this.fileRequestHandler.setObjectHandler(this.objectRequestHandler);
+        this.fileRequestHandler.setFactory(this.factory);
+        this.preSignedRequestHandler.setSigner(this.signer);
+        this.preSignedRequestHandler.setFactory(this.factory);
+    }
+
+    private void cascadeUpdateTransport() {
+        this.bucketRequestHandler.setTransport(this.transport);
+        this.objectRequestHandler.setTransport(this.transport);
+        this.fileRequestHandler.setObjectHandler(this.objectRequestHandler);
+        this.fileRequestHandler.setTransport(this.transport);
+    }
+
+    @Override
+    public void changeRegionAndEndpoint(String region, String endpoint) {
+        this.config.setRegion(region);
+        this.config.setEndpoint(endpoint);
+        validateEndpoint();
+        this.factory.setEndpoint(endpoint);
+        cascadeUpdateRequestFactory();
+    }
+
+    @Override
+    public void changeTransportConfig(TransportConfig config) {
+        this.config.setTransportConfig(config);
+        this.transport.switchConfig(this.config.getTransportConfig());
+        cascadeUpdateTransport();
     }
 
     @Override
     public CreateBucketV2Output createBucket(String bucket) throws TosException {
-        return this.createBucket(CreateBucketV2Input.builder().bucket(bucket).build());
+        return createBucket(CreateBucketV2Input.builder().bucket(bucket).build());
     }
 
     @Override
     public CreateBucketV2Output createBucket(CreateBucketV2Input input) throws TosException {
-        return this.bucketRequestHandler.createBucket(input);
+        return bucketRequestHandler.createBucket(input);
     }
 
     @Override
     public HeadBucketV2Output headBucket(HeadBucketV2Input input) throws TosException {
-        return this.bucketRequestHandler.headBucket(input);
+        return bucketRequestHandler.headBucket(input);
     }
 
     @Override
     public DeleteBucketOutput deleteBucket(String bucket) throws TosException {
-        return this.deleteBucket(DeleteBucketInput.builder().bucket(bucket).build());
+        return deleteBucket(DeleteBucketInput.builder().bucket(bucket).build());
     }
 
     @Override
     public DeleteBucketOutput deleteBucket(DeleteBucketInput input) throws TosException {
-        return this.bucketRequestHandler.deleteBucket(input);
+        return bucketRequestHandler.deleteBucket(input);
     }
 
     @Override
     public ListBucketsV2Output listBuckets(ListBucketsV2Input input) throws TosException {
-        return this.bucketRequestHandler.listBuckets(input);
+        return bucketRequestHandler.listBuckets(input);
     }
 
     @Override
     public PutBucketPolicyOutput putBucketPolicy(String bucket, String policy) throws TosException {
-        return this.putBucketPolicy(PutBucketPolicyInput.builder().bucket(bucket).policy(policy).build());
+        return putBucketPolicy(PutBucketPolicyInput.builder().bucket(bucket).policy(policy).build());
     }
 
     @Override
     public PutBucketPolicyOutput putBucketPolicy(PutBucketPolicyInput input) throws TosException {
-        return this.bucketRequestHandler.putBucketPolicy(input);
+        return bucketRequestHandler.putBucketPolicy(input);
     }
 
     @Override
     public GetBucketPolicyOutput getBucketPolicy(String bucket) throws TosException {
-        return this.getBucketPolicy(GetBucketPolicyInput.builder().bucket(bucket).build());
+        return getBucketPolicy(GetBucketPolicyInput.builder().bucket(bucket).build());
     }
 
     @Override
     public GetBucketPolicyOutput getBucketPolicy(GetBucketPolicyInput input) throws TosException {
-        return this.bucketRequestHandler.getBucketPolicy(input);
+        return bucketRequestHandler.getBucketPolicy(input);
     }
 
     @Override
     public DeleteBucketPolicyOutput deleteBucketPolicy(String bucket) throws TosException {
-        return this.deleteBucketPolicy(DeleteBucketPolicyInput.builder().bucket(bucket).build());
+        return deleteBucketPolicy(DeleteBucketPolicyInput.builder().bucket(bucket).build());
     }
 
     @Override
     public DeleteBucketPolicyOutput deleteBucketPolicy(DeleteBucketPolicyInput input) throws TosException {
-        return this.bucketRequestHandler.deleteBucketPolicy(input);
+        return bucketRequestHandler.deleteBucketPolicy(input);
+    }
+
+    @Override
+    public PutBucketCORSOutput putBucketCORS(PutBucketCORSInput input) throws TosException {
+        return bucketRequestHandler.putBucketCORS(input);
+    }
+
+    @Override
+    public GetBucketCORSOutput getBucketCORS(GetBucketCORSInput input) throws TosException {
+        return bucketRequestHandler.getBucketCORS(input);
+    }
+
+    @Override
+    public DeleteBucketCORSOutput deleteBucketCORS(DeleteBucketCORSInput input) throws TosException {
+        return bucketRequestHandler.deleteBucketCORS(input);
+    }
+
+    @Override
+    public PutBucketStorageClassOutput putBucketStorageClass(PutBucketStorageClassInput input) throws TosException {
+        return bucketRequestHandler.putBucketStorageClass(input);
+    }
+
+    @Override
+    public GetBucketLocationOutput getBucketLocation(GetBucketLocationInput input) throws TosException {
+        return bucketRequestHandler.getBucketLocation(input);
+    }
+
+    @Override
+    public PutBucketLifecycleOutput putBucketLifecycle(PutBucketLifecycleInput input) throws TosException {
+        return bucketRequestHandler.putBucketLifecycle(input);
+    }
+
+    @Override
+    public GetBucketLifecycleOutput getBucketLifecycle(GetBucketLifecycleInput input) throws TosException {
+        return bucketRequestHandler.getBucketLifecycle(input);
+    }
+
+    @Override
+    public DeleteBucketLifecycleOutput deleteBucketLifecycle(DeleteBucketLifecycleInput input) throws TosException {
+        return bucketRequestHandler.deleteBucketLifecycle(input);
+    }
+
+    @Override
+    public PutBucketMirrorBackOutput putBucketMirrorBack(PutBucketMirrorBackInput input) throws TosException {
+        return bucketRequestHandler.putBucketMirrorBack(input);
+    }
+
+    @Override
+    public GetBucketMirrorBackOutput getBucketMirrorBack(GetBucketMirrorBackInput input) throws TosException {
+        return bucketRequestHandler.getBucketMirrorBack(input);
+    }
+
+    @Override
+    public DeleteBucketMirrorBackOutput deleteBucketMirrorBack(DeleteBucketMirrorBackInput input) throws TosException {
+        return bucketRequestHandler.deleteBucketMirrorBack(input);
+    }
+
+    @Override
+    public PutBucketReplicationOutput putBucketReplication(PutBucketReplicationInput input) throws TosException {
+        return bucketRequestHandler.putBucketReplication(input);
+    }
+
+    @Override
+    public GetBucketReplicationOutput getBucketReplication(GetBucketReplicationInput input) throws TosException {
+        return bucketRequestHandler.getBucketReplication(input);
+    }
+
+    @Override
+    public DeleteBucketReplicationOutput deleteBucketReplication(DeleteBucketReplicationInput input) throws TosException {
+        return bucketRequestHandler.deleteBucketReplication(input);
+    }
+
+    @Override
+    public PutBucketVersioningOutput putBucketVersioning(PutBucketVersioningInput input) throws TosException {
+        return bucketRequestHandler.putBucketVersioning(input);
+    }
+
+    @Override
+    public GetBucketVersioningOutput getBucketVersioning(GetBucketVersioningInput input) throws TosException {
+        return bucketRequestHandler.getBucketVersioning(input);
+    }
+
+    @Override
+    public PutBucketWebsiteOutput putBucketWebsite(PutBucketWebsiteInput input) throws TosException {
+        return bucketRequestHandler.putBucketWebsite(input);
+    }
+
+    @Override
+    public GetBucketWebsiteOutput getBucketWebsite(GetBucketWebsiteInput input) throws TosException {
+        return bucketRequestHandler.getBucketWebsite(input);
+    }
+
+    @Override
+    public DeleteBucketWebsiteOutput deleteBucketWebsite(DeleteBucketWebsiteInput input) throws TosException {
+        return bucketRequestHandler.deleteBucketWebsite(input);
+    }
+
+    @Override
+    public PutBucketNotificationOutput putBucketNotification(PutBucketNotificationInput input) throws TosException {
+        return bucketRequestHandler.putBucketNotification(input);
+    }
+
+    @Override
+    public GetBucketNotificationOutput getBucketNotification(GetBucketNotificationInput input) throws TosException {
+        return bucketRequestHandler.getBucketNotification(input);
+    }
+
+    @Override
+    public PutBucketCustomDomainOutput putBucketCustomDomain(PutBucketCustomDomainInput input) throws TosException {
+        return bucketRequestHandler.putBucketCustomDomain(input);
+    }
+
+    @Override
+    public ListBucketCustomDomainOutput listBucketCustomDomain(ListBucketCustomDomainInput input) throws TosException {
+        return bucketRequestHandler.listBucketCustomDomain(input);
+    }
+
+    @Override
+    public DeleteBucketCustomDomainOutput deleteBucketCustomDomain(DeleteBucketCustomDomainInput input) throws TosException {
+        return bucketRequestHandler.deleteBucketCustomDomain(input);
+    }
+
+    @Override
+    public PutBucketRealTimeLogOutput putBucketRealTimeLog(PutBucketRealTimeLogInput input) throws TosException {
+        return bucketRequestHandler.putBucketRealTimeLog(input);
+    }
+
+    @Override
+    public GetBucketRealTimeLogOutput getBucketRealTimeLog(GetBucketRealTimeLogInput input) throws TosException {
+        return bucketRequestHandler.getBucketRealTimeLog(input);
+    }
+
+    @Override
+    public DeleteBucketRealTimeLogOutput deleteBucketRealTimeLog(DeleteBucketRealTimeLogInput input) throws TosException {
+        return bucketRequestHandler.deleteBucketRealTimeLog(input);
+    }
+
+    @Override
+    public PutBucketACLOutput putBucketACL(PutBucketACLInput input) throws TosException {
+        return bucketRequestHandler.putBucketACL(input);
+    }
+
+    @Override
+    public GetBucketACLOutput getBucketACL(GetBucketACLInput input) throws TosException {
+        return bucketRequestHandler.getBucketACL(input);
     }
 
     @Override
@@ -155,6 +346,11 @@ public class TOSV2Client implements TOSV2 {
     @Override
     public DownloadFileOutput downloadFile(DownloadFileInput input) throws TosException {
         return fileRequestHandler.downloadFile(input);
+    }
+
+    @Override
+    public ResumableCopyObjectOutput resumableCopyObject(ResumableCopyObjectInput input) throws TosException {
+        return fileRequestHandler.resumableCopyObject(input);
     }
 
     @Override
@@ -198,6 +394,15 @@ public class TOSV2Client implements TOSV2 {
     }
 
     @Override
+    public ListObjectsType2Output listObjectsType2(ListObjectsType2Input input) throws TosException {
+        ParamsChecker.ensureNotNull(input, "ListObjectsType2Input");
+        if (input.isListOnlyOnce()) {
+            return objectRequestHandler.listObjectsType2(input);
+        }
+        return objectRequestHandler.listObjectsType2UntilFinished(input);
+    }
+
+    @Override
     public ListObjectVersionsV2Output listObjectVersions(ListObjectVersionsV2Input input) throws TosException {
         return objectRequestHandler.listObjectVersions(input);
     }
@@ -220,6 +425,31 @@ public class TOSV2Client implements TOSV2 {
     @Override
     public GetObjectACLV2Output getObjectAcl(GetObjectACLV2Input input) throws TosException {
         return objectRequestHandler.getObjectAcl(input);
+    }
+
+    @Override
+    public PutObjectTaggingOutput putObjectTagging(PutObjectTaggingInput input) throws TosException {
+        return objectRequestHandler.putObjectTagging(input);
+    }
+
+    @Override
+    public GetObjectTaggingOutput getObjectTagging(GetObjectTaggingInput input) throws TosException {
+        return objectRequestHandler.getObjectTagging(input);
+    }
+
+    @Override
+    public DeleteObjectTaggingOutput deleteObjectTagging(DeleteObjectTaggingInput input) throws TosException {
+        return objectRequestHandler.deleteObjectTagging(input);
+    }
+
+    @Override
+    public FetchObjectOutput fetchObject(FetchObjectInput input) throws TosException {
+        return objectRequestHandler.fetchObject(input);
+    }
+
+    @Override
+    public PutFetchTaskOutput putFetchTask(PutFetchTaskInput input) throws TosException {
+        return objectRequestHandler.putFetchTask(input);
     }
 
     @Override
@@ -259,144 +489,146 @@ public class TOSV2Client implements TOSV2 {
 
     @Override
     public PreSignedURLOutput preSignedURL(PreSignedURLInput input) throws TosException {
-        ParamsChecker.ensureNotNull(input, "PreSignedURLInput");
-        ParamsChecker.isValidBucketNameAndKey(input.getBucket(), input.getKey());
-        RequestBuilder builder = this.factory.init(input.getBucket(), "", input.getHeader());
-        if (input.getQuery() != null) {
-            input.getQuery().forEach(builder::withQuery);
-        }
-        // todo where is header?
-        return new PreSignedURLOutput(builder.preSignedURL(input.getHttpMethod().toString(),
-                Duration.ofSeconds(input.getExpires())), null);
+        return preSignedRequestHandler.preSignedURL(input);
+    }
+
+    @Override
+    public PreSignedPostSignatureOutput preSignedPostSignature(PreSignedPostSignatureInput input) throws TosException {
+        return preSignedRequestHandler.preSignedPostSignature(input);
+    }
+
+    @Override
+    public PreSingedPolicyURLOutput preSingedPolicyURL(PreSingedPolicyURLInput input) throws TosException {
+        return preSignedRequestHandler.preSingedPolicyURL(input);
     }
 
     @Override
     public CreateBucketOutput createBucket(CreateBucketInput input) throws TosException {
-        return this.client.createBucket(input);
+        return clientV1Adapter.createBucket(input);
     }
 
     @Override
     public HeadBucketOutput headBucket(String bucket) throws TosException {
-        return this.client.headBucket(bucket);
+        return clientV1Adapter.headBucket(bucket);
     }
 
     @Override
     public ListBucketsOutput listBuckets(ListBucketsInput input) throws TosException {
-        return this.client.listBuckets(input);
+        return clientV1Adapter.listBuckets(input);
     }
 
     @Override
     public GetObjectOutput getObject(String bucket, String objectKey, RequestOptionsBuilder... builders) throws TosException {
-        return this.client.getObject(bucket, objectKey, builders);
+        return clientV1Adapter.getObject(bucket, objectKey, builders);
     }
 
     @Override
     public HeadObjectOutput headObject(String bucket, String objectKey, RequestOptionsBuilder... builders) throws TosException {
-        return this.client.headObject(bucket, objectKey, builders);
+        return clientV1Adapter.headObject(bucket, objectKey, builders);
     }
 
     @Override
     public DeleteObjectOutput deleteObject(String bucket, String objectKey, RequestOptionsBuilder... builders) throws TosException {
-        return this.client.deleteObject(bucket, objectKey, builders);
+        return clientV1Adapter.deleteObject(bucket, objectKey, builders);
     }
 
     @Override
     public DeleteMultiObjectsOutput deleteMultiObjects(String bucket, DeleteMultiObjectsInput input, RequestOptionsBuilder... builders) throws TosException {
-        return this.client.deleteMultiObjects(bucket, input, builders);
+        return clientV1Adapter.deleteMultiObjects(bucket, input, builders);
     }
 
     @Override
     public PutObjectOutput putObject(String bucket, String objectKey, InputStream inputStream, RequestOptionsBuilder... builders) throws TosException {
-        return this.client.putObject(bucket, objectKey, inputStream, builders);
+        return clientV1Adapter.putObject(bucket, objectKey, inputStream, builders);
     }
 
     @Override
     public UploadFileOutput uploadFile(String bucket, UploadFileInput input, RequestOptionsBuilder... builders) throws TosException {
-        return this.client.uploadFile(bucket, input, builders);
+        return clientV1Adapter.uploadFile(bucket, input, builders);
     }
 
     @Override
     public AppendObjectOutput appendObject(String bucket, String objectKey, InputStream content, long offset, RequestOptionsBuilder... builders) throws TosException {
-        return this.client.appendObject(bucket, objectKey, content, offset, builders);
+        return clientV1Adapter.appendObject(bucket, objectKey, content, offset, builders);
     }
 
     @Override
     public SetObjectMetaOutput setObjectMeta(String bucket, String objectKey, RequestOptionsBuilder... builders) throws TosException {
-        return this.client.setObjectMeta(bucket, objectKey, builders);
+        return clientV1Adapter.setObjectMeta(bucket, objectKey, builders);
     }
 
     @Override
     public ListObjectsOutput listObjects(String bucket, ListObjectsInput input) throws TosException {
-        return this.client.listObjects(bucket, input);
+        return clientV1Adapter.listObjects(bucket, input);
     }
 
     @Override
     public ListObjectVersionsOutput listObjectVersions(String bucket, ListObjectVersionsInput input) throws TosException {
-        return this.client.listObjectVersions(bucket, input);
+        return clientV1Adapter.listObjectVersions(bucket, input);
     }
 
     @Override
     public CopyObjectOutput copyObject(String bucket, String srcObjectKey, String dstObjectKey, RequestOptionsBuilder... builders) throws TosException {
-        return this.client.copyObject(bucket, srcObjectKey, dstObjectKey, builders);
+        return clientV1Adapter.copyObject(bucket, srcObjectKey, dstObjectKey, builders);
     }
 
     @Override
     public CopyObjectOutput copyObjectTo(String bucket, String dstBucket, String dstObjectKey, String srcObjectKey, RequestOptionsBuilder... builders) throws TosException {
-        return this.client.copyObjectTo(bucket, dstBucket, dstObjectKey, srcObjectKey, builders);
+        return clientV1Adapter.copyObjectTo(bucket, dstBucket, dstObjectKey, srcObjectKey, builders);
     }
 
     @Override
     public CopyObjectOutput copyObjectFrom(String bucket, String srcBucket, String srcObjectKey, String dstObjectKey, RequestOptionsBuilder... builders) throws TosException {
-        return this.client.copyObjectFrom(bucket, srcBucket, srcObjectKey, dstObjectKey, builders);
+        return clientV1Adapter.copyObjectFrom(bucket, srcBucket, srcObjectKey, dstObjectKey, builders);
     }
 
     @Override
     public UploadPartCopyOutput uploadPartCopy(String bucket, UploadPartCopyInput input, RequestOptionsBuilder... builders) throws TosException {
-        return this.client.uploadPartCopy(bucket, input, builders);
+        return clientV1Adapter.uploadPartCopy(bucket, input, builders);
     }
 
     @Override
     public PutObjectAclOutput putObjectAcl(String bucket, PutObjectAclInput input) throws TosException {
-        return this.client.putObjectAcl(bucket, input);
+        return clientV1Adapter.putObjectAcl(bucket, input);
     }
 
     @Override
     public GetObjectAclOutput getObjectAcl(String bucket, String objectKey, RequestOptionsBuilder... builders) throws TosException {
-        return this.client.getObjectAcl(bucket, objectKey, builders);
+        return clientV1Adapter.getObjectAcl(bucket, objectKey, builders);
     }
 
     @Override
     public CreateMultipartUploadOutput createMultipartUpload(String bucket, String objectKey, RequestOptionsBuilder... builders) throws TosException {
-        return this.client.createMultipartUpload(bucket, objectKey, builders);
+        return clientV1Adapter.createMultipartUpload(bucket, objectKey, builders);
     }
 
     @Override
     public UploadPartOutput uploadPart(String bucket, UploadPartInput input, RequestOptionsBuilder... builders) throws TosException {
-        return this.client.uploadPart(bucket, input, builders);
+        return clientV1Adapter.uploadPart(bucket, input, builders);
     }
 
     @Override
     public CompleteMultipartUploadOutput completeMultipartUpload(String bucket, CompleteMultipartUploadInput input) throws TosException {
-        return this.client.completeMultipartUpload(bucket, input);
+        return clientV1Adapter.completeMultipartUpload(bucket, input);
     }
 
     @Override
     public AbortMultipartUploadOutput abortMultipartUpload(String bucket, AbortMultipartUploadInput input) throws TosException {
-        return this.client.abortMultipartUpload(bucket, input);
+        return clientV1Adapter.abortMultipartUpload(bucket, input);
     }
 
     @Override
     public ListUploadedPartsOutput listUploadedParts(String bucket, ListUploadedPartsInput input, RequestOptionsBuilder... builders) throws TosException {
-        return this.client.listUploadedParts(bucket, input, builders);
+        return clientV1Adapter.listUploadedParts(bucket, input, builders);
     }
 
     @Override
     public ListMultipartUploadsOutput listMultipartUploads(String bucket, ListMultipartUploadsInput input) throws TosException {
-        return this.client.listMultipartUploads(bucket, input);
+        return clientV1Adapter.listMultipartUploads(bucket, input);
     }
 
     @Override
     public String preSignedURL(String httpMethod, String bucket, String objectKey, Duration ttl, RequestOptionsBuilder... builders) throws TosException {
-        return this.client.preSignedURL(httpMethod, bucket, objectKey, ttl, builders);
+        return clientV1Adapter.preSignedURL(httpMethod, bucket, objectKey, ttl, builders);
     }
 }

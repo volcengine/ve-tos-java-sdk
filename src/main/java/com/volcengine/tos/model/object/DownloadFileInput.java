@@ -5,7 +5,7 @@ import com.volcengine.tos.comm.ratelimit.RateLimiter;
 import com.volcengine.tos.internal.taskman.DownloadFileTaskCanceler;
 
 public class DownloadFileInput {
-    private HeadObjectV2Input headObjectV2Input;
+    private HeadObjectV2Input headObjectV2Input = new HeadObjectV2Input();
     private String filePath;
     private String tempFilePath;
     private long partSize;
@@ -20,12 +20,39 @@ public class DownloadFileInput {
     /** 客户端限速，单位 Byte/s **/
     private RateLimiter rateLimiter;
 
-    public HeadObjectV2Input getHeadObjectV2Input() {
-        return headObjectV2Input;
+    public String getBucket() {
+        return headObjectV2Input.getBucket();
     }
 
-    public DownloadFileInput setHeadObjectV2Input(HeadObjectV2Input headObjectV2Input) {
-        this.headObjectV2Input = headObjectV2Input;
+    public DownloadFileInput setBucket(String bucket) {
+        this.headObjectV2Input.setBucket(bucket);
+        return this;
+    }
+
+    public String getKey() {
+        return headObjectV2Input.getKey();
+    }
+
+    public DownloadFileInput setKey(String key) {
+        this.headObjectV2Input.setKey(key);
+        return this;
+    }
+
+    public String getVersionID() {
+        return headObjectV2Input.getVersionID();
+    }
+
+    public DownloadFileInput setVersionID(String versionID) {
+        this.headObjectV2Input.setVersionID(versionID);
+        return this;
+    }
+
+    public ObjectMetaRequestOptions getOptions() {
+        return headObjectV2Input.getOptions();
+    }
+
+    public DownloadFileInput setOptions(ObjectMetaRequestOptions options) {
+        this.headObjectV2Input.setOptions(options);
         return this;
     }
 
@@ -123,10 +150,24 @@ public class DownloadFileInput {
         return this;
     }
 
+    @Deprecated
+    public HeadObjectV2Input getHeadObjectV2Input() {
+        return headObjectV2Input;
+    }
+
+    @Deprecated
+    public DownloadFileInput setHeadObjectV2Input(HeadObjectV2Input headObjectV2Input) {
+        this.headObjectV2Input = headObjectV2Input;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "DownloadFileInput{" +
-                "headObjectV2Input=" + headObjectV2Input +
+                "bucket='" + getBucket() + '\'' +
+                ", key='" + getKey() + '\'' +
+                ", versionID='" + getVersionID() + '\'' +
+                ", options=" + getOptions() +
                 ", filePath='" + filePath + '\'' +
                 ", tempFilePath='" + tempFilePath + '\'' +
                 ", partSize=" + partSize +
@@ -142,7 +183,7 @@ public class DownloadFileInput {
     }
 
     public static final class DownloadFileInputBuilder {
-        private HeadObjectV2Input headObjectV2Input;
+        private HeadObjectV2Input headObjectV2Input = new HeadObjectV2Input();
         private String filePath;
         private String tempFilePath;
         private long partSize;
@@ -157,8 +198,29 @@ public class DownloadFileInput {
         private DownloadFileInputBuilder() {
         }
 
+        @Deprecated
         public DownloadFileInputBuilder headObjectV2Input(HeadObjectV2Input headObjectV2Input) {
             this.headObjectV2Input = headObjectV2Input;
+            return this;
+        }
+
+        public DownloadFileInputBuilder bucket(String bucket) {
+            this.headObjectV2Input.setBucket(bucket);
+            return this;
+        }
+
+        public DownloadFileInputBuilder key(String key) {
+            this.headObjectV2Input.setKey(key);
+            return this;
+        }
+
+        public DownloadFileInputBuilder versionID(String versionID) {
+            this.headObjectV2Input.setVersionID(versionID);
+            return this;
+        }
+
+        public DownloadFileInputBuilder options(ObjectMetaRequestOptions options) {
+            this.headObjectV2Input.setOptions(options);
             return this;
         }
 

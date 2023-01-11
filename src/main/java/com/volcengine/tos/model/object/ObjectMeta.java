@@ -57,6 +57,31 @@ public class ObjectMeta {
         return this;
     }
 
+    public ObjectMeta fromGetObjectV2Output(GetObjectBasicOutput res) {
+        if (res == null) {
+            return null;
+        }
+        this.contentLength = res.getContentLength();
+        this.contentType = res.getContentType();
+        this.contentMD5 = res.getContentMD5();
+        this.contentLanguage = res.getContentLanguage();
+        this.contentEncoding = res.getContentEncoding();
+        this.contentDisposition = res.getContentDisposition();
+        this.lastModified = res.getLastModified();
+        this.cacheControl = res.getCacheControl();
+        this.expires = res.getExpires();
+        this.etags = res.getEtag();
+        this.versionID = res.getVersionID();
+        this.deleteMarker = res.isDeleteMarker();
+        this.objectType = res.getObjectType();
+        this.storageClass = res.getStorageClass().toString();
+        this.metadata = res.getCustomMetadata();
+        this.sseCustomerAlgorithm = res.getSsecAlgorithm();
+        this.sseCustomerKeyMD5 = res.getSsecKeyMD5();
+        this.crc64 = res.getHashCrc64ecma();
+        return this;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) {

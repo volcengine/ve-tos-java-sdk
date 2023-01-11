@@ -1,17 +1,13 @@
 package com.volcengine.tos.auth;
 
+import com.volcengine.tos.TosClientException;
 import com.volcengine.tos.internal.TosRequest;
 import com.volcengine.tos.internal.util.ParamsChecker;
+import com.volcengine.tos.internal.util.SigningUtils;
 import com.volcengine.tos.internal.util.StringUtils;
 
-import javax.crypto.Mac;
-import javax.crypto.spec.SecretKeySpec;
 import java.nio.charset.StandardCharsets;
-import java.security.InvalidKeyException;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.time.*;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.function.Predicate;
@@ -19,8 +15,6 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import static com.volcengine.tos.internal.util.TosUtils.uriEncode;
 
 @FunctionalInterface
 interface signingHeader{
@@ -35,25 +29,6 @@ interface signKey{
 public class SignV4 implements Signer {
     private static final Logger LOG = LoggerFactory.getLogger(SignV4.class);
 
-    static final String emptySHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
-    static final String unsignedPayload = "UNSIGNED-PAYLOAD";
-    static final String signPrefix = "TOS4-HMAC-SHA256";
-    static final String authorization = "Authorization";
-    static final DateTimeFormatter yyyyMMdd = DateTimeFormatter.ofPattern("yyyyMMdd");
-    static final DateTimeFormatter iso8601Layout = DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss'Z'");
-
-    static final String v4Algorithm = "X-Tos-Algorithm";
-    static final String v4Credential = "X-Tos-Credential";
-    static final String v4Date = "X-Tos-Date";
-    static final String v4Expires = "X-Tos-Expires";
-    static final String v4SignedHeaders = "X-Tos-SignedHeaders";
-    static final String v4Signature = "X-Tos-Signature";
-    static final String v4SignatureLower = "x-tos-signature";
-    static final String v4ContentSHA256 = "X-Tos-Content-Sha256";
-    static final String v4SecurityToken = "X-Tos-Security-Token";
-
-    static final String v4Prefix = "x-tos";
-
     private Credentials credentials;
     private final String region;
     private signingHeader signingHeader;
@@ -62,12 +37,14 @@ public class SignV4 implements Signer {
     private signKey signKey;
 
     public SignV4(Credentials credentials, String region) {
+        ParamsChecker.ensureNotNull(credentials, "Credentials");
+        ParamsChecker.ensureNotNull(region, "Region");
         this.credentials = credentials;
         this.region = region;
         this.signingHeader = SignV4::defaultSigningHeaderV4;
         this.signingQuery = SignV4::defaultSigningQueryV4;
         this.now = SignV4::defaultUTCNow;
-        this.signKey = SignV4::signKey;
+        this.signKey = SigningUtils::signKey;
     }
 
     public Supplier<Instant> getNow() {
@@ -79,23 +56,33 @@ public class SignV4 implements Signer {
     }
 
     @Override
+    public Credentials getCredential() {
+        return this.credentials;
+    }
+
+    @Override
+    public String getRegion() {
+        return this.region;
+    }
+
+    @Override
     public Map<String, String> signHeader(TosRequest req) {
         ParamsChecker.ensureNotNull(req.getHost(), "host");
         Map<String, String> signed = new HashMap<>(4);
         OffsetDateTime now = this.now.get().atOffset(ZoneOffset.UTC);
-        String date = now.format(iso8601Layout);
-        String contentSha256 = req.getHeaders().get(v4ContentSHA256);
+        String date = now.format(SigningUtils.iso8601Layout);
+        String contentSha256 = req.getHeaders().get(SigningUtils.v4ContentSHA256);
 
         Map<String, String> header = req.getHeaders();
         List<Map.Entry<String, String>> signedHeader = this.signedHeader(header, false);
-        signedHeader.add(new SimpleEntry<>(v4Date.toLowerCase(), date));
+        signedHeader.add(new SimpleEntry<>(SigningUtils.v4Date.toLowerCase(), date));
         signedHeader.add(new SimpleEntry<>("date", date));
         signedHeader.add(new SimpleEntry<>("host", req.getHost()));
 
         Credential cred = this.credentials.credential();
         if (StringUtils.isNotEmpty(cred.getSecurityToken())) {
-            signedHeader.add(new SimpleEntry<>(v4SecurityToken.toLowerCase(), cred.getSecurityToken()));
-            signed.put(v4SecurityToken, cred.getSecurityToken());
+            signedHeader.add(new SimpleEntry<>(SigningUtils.v4SecurityToken.toLowerCase(), cred.getSecurityToken()));
+            signed.put(SigningUtils.v4SecurityToken, cred.getSecurityToken());
         }
         Collections.sort(signedHeader, new Comparator<Map.Entry<String, String>>() {
             @Override
@@ -105,12 +92,12 @@ public class SignV4 implements Signer {
         });
         List<Map.Entry<String, String>> signedQuery = this.signedQuery(req.getQuery(), null);
         String sign = this.doSign(req.getMethod(), req.getPath(), contentSha256, signedHeader, signedQuery, now, cred);
-        String credential = String.format("%s/%s/%s/tos/request", cred.getAccessKeyId(), now.format(yyyyMMdd), this.region);
+        String credential = String.format("%s/%s/%s/tos/request", cred.getAccessKeyId(), now.format(SigningUtils.yyyyMMdd), this.region);
         String keys = signedHeader.stream().map(Map.Entry::getKey).sorted().collect(Collectors.joining(";"));
         String auth = String.format("TOS4-HMAC-SHA256 Credential=%s,SignedHeaders=%s,Signature=%s", credential, keys, sign);
 
-        signed.put(authorization, auth);
-        signed.put(v4Date, date);
+        signed.put(SigningUtils.authorization, auth);
+        signed.put(SigningUtils.v4Date, date);
         signed.put("Date", date);
         return signed;
     }
@@ -118,18 +105,18 @@ public class SignV4 implements Signer {
     @Override
     public Map<String, String> signQuery(TosRequest req, Duration ttl) {
         OffsetDateTime now = this.now.get().atOffset(ZoneOffset.UTC);
-        String date = now.format(iso8601Layout);
+        String date = now.format(SigningUtils.iso8601Layout);
         Map<String, String> query = req.getQuery();
         Map<String, String> extra = new HashMap<>();
 
         Credential cred = this.credentials.credential();
-        String credential = String.format("%s/%s/%s/tos/request", cred.getAccessKeyId(), now.format(yyyyMMdd), this.region);
-        extra.put(v4Algorithm, signPrefix);
-        extra.put(v4Credential, credential);
-        extra.put(v4Date, date);
-        extra.put(v4Expires, String.valueOf(ttl.toMillis() / 1000));
+        String credential = String.format("%s/%s/%s/tos/request", cred.getAccessKeyId(), now.format(SigningUtils.yyyyMMdd), this.region);
+        extra.put(SigningUtils.v4Algorithm, SigningUtils.signPrefix);
+        extra.put(SigningUtils.v4Credential, credential);
+        extra.put(SigningUtils.v4Date, date);
+        extra.put(SigningUtils.v4Expires, String.valueOf(ttl.toMillis() / 1000));
         if (StringUtils.isNotEmpty(cred.getSecurityToken())) {
-            extra.put(v4SecurityToken, cred.getSecurityToken());
+            extra.put(SigningUtils.v4SecurityToken, cred.getSecurityToken());
         }
 //        extra.put(v4SignedHeaders, "host"); // 目前只有host
 
@@ -137,7 +124,7 @@ public class SignV4 implements Signer {
 
         String host = req.getHost();
         if (StringUtils.isEmpty(host)) {
-            throw new IllegalArgumentException("params.getHost() get null/empty");
+            throw new TosClientException("empty host", null);
         }
         signedHeader.add(new SimpleEntry<>("host", host));
         Collections.sort(signedHeader, new Comparator<Map.Entry<String, String>>() {
@@ -148,10 +135,10 @@ public class SignV4 implements Signer {
         });
 
         String keys = signedHeader.stream().map(Map.Entry::getKey).sorted().collect(Collectors.joining(";"));
-        extra.put(v4SignedHeaders, keys);
+        extra.put(SigningUtils.v4SignedHeaders, keys);
         List<Map.Entry<String, String>> signedQuery = this.signedQuery(query, extra);
-        String sign = this.doSign(req.getMethod(), req.getPath(), unsignedPayload, signedHeader, signedQuery, now, cred);
-        extra.put(v4Signature, sign);
+        String sign = this.doSign(req.getMethod(), req.getPath(), SigningUtils.unsignedPayload, signedHeader, signedQuery, now, cred);
+        extra.put(SigningUtils.v4Signature, sign);
 
         return extra;
     }
@@ -173,7 +160,7 @@ public class SignV4 implements Signer {
         if (StringUtils.isEmpty(key)) {
             return false;
         }
-        return ("content-type".equals(key) && !isSigningQuery) || key.startsWith(v4Prefix);
+        return ("content-type".equals(key) && !isSigningQuery) || key.startsWith(SigningUtils.v4Prefix);
     }
 
     /**
@@ -181,7 +168,7 @@ public class SignV4 implements Signer {
      * @return boolean, 需要加入签名中 or not
      */
     public static boolean defaultSigningQueryV4(String key) {
-        return !v4SignatureLower.equals(key);
+        return !SigningUtils.v4SignatureLower.equals(key);
     }
 
     /**
@@ -239,10 +226,10 @@ public class SignV4 implements Signer {
         buf.append(method);
         buf.append(split);
 
-        buf.append(encodePath(path));
+        buf.append(SigningUtils.encodePath(path));
         buf.append(split);
 
-        buf.append(encodeQuery(query));
+        buf.append(SigningUtils.encodeQuery(query));
         buf.append(split);
 
         if (header == null) {
@@ -274,17 +261,9 @@ public class SignV4 implements Signer {
         if (StringUtils.isNotEmpty(contentSha256)) {
             buf.append(contentSha256);
         } else {
-            buf.append(emptySHA256);
+            buf.append(SigningUtils.emptySHA256);
         }
         return buf.toString();
-    }
-
-    static byte[] signKey(SignKeyInfo info) {
-        byte[] date = hmacSha256(info.getCredential().getAccessKeySecret().getBytes(StandardCharsets.UTF_8),
-                info.getDate().getBytes(StandardCharsets.UTF_8));
-        byte[] region = hmacSha256(date, info.getRegion().getBytes(StandardCharsets.UTF_8));
-        byte[] service = hmacSha256(region, "tos".getBytes(StandardCharsets.UTF_8));
-        return hmacSha256(service, "request".getBytes(StandardCharsets.UTF_8));
     }
 
     private String doSign(String method, String path, String contentSha256,
@@ -297,87 +276,25 @@ public class SignV4 implements Signer {
 
         LOG.debug("canonical request:\n{}", req);
 
-        StringBuilder buf = new StringBuilder(signPrefix.length() + 128);
+        StringBuilder buf = new StringBuilder(SigningUtils.signPrefix.length() + 128);
 
-        buf.append(signPrefix);
+        buf.append(SigningUtils.signPrefix);
         buf.append(split);
 
-        buf.append(now.format(iso8601Layout));
+        buf.append(now.format(SigningUtils.iso8601Layout));
         buf.append(split);
 
-        String date = now.format(yyyyMMdd);
+        String date = now.format(SigningUtils.yyyyMMdd);
         buf.append(date).append('/')
                 .append(this.region).append("/tos/request");
         buf.append(split);
 
-        byte[] sum = sha256(req);
-        buf.append(toHex(sum));
+        byte[] sum = SigningUtils.sha256(req);
+        buf.append(SigningUtils.toHex(sum));
         LOG.debug("string to sign:\n {}", buf.toString());
-        byte[] signK = signKey(new SignKeyInfo(date, this.region, cred));
-        byte[] sign = hmacSha256(signK, buf.toString().getBytes(StandardCharsets.UTF_8));
-        return String.valueOf(toHex(sign));
+        byte[] signK = SigningUtils.signKey(new SignKeyInfo(date, this.region, cred));
+        byte[] sign = SigningUtils.hmacSha256(signK, buf.toString().getBytes(StandardCharsets.UTF_8));
+        return String.valueOf(SigningUtils.toHex(sign));
     }
 
-    private static String encodePath(String path) {
-        if (path == null || path.isEmpty()) {
-            return "/";
-        }
-        return uriEncode(path, false);
-    }
-
-    private static String encodeQuery(List<Map.Entry<String, String>> query) {
-        if (query == null || query.isEmpty()) {
-            return "";
-        }
-        StringBuilder buf = new StringBuilder(512);
-        Collections.sort(query, new Comparator<Map.Entry<String, String>>() {
-            @Override
-            public int compare(Map.Entry<String, String> o1, Map.Entry<String, String> o2) {
-                return o1.getKey().compareTo(o2.getKey());
-            }
-        });
-        for (Map.Entry<String, String> kv : query) {
-            String keyEscaped = uriEncode(kv.getKey(), true);
-            if (buf.length() > 0){
-                buf.append('&');
-            }
-            buf.append(keyEscaped);
-            buf.append('=');
-            buf.append(uriEncode(kv.getValue() == null ? "" : kv.getValue(), true));
-        }
-        return buf.toString();
-    }
-
-    static byte[] hmacSha256(byte[] key, byte[] value) {
-        try {
-            Mac hmac = Mac.getInstance("HmacSHA256");
-            SecretKeySpec secretKey = new SecretKeySpec(key, "HmacSHA256");
-            hmac.init(secretKey);
-            return hmac.doFinal(value);
-        } catch (NoSuchAlgorithmException | InvalidKeyException e) {
-            throw new IllegalArgumentException(e.getMessage());
-        }
-    }
-
-    public static byte[] sha256(String data) {
-        try {
-            MessageDigest md = MessageDigest.getInstance("SHA-256");
-            md.update(data.getBytes(StandardCharsets.UTF_8));
-            return md.digest();
-        } catch (Exception e) {
-            throw new IllegalArgumentException(e.getMessage());
-        }
-    }
-
-    private static final char[] HEX = "0123456789abcdef".toCharArray();
-
-    private static char[] toHex(byte[] bytes) {
-        char[] hexChars = new char[bytes.length * 2];
-        for (int j = 0; j < bytes.length; j++) {
-            int v = bytes[j] & 0xFF;
-            hexChars[j * 2] = HEX[v >>> 4];
-            hexChars[j * 2 + 1] = HEX[v & 0x0F];
-        }
-        return hexChars;
-    }
 }

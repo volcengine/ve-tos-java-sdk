@@ -1,6 +1,5 @@
 package com.volcengine.tos.model.object;
 
-
 import java.io.Serializable;
 
 public class UploadFilePartInfo implements Serializable {

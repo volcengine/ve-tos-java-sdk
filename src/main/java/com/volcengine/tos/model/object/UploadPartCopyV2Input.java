@@ -1,5 +1,6 @@
 package com.volcengine.tos.model.object;
 
+import com.volcengine.tos.TosClientException;
 import com.volcengine.tos.comm.TosHeader;
 import com.volcengine.tos.internal.Consts;
 import com.volcengine.tos.internal.model.HttpRange;
@@ -26,6 +27,13 @@ public class UploadPartCopyV2Input {
      * only supported in uploadPartCopy method
      */
     private HttpRange copySourceRange;
+
+    /**
+     * for http common header: "Range"
+     * only supported in uploadPartCopy method
+     * prefer use copySourceRangeString instead of copySourceRange field
+     */
+    private String copySourceRangeString;
 
     /**
      * for copy object option header: "x-tos-copy-source-if-match"
@@ -140,6 +148,15 @@ public class UploadPartCopyV2Input {
         return copySourceRange == null ? 0 : copySourceRange.getEnd();
     }
 
+    public String getCopySourceRangeString() {
+        return copySourceRangeString;
+    }
+
+    public UploadPartCopyV2Input setCopySourceRangeString(String copySourceRangeString) {
+        this.copySourceRangeString = copySourceRangeString;
+        return this;
+    }
+
     public UploadPartCopyV2Input setCopySourceRange(long copySourceRangeStart, long copySourceRangeEnd) {
         this.copySourceRange = new HttpRange().setStart(copySourceRangeStart).setEnd(copySourceRangeEnd);
         return this;
@@ -212,13 +229,17 @@ public class UploadPartCopyV2Input {
         if (this.copySourceRange != null) {
             withHeader(TosHeader.HEADER_COPY_SOURCE_RANGE, this.copySourceRange.toString());
         }
+        if (StringUtils.isNotEmpty(this.copySourceRangeString)) {
+            // will overwrite the Range header set by copySourceRange.
+            withHeader(TosHeader.HEADER_COPY_SOURCE_RANGE, this.copySourceRangeString);
+        }
         withHeader(TosHeader.HEADER_COPY_SOURCE_IF_MATCH, copySourceIfMatch);
         withHeader(TosHeader.HEADER_COPY_SOURCE_IF_NONE_MATCH, copySourceIfNoneMatch);
         if (StringUtils.isNotEmpty(copySourceSSECAlgorithm)) {
             if (Consts.CUSTOM_SERVER_SIDE_ENCRYPTION_ALGORITHM_LIST.contains(copySourceSSECAlgorithm)) {
                 withHeader(TosHeader.HEADER_SSE_CUSTOMER_ALGORITHM, copySourceSSECAlgorithm);
             } else {
-                throw new IllegalArgumentException("invalid copySourceSSECAlgorithm input, only support AES256");
+                throw new TosClientException("invalid copySourceSSECAlgorithm input, only support AES256", null);
             }
         }
         withHeader(TosHeader.HEADER_COPY_SOURCE_SSE_CUSTOMER_KEY, copySourceSSECKey);

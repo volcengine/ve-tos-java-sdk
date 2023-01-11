@@ -1,6 +1,7 @@
 package com.volcengine.tos.internal;
 
 import com.volcengine.tos.comm.TosHeader;
+import com.volcengine.tos.internal.util.dnscache.DnsCacheService;
 import okhttp3.*;
 import org.slf4j.Logger;
 
@@ -34,18 +35,25 @@ public class RequestEventListener extends EventListener {
 
     public static class RequestEventListenerFactory implements EventListener.Factory {
         private final Logger log;
+        private DnsCacheService dnsCacheService;
 
         public RequestEventListenerFactory(Logger log) {
             this.log = log;
         }
 
+        public RequestEventListenerFactory setDnsCacheService(DnsCacheService dnsCacheService) {
+            this.dnsCacheService = dnsCacheService;
+            return this;
+        }
+
         @Override
         public EventListener create(Call call) {
-            return new RequestEventListener(log);
+            return new RequestEventListener(log).setDnsCacheService(dnsCacheService);
         }
     }
 
     private Logger log;
+    private DnsCacheService dnsCacheService;
 
     public RequestEventListener(Logger log) {
         callStart = -1;
@@ -64,6 +72,11 @@ public class RequestEventListener extends EventListener {
         responseEnd = -1;
 
         this.log = log;
+    }
+
+    public RequestEventListener setDnsCacheService(DnsCacheService dnsCacheService) {
+        this.dnsCacheService = dnsCacheService;
+        return this;
     }
 
     @Override
@@ -99,6 +112,11 @@ public class RequestEventListener extends EventListener {
     @Override
     public void connectFailed(Call call, InetSocketAddress inetSocketAddress, Proxy proxy, Protocol protocol, IOException ioe) {
         connectEnd = System.currentTimeMillis();
+        // remove
+        if (this.dnsCacheService != null && inetSocketAddress != null && inetSocketAddress.getAddress() != null
+        && inetSocketAddress.getAddress().getHostAddress() != null) {
+            this.dnsCacheService.removeAddress(call.request().url().host(), inetSocketAddress.getAddress().getHostAddress());
+        }
     }
 
     @Override

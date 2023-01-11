@@ -6,10 +6,7 @@ import com.volcengine.tos.comm.event.DataTransferListener;
 import com.volcengine.tos.comm.event.DataTransferStatus;
 import com.volcengine.tos.internal.Consts;
 import com.volcengine.tos.internal.util.StringUtils;
-import com.volcengine.tos.model.object.DownloadEvent;
-import com.volcengine.tos.model.object.DownloadEventListener;
-import com.volcengine.tos.model.object.UploadEvent;
-import com.volcengine.tos.model.object.UploadEventListener;
+import com.volcengine.tos.model.object.*;
 import org.apache.commons.codec.binary.Base64;
 
 import java.io.File;
@@ -35,6 +32,12 @@ class Util {
         }
     }
 
+    static void postCopyEvent(CopyEventListener listener, CopyEvent event) {
+        if (listener != null && event != null) {
+            listener.eventChange(event);
+        }
+    }
+
     static void postDataTransferStatus(DataTransferListener listener, DataTransferStatus status) {
         if (listener != null && status != null) {
             listener.dataTransferStatusChange(status);
@@ -43,7 +46,7 @@ class Util {
 
     static void validatePartSize(long partSize) {
         if (partSize < Consts.MIN_PART_SIZE || partSize > Consts.MAX_PART_SIZE) {
-            throw new IllegalArgumentException("invalid part size, the size must be [5242880, 5368709120]");
+            throw new TosClientException("invalid part size, the size must be [5242880, 5368709120]", null);
         }
     }
 
