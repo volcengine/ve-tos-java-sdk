@@ -1,11 +1,9 @@
 package com.volcengine.tos.model.object;
 
-import com.volcengine.tos.comm.HttpMethod;
-
 import java.util.Map;
 
 public class PreSignedURLInput {
-    private HttpMethod httpMethod;
+    private String httpMethod;
     private String bucket;
     private String key;
     /**
@@ -20,7 +18,7 @@ public class PreSignedURLInput {
      */
     private String alternativeEndpoint;
 
-    public HttpMethod getHttpMethod() {
+    public String getHttpMethod() {
         return httpMethod;
     }
 
@@ -48,7 +46,7 @@ public class PreSignedURLInput {
         return alternativeEndpoint;
     }
 
-    public PreSignedURLInput setHttpMethod(HttpMethod httpMethod) {
+    public PreSignedURLInput setHttpMethod(String httpMethod) {
         this.httpMethod = httpMethod;
         return this;
     }
@@ -101,7 +99,7 @@ public class PreSignedURLInput {
     }
 
     public static final class PreSignedURLInputBuilder {
-        private HttpMethod httpMethod;
+        private String httpMethod;
         private String bucket;
         private String key;
         private long expires;
@@ -112,7 +110,7 @@ public class PreSignedURLInput {
         private PreSignedURLInputBuilder() {
         }
 
-        public PreSignedURLInputBuilder httpMethod(HttpMethod httpMethod) {
+        public PreSignedURLInputBuilder httpMethod(String httpMethod) {
             this.httpMethod = httpMethod;
             return this;
         }

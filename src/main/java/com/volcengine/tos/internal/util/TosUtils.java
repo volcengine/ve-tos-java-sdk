@@ -19,6 +19,9 @@ public class TosUtils {
             System.getProperty("os.name"), System.getProperty("os.arch"), System.getProperty("java.version", "0"));
     public static final ObjectMapper JSON = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
+    private static final long MAX_PRE_SIGNED_TTL = 604800;
+    private static final long DEFAULT_PRE_SIGNED_TTL = 3600;
+
     private static Map<String, List<String>> SUPPORTED_REGION = null;
 
     private static final int baseDelay = 1;
@@ -183,5 +186,23 @@ public class TosUtils {
             return 0;
         }
         return (long)(backoff * 1000);
+    }
+
+    public static String convertInteger(int value) {
+        if (value == 0) {
+            return null;
+        }
+        return String.valueOf(value);
+    }
+
+    public static long validateAndGetTtl(long expires) {
+        long ttl = expires;
+        if (expires == 0) {
+            ttl = DEFAULT_PRE_SIGNED_TTL;
+        }
+        if (expires > MAX_PRE_SIGNED_TTL || expires < 0) {
+            throw new TosClientException("tos: invalid preSignedUrl expires, should not be in [1, 604800].", null);
+        }
+        return ttl;
     }
 }

@@ -36,9 +36,7 @@ public class DownloadFileTaskHandler {
 
     public DownloadFileTaskHandler(DownloadFileInput input, TosObjectRequestHandler handler, boolean enableCrcCheck) {
         ParamsChecker.ensureNotNull(input, "DownloadFileInput");
-        ParamsChecker.ensureNotNull(input.getHeadObjectV2Input(), "HeadObjectV2Input");
-        ParamsChecker.isValidBucketNameAndKey(input.getHeadObjectV2Input().getBucket(),
-                input.getHeadObjectV2Input().getKey());
+        ParamsChecker.isValidBucketNameAndKey(input.getBucket(), input.getKey());
         ParamsChecker.ensureNotNull(handler, "TosObjectRequestHandler");
         this.input = input;
         this.handler = handler;
@@ -48,8 +46,9 @@ public class DownloadFileTaskHandler {
 
     public void initTask() {
         validateInput();
-        headObjectV2Output = handler.headObject(this.input.getHeadObjectV2Input());
-        String newPath = FileUtils.parseFilePath(input.getFilePath(), input.getHeadObjectV2Input().getKey());
+        headObjectV2Output = handler.headObject(new HeadObjectV2Input().setBucket(input.getBucket()).setKey(input.getKey())
+                .setVersionID(input.getVersionID()).setOptions(input.getOptions()));
+        String newPath = FileUtils.parseFilePath(input.getFilePath(), input.getKey());
         if (StringUtils.isEmpty(newPath)) {
             return;
         }
@@ -80,7 +79,8 @@ public class DownloadFileTaskHandler {
                         .setEnableCrcCheck(this.enableCrcCheck)
                         .setDownloadEventListener(input.getDownloadEventListener())
                         .setHandler(handler)
-                        .setHeadObjectV2Input(input.getHeadObjectV2Input())
+                        .setHeadObjectV2Input(new HeadObjectV2Input().setBucket(input.getBucket())
+                                .setKey(input.getKey()).setOptions(input.getOptions()).setVersionID(input.getVersionID()))
                         .setRateLimiter(input.getRateLimiter())
                         .setDataTransferListener(input.getDataTransferListener()));
             } else {
@@ -110,6 +110,10 @@ public class DownloadFileTaskHandler {
         }
         Util.postDataTransferStatus(this.input.getDataTransferListener(), status.setType(DataTransferType.DATA_TRANSFER_SUCCEED));
 
+        return completeDownloadFileTask();
+    }
+
+    private DownloadFileOutput completeDownloadFileTask() {
         DownloadEvent event = new DownloadEvent()
                 .setBucket(this.checkpoint.getBucket())
                 .setKey(this.checkpoint.getKey())
@@ -144,22 +148,21 @@ public class DownloadFileTaskHandler {
     }
 
     private void validateCheckpointPath() {
+        String checkpointFileSuffix = Util.checkpointPathMd5(input.getBucket(), input.getKey(), input.getVersionID()) +
+                Consts.DOWNLOAD_CHECKPOINT_FILE_SUFFIX;
         if (StringUtils.isEmpty(input.getCheckpointFile())) {
-            input.setCheckpointFile(input.getFilePath() + Consts.DOWNLOAD_CHECKPOINT_FILE_SUFFIX);
+            input.setCheckpointFile(input.getFilePath() + checkpointFileSuffix);
         } else {
             File ufcf = new File(input.getCheckpointFile());
             if (ufcf.isDirectory()) {
-                throw new IllegalArgumentException("The input checkpoint file is directory: " + input.getCheckpointFile());
+                throw new TosClientException("The input checkpoint file is directory: " + input.getCheckpointFile(), null);
             }
         }
     }
 
     private void createTempFile() {
-        DownloadEvent downloadEvent = new DownloadEvent()
-                .setBucket(input.getHeadObjectV2Input().getBucket())
-                .setKey(input.getHeadObjectV2Input().getKey())
-                .setVersionID(input.getHeadObjectV2Input().getVersionID())
-                .setFilePath(input.getFilePath());
+        DownloadEvent downloadEvent = new DownloadEvent().setBucket(input.getBucket()).setKey(input.getKey())
+                .setVersionID(input.getVersionID()).setFilePath(input.getFilePath());
         File file = new File(this.input.getTempFilePath());
         try{
             if (file.exists()) {
@@ -183,17 +186,17 @@ public class DownloadFileTaskHandler {
             try{
                 checkpoint = loadCheckpointFromFile(input.getCheckpointFile());
             } catch (IOException | ClassNotFoundException e){
+                logger.debug("loadCheckpointFromFile failed, {}", e.toString());
                 Util.deleteCheckpointFile(input.getCheckpointFile());
             }
         }
         boolean valid = false;
         if (checkpoint != null) {
             String etag = null;
-            if (head != null && head.getHeadObjectBasicOutput() != null) {
-                etag = head.getHeadObjectBasicOutput().getEtag();
+            if (head != null) {
+                etag = head.getEtag();
             }
-            valid = checkpoint.isValid(this.input.getHeadObjectV2Input().getBucket(),
-                    this.input.getHeadObjectV2Input().getKey(), input.getFilePath(), etag);
+            valid = checkpoint.isValid(this.input.getBucket(), this.input.getKey(), input.getFilePath(), etag);
             if (!valid) {
                 Util.deleteCheckpointFile(input.getCheckpointFile());
             } else {
@@ -224,8 +227,7 @@ public class DownloadFileTaskHandler {
     private DownloadFileCheckpoint loadCheckpointFromFile(String checkpointFilePath) throws IOException, ClassNotFoundException{
         ParamsChecker.ensureNotNull(checkpointFilePath, "checkpointFilePath is null");
         File f = new File(checkpointFilePath);
-        try(FileInputStream checkpointFile = new FileInputStream(f))
-        {
+        try(FileInputStream checkpointFile = new FileInputStream(f)) {
             byte[] data = new byte[(int)f.length()];
             checkpointFile.read(data);
             return TosUtils.JSON.readValue(data, new TypeReference<DownloadFileCheckpoint>(){});
@@ -233,22 +235,18 @@ public class DownloadFileTaskHandler {
     }
 
     private DownloadFileCheckpoint initCheckpoint(HeadObjectV2Output head) throws TosException {
-        ParamsChecker.ensureNotNull(input.getHeadObjectV2Input(), "HeadObjectV2Input");
         ParamsChecker.ensureNotNull(head, "HeadObjectV2Output");
-        ParamsChecker.ensureNotNull(head.getHeadObjectBasicOutput(), "HeadObjectBasicOutput");
-        HeadObjectV2Input headInput = input.getHeadObjectV2Input();
-        GetObjectBasicOutput basic = head.getHeadObjectBasicOutput();
-        return new DownloadFileCheckpoint().setBucket(headInput.getBucket()).setKey(headInput.getKey()).setVersionID(headInput.getVersionID())
-                .setIfMatch(headInput.getOptions() == null ? null : headInput.getOptions().getIfMatch())
-                .setIfModifiedSince(headInput.getOptions() == null ? null : headInput.getOptions().getIfModifiedSince())
-                .setIfNoneMatch(headInput.getOptions() == null ? null : headInput.getOptions().getIfNoneMatch())
-                .setIfUnModifiedSince(headInput.getOptions() == null ? null : headInput.getOptions().getIfUnmodifiedSince())
-                .setSsecAlgorithm(headInput.getOptions() == null ? null : headInput.getOptions().getSsecAlgorithm())
-                .setSsecKeyMD5(headInput.getOptions() == null ? null : headInput.getOptions().getSsecKeyMD5())
+        return new DownloadFileCheckpoint().setBucket(input.getBucket()).setKey(input.getKey()).setVersionID(input.getVersionID())
+                .setIfMatch(input.getOptions() == null ? null : input.getOptions().getIfMatch())
+                .setIfModifiedSince(input.getOptions() == null ? null : input.getOptions().getIfModifiedSince())
+                .setIfNoneMatch(input.getOptions() == null ? null : input.getOptions().getIfNoneMatch())
+                .setIfUnModifiedSince(input.getOptions() == null ? null : input.getOptions().getIfUnmodifiedSince())
+                .setSsecAlgorithm(input.getOptions() == null ? null : input.getOptions().getSsecAlgorithm())
+                .setSsecKeyMD5(input.getOptions() == null ? null : input.getOptions().getSsecKeyMD5())
                 .setDownloadFileInfo(new DownloadFileInfo().setFilePath(input.getFilePath()).setTempFilePath(input.getTempFilePath()))
-                .setDownloadObjectInfo(new DownloadObjectInfo().setObjectSize(basic.getContentLength()).setEtag(basic.getEtag())
-                        .setHashCrc64ecma(basic.getHashCrc64ecma()).setLastModified(basic.getLastModifiedInDate()))
-                .setPartSize(input.getPartSize()).setDownloadPartInfos(getPartsFromFile(input.getPartSize(), basic.getContentLength()));
+                .setDownloadObjectInfo(new DownloadObjectInfo().setObjectSize(head.getContentLength()).setEtag(head.getEtag())
+                        .setHashCrc64ecma(head.getHashCrc64ecma()).setLastModified(head.getLastModifiedInDate()))
+                .setPartSize(input.getPartSize()).setDownloadPartInfos(getPartsFromFile(input.getPartSize(), head.getContentLength()));
     }
 
     private List<DownloadPartInfo> getPartsFromFile(long partSize, long contentLength) {
@@ -259,8 +257,7 @@ public class DownloadFileTaskHandler {
         }
         List<DownloadPartInfo> partInfoList = new ArrayList<>((int) partNum);
         for(int i = 0; i < partNum; i++) {
-            partInfoList.add(new DownloadPartInfo().setPartNumber(i+1)
-                    .setRangeStart(i * partSize).setRangeEnd((i+1) * partSize - 1));
+            partInfoList.add(new DownloadPartInfo().setPartNumber(i+1).setRangeStart(i * partSize).setRangeEnd((i+1) * partSize - 1));
         }
         partInfoList.get((int)partNum-1).setRangeEnd((partNum-1) * partSize + lastPartSize- 1);
         return partInfoList;
@@ -283,17 +280,17 @@ public class DownloadFileTaskHandler {
     }
 
     private void combineCrcAndCheck() {
-        boolean headResNotNull = headObjectV2Output != null && headObjectV2Output.getHeadObjectBasicOutput() != null;
+        boolean headResNotNull = headObjectV2Output != null;
         if (!headResNotNull) {
             return;
         }
-        if (headObjectV2Output.getHeadObjectBasicOutput().getHashCrc64ecma() == null) {
+        if (headObjectV2Output.getHashCrc64ecma() == null) {
             return;
         }
         if (downloadPartInfos == null || downloadPartInfos.size() == 0) {
             return;
         }
-        String serverCrc64 = headObjectV2Output.getHeadObjectBasicOutput().getHashCrc64ecma();
+        String serverCrc64 = headObjectV2Output.getHashCrc64ecma();
         long crc = computeClientCrc();
         if (!Utils.isSameHashCrc64Ecma(crc, serverCrc64)) {
             clearTmpFile();

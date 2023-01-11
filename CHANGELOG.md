@@ -1,6 +1,11 @@
 ## Release Note
-### 2022.9.21 Version 2.1.2
-- 
+### 2022.11.28 Version 2.5.0
+- A brand-new version with multiple features.
+- Multiple Bucket APIs.
+- Data Integrity Validation in put/get objects.
+- Retry, rateLimit, progressbar, eventListener, full debug log, dns cache, etc.
+- Breakpoint continuation in upload/download large file.
+- Completely compatible with older 0.2.X versions, recommended update. 
 ### 2022.8.31 Version 0.2.10
 - fix object key signature failed issue. 
 ### 2022.8.18 Version 0.2.9

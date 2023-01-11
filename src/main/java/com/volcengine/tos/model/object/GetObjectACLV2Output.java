@@ -1,5 +1,6 @@
 package com.volcengine.tos.model.object;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.volcengine.tos.model.RequestInfo;
 import com.volcengine.tos.model.acl.GrantV2;
@@ -8,12 +9,16 @@ import com.volcengine.tos.model.acl.Owner;
 import java.util.List;
 
 public class GetObjectACLV2Output {
+    @JsonIgnore
     private RequestInfo requestInfo;
+    @JsonIgnore
     private String versionID;
     @JsonProperty("Owner")
     private Owner owner;
     @JsonProperty("Grants")
     private List<GrantV2> grants;
+    @JsonProperty("BucketOwnerEntrusted")
+    private boolean bucketOwnerEntrusted;
 
     public RequestInfo getRequestInfo() {
         return requestInfo;
@@ -51,6 +56,15 @@ public class GetObjectACLV2Output {
         return this;
     }
 
+    public boolean isBucketOwnerEntrusted() {
+        return bucketOwnerEntrusted;
+    }
+
+    public GetObjectACLV2Output setBucketOwnerEntrusted(boolean bucketOwnerEntrusted) {
+        this.bucketOwnerEntrusted = bucketOwnerEntrusted;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "GetObjectACLV2Output{" +
@@ -58,6 +72,7 @@ public class GetObjectACLV2Output {
                 ", versionID='" + versionID + '\'' +
                 ", owner=" + owner +
                 ", grants=" + grants +
+                ", bucketOwnerEntrusted=" + bucketOwnerEntrusted +
                 '}';
     }
 }

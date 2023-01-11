@@ -63,12 +63,12 @@ public interface TosHeader {
     /**
      *  only for getObject() method headers
      */
-    String HEADER_RESPONSE_CONTENT_TYPE = "Response-Content-Type";
-    String HEADER_RESPONSE_CONTENT_LANGUAGE = "Response-Content-Language";
-    String HEADER_RESPONSE_CONTENT_ENCODING = "Response-Content-Encoding";
-    String HEADER_RESPONSE_CONTENT_DISPOSITION = "Response-Content-Disposition";
-    String HEADER_RESPONSE_CACHE_CONTROL = "Response-Cache-Control";
-    String HEADER_RESPONSE_EXPIRES = "Response-Expires";
+    String QUERY_RESPONSE_CONTENT_TYPE = "response-content-type";
+    String QUERY_RESPONSE_CONTENT_LANGUAGE = "response-content-language";
+    String QUERY_RESPONSE_CONTENT_ENCODING = "response-content-encoding";
+    String QUERY_RESPONSE_CONTENT_DISPOSITION = "response-content-disposition";
+    String QUERY_RESPONSE_CACHE_CONTROL = "response-cache-control";
+    String QUERY_RESPONSE_EXPIRES = "response-expires";
 
     String HEADER_WEBSITE_REDIRECT_LOCATION = "X-Tos-Website-Redirect-Location";
     String HEADER_CS_TYPE = "X-Tos-Cs-Type";

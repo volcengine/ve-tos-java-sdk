@@ -148,7 +148,7 @@ public class RequestOptions {
      * @return
      */
     public static RequestOptionsBuilder withStorageClass(String storageClass) {
-        return builder -> builder.withQuery(TosHeader.HEADER_STORAGE_CLASS, storageClass);
+        return builder -> builder.withHeader(TosHeader.HEADER_STORAGE_CLASS, storageClass);
     }
 
     public static RequestOptionsBuilder withMetadataDirective(String directive) {
@@ -181,6 +181,10 @@ public class RequestOptions {
 
     public static RequestOptionsBuilder withWebsiteRedirectLocation(String redirectLocation) {
         return builder -> builder.withHeader(TosHeader.HEADER_WEBSITE_REDIRECT_LOCATION, redirectLocation);
+    }
+
+    public static RequestOptionsBuilder withPreHashCrc64ecma(String preHashCrc64ecma) {
+        return builder -> builder.setPreHashCrc64ecma(preHashCrc64ecma);
     }
 
     public static RequestOptionsBuilder withHeader(String key, String value) {

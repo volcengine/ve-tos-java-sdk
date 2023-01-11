@@ -12,6 +12,8 @@ public class ObjectAclRulesV2 {
     private Owner owner;
     @JsonProperty("Grants")
     private List<GrantV2> grants;
+    @JsonProperty("BucketOwnerEntrusted")
+    private boolean bucketOwnerEntrusted;
 
     public Owner getOwner() {
         return owner;
@@ -31,11 +33,21 @@ public class ObjectAclRulesV2 {
         return this;
     }
 
+    public boolean isBucketOwnerEntrusted() {
+        return bucketOwnerEntrusted;
+    }
+
+    public ObjectAclRulesV2 setBucketOwnerEntrusted(boolean bucketOwnerEntrusted) {
+        this.bucketOwnerEntrusted = bucketOwnerEntrusted;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "ObjectAclRulesV2{" +
                 "owner=" + owner +
-                ", grants=" + Arrays.toString(grants.toArray()) +
+                ", grants=" + grants +
+                ", bucketOwnerEntrusted=" + bucketOwnerEntrusted +
                 '}';
     }
 
@@ -46,6 +58,7 @@ public class ObjectAclRulesV2 {
     public static final class ObjectAclRulesV2Builder {
         private Owner owner;
         private List<GrantV2> grants;
+        private boolean bucketOwnerEntrusted;
 
         private ObjectAclRulesV2Builder() {
         }
@@ -60,10 +73,16 @@ public class ObjectAclRulesV2 {
             return this;
         }
 
+        public ObjectAclRulesV2Builder bucketOwnerEntrusted(boolean bucketOwnerEntrusted) {
+            this.bucketOwnerEntrusted = bucketOwnerEntrusted;
+            return this;
+        }
+
         public ObjectAclRulesV2 build() {
             ObjectAclRulesV2 objectAclRulesV2 = new ObjectAclRulesV2();
             objectAclRulesV2.owner = this.owner;
             objectAclRulesV2.grants = this.grants;
+            objectAclRulesV2.bucketOwnerEntrusted = this.bucketOwnerEntrusted;
             return objectAclRulesV2;
         }
     }

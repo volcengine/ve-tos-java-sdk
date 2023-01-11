@@ -158,6 +158,7 @@ public interface TOS {
      */
     PutObjectOutput putObject(String bucket, String objectKey, InputStream inputStream, RequestOptionsBuilder...builders) throws TosException;
 
+    @Deprecated
     UploadFileOutput uploadFile(String bucket, UploadFileInput input, RequestOptionsBuilder ...builders) throws TosException;
 
     /**

@@ -32,6 +32,16 @@ public class ListBucketsOutput {
         return owner;
     }
 
+    public ListBucketsOutput setBuckets(ListedBucket[] buckets) {
+        this.buckets = buckets;
+        return this;
+    }
+
+    public ListBucketsOutput setOwner(ListedOwner owner) {
+        this.owner = owner;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "ListBucketsOutput{" +

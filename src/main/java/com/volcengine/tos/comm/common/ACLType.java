@@ -26,9 +26,13 @@ public enum ACLType {
      */
     ACL_BUCKET_OWNER_FULL_CONTROL("bucket-owner-full-control"),
     /**
-     * et bucket or object acl to log-delivery-write
+     * set bucket or object acl to log-delivery-write
      */
-    ACL_LOG_DELIVERY_WRITE("log-delivery-write");
+    ACL_LOG_DELIVERY_WRITE("log-delivery-write"),
+    /**
+     * set object acl to bucket-owner-entrusted
+     */
+    ACL_BUCKET_OWNER_ENTRUSTED("bucket-owner-entrusted");
 
     private String type;
     private ACLType(String type) {

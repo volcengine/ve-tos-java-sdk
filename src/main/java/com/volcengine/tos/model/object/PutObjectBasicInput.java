@@ -8,6 +8,7 @@ import java.util.Map;
 public class PutObjectBasicInput {
     private String bucket;
     private String key;
+    private long contentLength;
 
     private ObjectMetaRequestOptions options;
 
@@ -65,14 +66,24 @@ public class PutObjectBasicInput {
         return this;
     }
 
+    public long getContentLength() {
+        return contentLength;
+    }
+
+    public PutObjectBasicInput setContentLength(long contentLength) {
+        this.contentLength = contentLength;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "PutObjectBasicInput{" +
                 "bucket='" + bucket + '\'' +
                 ", key='" + key + '\'' +
+                ", contentLength=" + contentLength +
                 ", options=" + options +
                 ", dataTransferListener=" + dataTransferListener +
-                ", rateLimit=" + rateLimiter +
+                ", rateLimiter=" + rateLimiter +
                 '}';
     }
 
@@ -83,6 +94,7 @@ public class PutObjectBasicInput {
     public static final class PutObjectBasicInputBuilder {
         private String bucket;
         private String key;
+        private long contentLength;
         private ObjectMetaRequestOptions options;
         private DataTransferListener dataTransferListener;
         private RateLimiter rateLimit;
@@ -97,6 +109,11 @@ public class PutObjectBasicInput {
 
         public PutObjectBasicInputBuilder key(String key) {
             this.key = key;
+            return this;
+        }
+
+        public PutObjectBasicInputBuilder contentLength(long contentLength) {
+            this.contentLength = contentLength;
             return this;
         }
 
@@ -119,6 +136,7 @@ public class PutObjectBasicInput {
             PutObjectBasicInput putObjectBasicInput = new PutObjectBasicInput();
             putObjectBasicInput.key = this.key;
             putObjectBasicInput.bucket = this.bucket;
+            putObjectBasicInput.contentLength = this.contentLength;
             putObjectBasicInput.dataTransferListener = this.dataTransferListener;
             putObjectBasicInput.options = this.options;
             putObjectBasicInput.rateLimiter = this.rateLimit;

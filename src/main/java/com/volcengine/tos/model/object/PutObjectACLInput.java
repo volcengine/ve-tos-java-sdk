@@ -59,6 +59,10 @@ public class PutObjectACLInput {
         return this.objectAclRules != null ? this.objectAclRules.getGrants() : null;
     }
 
+    public boolean isBucketOwnerEntrusted() {
+        return this.objectAclRules != null && this.objectAclRules.isBucketOwnerEntrusted();
+    }
+
     public ObjectAclRulesV2 getObjectAclRules() {
         return objectAclRules;
     }
@@ -108,6 +112,30 @@ public class PutObjectACLInput {
         return this;
     }
 
+    public PutObjectACLInput setOwner(Owner owner) {
+        if (this.objectAclRules == null) {
+            this.objectAclRules = new ObjectAclRulesV2();
+        }
+        this.objectAclRules.setOwner(owner);
+        return this;
+    }
+
+    public PutObjectACLInput setGrants(List<GrantV2> grants) {
+        if (this.objectAclRules == null) {
+            this.objectAclRules = new ObjectAclRulesV2();
+        }
+        this.objectAclRules.setGrants(grants);
+        return this;
+    }
+
+    public PutObjectACLInput setBucketOwnerEntrusted(boolean bucketOwnerEntrusted) {
+        if (this.objectAclRules == null) {
+            this.objectAclRules = new ObjectAclRulesV2();
+        }
+        this.objectAclRules.setBucketOwnerEntrusted(bucketOwnerEntrusted);
+        return this;
+    }
+
     @Override
     public String toString() {
         return "PutObjectACLInput{" +
@@ -138,6 +166,7 @@ public class PutObjectACLInput {
         private String grantWriteAcp;
         private Owner owner;
         private List<GrantV2> grants;
+        private boolean bucketOwnerEntrusted;
 
         private PutObjectACLInputBuilder() {
         }
@@ -192,6 +221,11 @@ public class PutObjectACLInput {
             return this;
         }
 
+        public PutObjectACLInputBuilder bucketOwnerEntrusted(boolean bucketOwnerEntrusted) {
+            this.bucketOwnerEntrusted = bucketOwnerEntrusted;
+            return this;
+        }
+
         public PutObjectACLInput build() {
             PutObjectACLInput putObjectACLInput = new PutObjectACLInput();
             putObjectACLInput.key = this.key;
@@ -203,7 +237,8 @@ public class PutObjectACLInput {
             putObjectACLInput.grantFullControl = this.grantFullControl;
             putObjectACLInput.versionID = this.versionID;
             putObjectACLInput.objectAclRules = new ObjectAclRulesV2()
-                    .setOwner(this.owner).setGrants(this.grants);
+                    .setOwner(this.owner).setGrants(this.grants)
+                    .setBucketOwnerEntrusted(bucketOwnerEntrusted);
             return putObjectACLInput;
         }
     }

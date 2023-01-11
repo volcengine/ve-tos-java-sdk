@@ -10,12 +10,20 @@ public class Consts {
     public static final ObjectMapper JSON = new ObjectMapper().disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
 
     // boe
+    // bucket with multi-version enabled
     public static final String bucket = System.getenv("TEST_BUCKET");
-    public static final String endpoint = System.getenv("ENDPOINT");
-    public static final String region = System.getenv("REGION");
-    public static final String accessKey = System.getenv("ACCESS_KEY");
-    public static final String secretKey = System.getenv("SECRET_KEY");
+    // bucket with multi-version disabled
+    public static final String bucketMultiVersionDisabled = System.getenv("TEST_BUCKET_VERSIONING_DISABLED");
+    // bucket for multi-version test
+    public static final String bucketForVersioning = System.getenv("TEST_BUCKET_VERSIONING");
+    public static final String endpoint = System.getenv("TEST_ENDPOINT");
+    public static final String region = System.getenv("TEST_REGION");
+    public static final String accessKey = System.getenv("TEST_ACCESS_KEY");
+    public static final String secretKey = System.getenv("TEST_SECRET_KEY");
     public static final String bucketCopy = System.getenv("TEST_BUCKET_COPY");
+    public static final String region2 = System.getenv("TEST_REGION2");
+    public static final String endpoint2 = System.getenv("TEST_ENDPOINT2");
+    public static final String bucketInRegion2 = System.getenv("TEST_BUCKET2");
 
     // for internal package uts
     public static final String internalBucketCrudPrefix = "internal-bucket-crud-test-prefix-";
