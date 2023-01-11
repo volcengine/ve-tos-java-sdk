@@ -5,7 +5,7 @@ import com.volcengine.tos.comm.ratelimit.RateLimiter;
 import com.volcengine.tos.internal.taskman.UploadFileTaskCanceler;
 
 public class UploadFileV2Input {
-    private CreateMultipartUploadInput createMultipartUploadInput;
+    private CreateMultipartUploadInput createMultipartUploadInput = new CreateMultipartUploadInput();
     private String filePath;
     private long partSize;
     private int taskNum;
@@ -17,12 +17,39 @@ public class UploadFileV2Input {
     /** 客户端限速，单位 Byte/s **/
     private RateLimiter rateLimiter;
 
-    public CreateMultipartUploadInput getCreateMultipartUploadInput() {
-        return createMultipartUploadInput;
+    public String getBucket() {
+        return createMultipartUploadInput.getBucket();
     }
 
-    public UploadFileV2Input setCreateMultipartUploadInput(CreateMultipartUploadInput createMultipartUploadInput) {
-        this.createMultipartUploadInput = createMultipartUploadInput;
+    public UploadFileV2Input setBucket(String bucket) {
+        this.createMultipartUploadInput.setBucket(bucket);
+        return this;
+    }
+
+    public String getKey() {
+        return createMultipartUploadInput.getKey();
+    }
+
+    public UploadFileV2Input setKey(String key) {
+        this.createMultipartUploadInput.setKey(key);
+        return this;
+    }
+
+    public String getEncodingType() {
+        return createMultipartUploadInput.getEncodingType();
+    }
+
+    public UploadFileV2Input setEncodingType(String encodingType) {
+        this.createMultipartUploadInput.setEncodingType(encodingType);
+        return this;
+    }
+
+    public ObjectMetaRequestOptions getOptions() {
+        return createMultipartUploadInput.getOptions();
+    }
+
+    public UploadFileV2Input setOptions(ObjectMetaRequestOptions options) {
+        this.createMultipartUploadInput.setOptions(options);
         return this;
     }
 
@@ -111,10 +138,24 @@ public class UploadFileV2Input {
         return this;
     }
 
+    @Deprecated
+    public CreateMultipartUploadInput getCreateMultipartUploadInput() {
+        return createMultipartUploadInput;
+    }
+
+    @Deprecated
+    public UploadFileV2Input setCreateMultipartUploadInput(CreateMultipartUploadInput createMultipartUploadInput) {
+        this.createMultipartUploadInput = createMultipartUploadInput;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "UploadFileV2Input{" +
-                "createMultipartUploadInput=" + createMultipartUploadInput +
+                "bucket='" + getBucket() + '\'' +
+                ", key='" + getKey() + '\'' +
+                ", encodingType='" + getEncodingType() + '\'' +
+                ", options=" + getOptions() +
                 ", filePath='" + filePath + '\'' +
                 ", partSize=" + partSize +
                 ", taskNum=" + taskNum +
@@ -128,7 +169,7 @@ public class UploadFileV2Input {
     }
 
     public static final class UploadFileV2InputBuilder {
-        private CreateMultipartUploadInput createMultipartUploadInput;
+        private CreateMultipartUploadInput createMultipartUploadInput = new CreateMultipartUploadInput();
         private String filePath;
         private long partSize;
         private int taskNum;
@@ -142,6 +183,27 @@ public class UploadFileV2Input {
         private UploadFileV2InputBuilder() {
         }
 
+        public UploadFileV2InputBuilder bucket(String bucket) {
+            this.createMultipartUploadInput.setBucket(bucket);
+            return this;
+        }
+
+        public UploadFileV2InputBuilder key(String key) {
+            this.createMultipartUploadInput.setKey(key);
+            return this;
+        }
+
+        public UploadFileV2InputBuilder encodingType(String encodingType) {
+            this.createMultipartUploadInput.setEncodingType(encodingType);
+            return this;
+        }
+
+        public UploadFileV2InputBuilder options(ObjectMetaRequestOptions options) {
+            this.createMultipartUploadInput.setOptions(options);
+            return this;
+        }
+
+        @Deprecated
         public UploadFileV2InputBuilder createMultipartUploadInput(CreateMultipartUploadInput createMultipartUploadInput) {
             this.createMultipartUploadInput = createMultipartUploadInput;
             return this;

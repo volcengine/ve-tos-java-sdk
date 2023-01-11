@@ -6,7 +6,7 @@
 
     <groupId>com.volcengine</groupId>
     <artifactId>ve-tos-java-sdk</artifactId>
-    <version>2.2.0</version>
+    <version>2.5.0</version>
 
     <properties>
         <maven.compiler.source>8</maven.compiler.source>
@@ -45,7 +45,7 @@
         <dependency>
             <groupId>com.squareup.okhttp3</groupId>
             <artifactId>okhttp</artifactId>
-            <version>4.9.2</version>
+            <version>4.10.0</version>
         </dependency>
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
@@ -163,6 +163,10 @@
                 <version>2.22.1</version>
                 <configuration>
                     <argLine>-Dfile.encoding=UTF-8</argLine>
+                    <excludes>
+                        <exclude>**/TestTOSV2ClientPerformance.java</exclude>
+                        <exclude>**/TestPrepare.java</exclude>
+                    </excludes>
                 </configuration>
             </plugin>
             <plugin>

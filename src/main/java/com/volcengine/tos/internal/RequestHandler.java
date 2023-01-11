@@ -2,30 +2,39 @@ package com.volcengine.tos.internal;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.volcengine.tos.TosClientException;
-import com.volcengine.tos.TosException;
 import com.volcengine.tos.TosServerException;
 import com.volcengine.tos.UnexpectedStatusCodeException;
 import com.volcengine.tos.comm.Code;
 import com.volcengine.tos.comm.HttpStatus;
 import com.volcengine.tos.internal.util.StringUtils;
 import com.volcengine.tos.internal.util.TosUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.List;
 
 class RequestHandler {
     private Transport transport;
+    private static final Logger log = LoggerFactory.getLogger(RequestHandler.class);
 
     RequestHandler(Transport transport) {
         this.transport = transport;
     }
 
-    protected  <T> T doRequest(TosRequest request, int expectedCode, Action<TosResponse, T> action) throws TosException {
+    public Transport getTransport() {
+        return transport;
+    }
+
+    public RequestHandler setTransport(Transport transport) {
+        this.transport = transport;
+        return this;
+    }
+
+    protected  <T> T doRequest(TosRequest request, int expectedCode, Action<TosResponse, T> action) {
         try (TosResponse res = doRequest(request)) {
-            if (containExpectedCodes(res.getStatusCode(), expectedCode)) {
+            if (containExpectedCode(res.getStatusCode(), expectedCode)) {
                 return action.apply(res);
             }
             checkException(res);
@@ -35,7 +44,7 @@ class RequestHandler {
         }
     }
 
-    protected <T> T doRequest(TosRequest request, List<Integer> expectedCodes, Action<TosResponse, T> action) throws TosException {
+    protected <T> T doRequest(TosRequest request, List<Integer> expectedCodes, Action<TosResponse, T> action) {
         try (TosResponse res = doRequest(request, expectedCodes)) {
             return action.apply(res);
         } catch (IOException e) {
@@ -46,7 +55,7 @@ class RequestHandler {
     protected TosResponse doRequest(TosRequest request, List<Integer> expectedCodes) {
         TosResponse response = doRequest(request);
         for (int code : expectedCodes) {
-            if (containExpectedCodes(response.getStatusCode(), code)) {
+            if (containExpectedCode(response.getStatusCode(), code)) {
                 return response;
             }
         }
@@ -54,17 +63,25 @@ class RequestHandler {
         throw new UnexpectedStatusCodeException(response.getStatusCode(), expectedCodes, response.getRequesID());
     }
 
-    private TosResponse doRequest(TosRequest request) throws TosException {
+    private TosResponse doRequest(TosRequest request) {
         TosResponse res;
         try{
             res = transport.roundTrip(request);
         } catch (IOException e){
             throw new TosClientException("tos: request exception", e);
+        } finally {
+            if (request.getContent() != null) {
+                try {
+                    request.getContent().close();
+                } catch (IOException e) {
+                    log.debug("tos: close request body failed, {}", e.toString());
+                }
+            }
         }
         return res;
     }
 
-    protected boolean containExpectedCodes(int statusCode, int expectedCode) {
+    protected boolean containExpectedCode(int statusCode, int expectedCode) {
         return statusCode == expectedCode;
     }
 
@@ -106,5 +123,5 @@ class RequestHandler {
 
 @FunctionalInterface
 interface Action<T, R> {
-    R apply(T t) throws IOException, TosException;
+    R apply(T t);
 }

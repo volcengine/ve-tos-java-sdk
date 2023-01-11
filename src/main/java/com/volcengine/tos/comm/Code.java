@@ -6,6 +6,7 @@ public interface Code {
 
     String NO_SUCH_BUCKET = "NoSuchBucket";
     String NO_SUCH_KEY = "NoSuchKey";
+    String NO_SUCH_UPLOAD = "NoSuchUpload";
     String ACCESS_DENIED = "AccessDenied";
     String MALFORMED_ACL_ERROR = "MalformedAclError";
     String UNEXPECTED_CONTENT = "UnexpectedContent";

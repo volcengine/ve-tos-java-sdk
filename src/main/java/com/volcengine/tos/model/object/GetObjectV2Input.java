@@ -3,7 +3,7 @@ package com.volcengine.tos.model.object;
 import com.volcengine.tos.comm.TosHeader;
 import com.volcengine.tos.comm.event.DataTransferListener;
 import com.volcengine.tos.comm.ratelimit.RateLimiter;
-import com.volcengine.tos.internal.util.DateConverter;
+import com.volcengine.tos.internal.util.StringUtils;
 
 import java.util.Collections;
 import java.util.Date;
@@ -14,6 +14,7 @@ public class GetObjectV2Input {
     private String bucket;
     private String key;
     private String versionID;
+    private String range;
 
     private ObjectMetaRequestOptions options;
 
@@ -142,32 +143,44 @@ public class GetObjectV2Input {
         return this;
     }
 
+    public String getRange() {
+        return range;
+    }
+
+    public GetObjectV2Input setRange(String range) {
+        this.range = range;
+        return this;
+    }
+
     public Map<String, String> getAllSettedHeaders() {
         Map<String, String> allHeaders = new HashMap<>(options == null ? Collections.emptyMap() : options.headers());
-        addRespHeaders(allHeaders);
+        if (StringUtils.isNotEmpty(range)) {
+            // will overwrite the Range header set in options.
+            allHeaders.put(TosHeader.HEADER_RANGE, range);
+        }
         return allHeaders;
     }
 
-    private void addRespHeaders(Map<String, String> allHeaders) {
-        if (this.responseCacheControl != null) {
-            allHeaders.put(TosHeader.HEADER_RESPONSE_CACHE_CONTROL, responseCacheControl);
-        }
-        if (this.responseContentLanguage != null) {
-            allHeaders.put(TosHeader.HEADER_RESPONSE_CONTENT_LANGUAGE, responseContentLanguage);
-        }
-        if (this.responseContentDisposition != null) {
-            allHeaders.put(TosHeader.HEADER_RESPONSE_CONTENT_DISPOSITION, responseContentDisposition);
-        }
-        if (this.responseContentType != null) {
-            allHeaders.put(TosHeader.HEADER_RESPONSE_CONTENT_TYPE, responseContentType);
-        }
-        if (this.responseContentEncoding != null) {
-            allHeaders.put(TosHeader.HEADER_RESPONSE_CONTENT_ENCODING, responseContentEncoding);
-        }
-        if (this.responseExpires != null) {
-            allHeaders.put(TosHeader.HEADER_RESPONSE_EXPIRES, DateConverter.dateToRFC1123String(responseExpires));
-        }
-    }
+//    private void addRespHeaders(Map<String, String> allHeaders) {
+//        if (this.responseCacheControl != null) {
+//            allHeaders.put(TosHeader.HEADER_RESPONSE_CACHE_CONTROL, responseCacheControl);
+//        }
+//        if (this.responseContentLanguage != null) {
+//            allHeaders.put(TosHeader.HEADER_RESPONSE_CONTENT_LANGUAGE, responseContentLanguage);
+//        }
+//        if (this.responseContentDisposition != null) {
+//            allHeaders.put(TosHeader.HEADER_RESPONSE_CONTENT_DISPOSITION, responseContentDisposition);
+//        }
+//        if (this.responseContentType != null) {
+//            allHeaders.put(TosHeader.HEADER_RESPONSE_CONTENT_TYPE, responseContentType);
+//        }
+//        if (this.responseContentEncoding != null) {
+//            allHeaders.put(TosHeader.HEADER_RESPONSE_CONTENT_ENCODING, responseContentEncoding);
+//        }
+//        if (this.responseExpires != null) {
+//            allHeaders.put(TosHeader.HEADER_RESPONSE_EXPIRES, DateConverter.dateToRFC1123String(responseExpires));
+//        }
+//    }
 
     @Override
     public String toString() {
@@ -195,6 +208,7 @@ public class GetObjectV2Input {
         private String bucket;
         private String key;
         private String versionID;
+        private String range;
         private ObjectMetaRequestOptions options;
         private String responseCacheControl;
         private String responseContentDisposition;
@@ -220,6 +234,11 @@ public class GetObjectV2Input {
 
         public GetObjectV2InputBuilder versionID(String versionID) {
             this.versionID = versionID;
+            return this;
+        }
+
+        public GetObjectV2InputBuilder range(String range) {
+            this.range = range;
             return this;
         }
 
@@ -272,6 +291,7 @@ public class GetObjectV2Input {
             GetObjectV2Input getObjectV2Input = new GetObjectV2Input();
             getObjectV2Input.bucket = this.bucket;
             getObjectV2Input.key = this.key;
+            getObjectV2Input.range = this.range;
             getObjectV2Input.dataTransferListener = this.dataTransferListener;
             getObjectV2Input.versionID = this.versionID;
             getObjectV2Input.options = this.options;

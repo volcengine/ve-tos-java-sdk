@@ -1,5 +1,6 @@
 package com.volcengine.tos.internal.util;
 
+import com.volcengine.tos.TosClientException;
 import com.volcengine.tos.internal.model.CRC64Checksum;
 
 import java.math.BigInteger;
@@ -126,7 +127,7 @@ public class CRC64Utils {
         }
 
         if (radix < Character.MIN_RADIX || radix > Character.MAX_RADIX) {
-            throw new NumberFormatException("illegal radix: " + radix);
+            throw new TosClientException("illegal radix: " + radix, null);
         }
 
         int maxSafePos = ParseOverflowDetection.maxSafeDigits[radix] - 1;
@@ -134,10 +135,10 @@ public class CRC64Utils {
         for (int pos = 0; pos < unsignedLongString.length(); pos++) {
             int digit = Character.digit(unsignedLongString.charAt(pos), radix);
             if (digit == -1) {
-                throw new NumberFormatException(unsignedLongString);
+                throw new TosClientException("not found digit in unsigned long: " + unsignedLongString, null);
             }
             if (pos > maxSafePos && ParseOverflowDetection.overflowInParse(value, digit, radix)) {
-                throw new NumberFormatException("Too large for unsigned long: " + unsignedLongString);
+                throw new TosClientException("too large for unsigned long: " + unsignedLongString, null);
             }
             value = (value * radix) + digit;
         }

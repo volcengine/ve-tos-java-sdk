@@ -1,18 +1,25 @@
 package com.volcengine.tos.internal;
 
 import com.volcengine.tos.Consts;
+import com.volcengine.tos.auth.Credentials;
+import com.volcengine.tos.auth.SignV4;
+import com.volcengine.tos.auth.Signer;
+import com.volcengine.tos.auth.StaticCredentials;
 import com.volcengine.tos.comm.HttpMethod;
 import com.volcengine.tos.comm.TosHeader;
 import com.volcengine.tos.model.RequestInfo;
 import com.volcengine.tos.model.object.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.volcengine.tos.transport.TransportConfig;
+import okhttp3.HttpUrl;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
 import java.io.IOException;
+import java.net.Proxy;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -49,8 +56,53 @@ public class TosRequestTest {
             LOG.error(e.getMessage());
         }
         Assert.assertEquals("abs", output.getEtag());
-        // Jackson会覆盖原变量的值，这与go json.unmarshal不一样
 //        assertEquals("bbb", output.getRequestInfo().getRequestID());
 //        assertEquals("application/json", output.getRequestInfo().getHeader().get(HttpHeaders.HeaderContentType));
+    }
+
+    @Test
+    void pathModeTest() {
+        Credentials credentials = new StaticCredentials(Consts.accessKey, Consts.secretKey);
+        Signer signer = new SignV4(credentials, Consts.region);
+        String endpoint = "http://localhost:8080";
+        TosRequestFactory factory = new TosRequestFactory(signer, endpoint);
+        TosRequest request = factory.init("aaa", "bbb", null).buildRequest(HttpMethod.PUT, null);
+        HttpUrl url = request.toURL();
+        Assert.assertNotNull(url);
+        Assert.assertEquals(url.host(), "localhost");
+        Assert.assertEquals(url.port(), 8080);
+        Assert.assertEquals(url.encodedPath(), "/aaa%2Fbbb");
+
+        endpoint = "http://192.161.1.1:1234";
+        factory = new TosRequestFactory(signer, endpoint);
+        request = factory.init("aaa", "bbb", null).buildRequest(HttpMethod.PUT, null);
+        url = request.toURL();
+        Assert.assertNotNull(url);
+        Assert.assertEquals(url.host(), "192.161.1.1");
+        Assert.assertEquals(url.port(), 1234);
+        Assert.assertEquals(url.encodedPath(), "/aaa%2Fbbb");
+
+        endpoint = "http://[fe80::1551:1234:fbb:fcc3]:1234";
+        factory = new TosRequestFactory(signer, endpoint);
+        request = factory.init("aaa", "bbb", null).buildRequest(HttpMethod.PUT, null);
+        url = request.toURL();
+        Assert.assertNotNull(url);
+        Assert.assertEquals(url.host(), "fe80::1551:1234:fbb:fcc3");
+        Assert.assertEquals(url.port(), 1234);
+        Assert.assertEquals(url.encodedPath(), "/aaa%2Fbbb");
+    }
+
+    @Test
+    void proxyTest() {
+        TransportConfig config = TransportConfig.builder().build();
+        RequestTransport transport = new RequestTransport(config);
+        Assert.assertNotNull(transport.getClient());
+        Assert.assertNull(transport.getClient().proxy());
+        config.setProxyHost("127.0.0.1").setProxyPort(9090).setProxyUserName("hello").setProxyPassword("world");
+        transport = new RequestTransport(config);
+        Assert.assertNotNull(transport.getClient());
+        Assert.assertNotNull(transport.getClient().proxy());
+        Assert.assertEquals(transport.getClient().proxy().type(), Proxy.Type.HTTP);
+        Assert.assertEquals(transport.getClient().proxy().address().toString(), "/127.0.0.1:9090");
     }
 }

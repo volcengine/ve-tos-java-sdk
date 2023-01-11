@@ -5,24 +5,24 @@ public class TransportConfig {
     /**
      * 连接池中允许打开的最大 HTTP 连接数，默认 1024
      */
-    private int maxConnections;
+    private int maxConnections = 1024;
     /**
      * 连接池中空闲 HTTP 连接时间超过此参数的设定值，则关闭 HTTP 连接，单位：毫秒，默认 60000 毫秒
      */
-    private int idleConnectionTimeMills;
+    private int idleConnectionTimeMills = 60000;
     /**
      * 建立连接超时时间，单位：毫秒，默认 10000 毫秒
      */
-    private int connectTimeoutMills;
+    private int connectTimeoutMills = 10000;
 
     /**
      * Socket 读超时时间，单位：毫秒，默认 30000 毫秒
      */
-    private int readTimeoutMills;
+    private int readTimeoutMills = 30000;
     /**
      * Socket 写超时时间，单位：毫秒，默认 30000 毫秒
      */
-    private int writeTimeoutMills;
+    private int writeTimeoutMills = 30000;
 
     /**
      * 代理服务器的主机地址，当前只支持 http 协议
@@ -49,7 +49,13 @@ public class TransportConfig {
     /**
      * DNS 缓存的有效期，单位：毫秒，小与等于 0 时代表关闭 DNS 缓存，默认为 0
      */
+    @Deprecated
     private int dnsCacheTimeMills;
+
+    /**
+     * DNS 缓存的有效期，单位：分钟，小与等于 0 时代表关闭 DNS 缓存，默认为 0
+     */
+    private int dnsCacheTimeMinutes;
 
     /**
      * 最大重试次数，默认为 3 次
@@ -146,12 +152,23 @@ public class TransportConfig {
         return this;
     }
 
+    @Deprecated
     public int getDnsCacheTimeMills() {
         return dnsCacheTimeMills;
     }
 
+    @Deprecated
     public TransportConfig setDnsCacheTimeMills(int dnsCacheTimeMills) {
         this.dnsCacheTimeMills = dnsCacheTimeMills;
+        return this;
+    }
+
+    public int getDnsCacheTimeMinutes() {
+        return dnsCacheTimeMinutes;
+    }
+
+    public TransportConfig setDnsCacheTimeMinutes(int dnsCacheTimeMinutes) {
+        this.dnsCacheTimeMinutes = dnsCacheTimeMinutes;
         return this;
     }
 
@@ -179,7 +196,9 @@ public class TransportConfig {
         private String proxyUserName;
         private String proxyPassword;
         private boolean enableVerifySSL;
+        @Deprecated
         private int dnsCacheTimeMills;
+        private int dnsCacheTimeMinutes;
         private int maxRetryCount;
 
         private TransportConfigBuilder() {
@@ -188,7 +207,6 @@ public class TransportConfig {
             this.connectTimeoutMills = 10000;
             this.readTimeoutMills = 30000;
             this.writeTimeoutMills = 30000;
-            this.dnsCacheTimeMills = 0;
         }
 
         public TransportConfigBuilder maxConnections(int maxConnections) {
@@ -241,8 +259,14 @@ public class TransportConfig {
             return this;
         }
 
+        @Deprecated
         public TransportConfigBuilder dnsCacheTimeMills(int dnsCacheTimeMills) {
             this.dnsCacheTimeMills = dnsCacheTimeMills;
+            return this;
+        }
+
+        public TransportConfigBuilder dnsCacheTimeMinutes(int dnsCacheTimeMinutes) {
+            this.dnsCacheTimeMinutes = dnsCacheTimeMinutes;
             return this;
         }
 
@@ -263,7 +287,7 @@ public class TransportConfig {
             transportConfig.setProxyUserName(proxyUserName);
             transportConfig.setProxyPassword(proxyPassword);
             transportConfig.setEnableVerifySSL(enableVerifySSL);
-            transportConfig.setDnsCacheTimeMills(dnsCacheTimeMills);
+            transportConfig.setDnsCacheTimeMinutes(dnsCacheTimeMinutes);
             transportConfig.setMaxRetryCount(maxRetryCount);
             return transportConfig;
         }
@@ -282,7 +306,8 @@ public class TransportConfig {
                 ", proxyUserName='" + proxyUserName + '\'' +
                 ", proxyPassword='" + proxyPassword + '\'' +
                 ", enableVerifySSL=" + enableVerifySSL +
-                ", dnsCacheTimeMills=" + dnsCacheTimeMills +
+                ", dnsCacheTimeMinutes=" + dnsCacheTimeMinutes +
+                ", maxRetryCount=" + maxRetryCount +
                 '}';
     }
 

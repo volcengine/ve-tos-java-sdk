@@ -12,7 +12,6 @@ public class ObjectTobeDeleted {
         return key;
     }
 
-    @Deprecated
     public ObjectTobeDeleted setKey(String key) {
         this.key = key;
         return this;
@@ -22,7 +21,6 @@ public class ObjectTobeDeleted {
         return versionID;
     }
 
-    @Deprecated
     public ObjectTobeDeleted setVersionID(String versionID) {
         this.versionID = versionID;
         return this;

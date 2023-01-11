@@ -1,5 +1,6 @@
 package com.volcengine.tos.model.object;
 
+@Deprecated
 public class UploadFileOutput {
     private CompleteMultipartUploadOutput completeMultipartUploadOutput;
     private String bucket;
