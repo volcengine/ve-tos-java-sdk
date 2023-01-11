@@ -7,15 +7,13 @@ import com.volcengine.tos.comm.Utils;
 import com.volcengine.tos.comm.event.DataTransferStatus;
 import com.volcengine.tos.comm.event.DataTransferType;
 import com.volcengine.tos.comm.event.UploadEventType;
-import com.volcengine.tos.internal.util.CRC64Utils;
-import com.volcengine.tos.model.object.UploadEvent;
 import com.volcengine.tos.internal.Consts;
 import com.volcengine.tos.internal.TosObjectRequestHandler;
+import com.volcengine.tos.internal.util.CRC64Utils;
 import com.volcengine.tos.internal.util.ParamsChecker;
 import com.volcengine.tos.internal.util.StringUtils;
 import com.volcengine.tos.internal.util.TosUtils;
 import com.volcengine.tos.model.object.*;
-import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -38,9 +36,7 @@ public class UploadFileTaskHandler {
     public UploadFileTaskHandler(UploadFileV2Input input, TosObjectRequestHandler handler, boolean enableCrcCheck) {
         ParamsChecker.ensureNotNull(input, "UploadFileV2Input");
         ParamsChecker.ensureNotNull(input.getFilePath(), "UploadFilePath");
-        ParamsChecker.ensureNotNull(input.getCreateMultipartUploadInput(), "CreateMultipartUploadInput");
-        ParamsChecker.isValidBucketNameAndKey(input.getCreateMultipartUploadInput().getBucket(),
-                input.getCreateMultipartUploadInput().getKey());
+        ParamsChecker.isValidBucketNameAndKey(input.getBucket(), input.getKey());
         ParamsChecker.ensureNotNull(handler, "TosObjectRequestHandler");
         this.input = input;
         this.handler = handler;
@@ -48,8 +44,11 @@ public class UploadFileTaskHandler {
         this.consumedBytes = new AtomicLong(0);
     }
 
+    public boolean isNullFile() {
+        return new File(input.getFilePath()).length() == 0;
+    }
+
     public void initTask() {
-        validateInput();
         if (this.input.isEnableCheckpoint()) {
             validateCheckpointPath();
         }
@@ -74,7 +73,7 @@ public class UploadFileTaskHandler {
                         .setEnableCheckpoint(input.isEnableCheckpoint())
                         .setCheckpointFile(input.getCheckpointFile())
                         .setUploadEventListener(input.getUploadEventListener())
-                        .setOptions(input.getCreateMultipartUploadInput().getOptions())
+                        .setOptions(input.getOptions())
                         .setRateLimiter(input.getRateLimiter())
                         .setDataTransferListener(input.getDataTransferListener())
                         .setHandler(handler));
@@ -105,6 +104,10 @@ public class UploadFileTaskHandler {
         if (!readyForComplete()) {
             throw new TosClientException("tos: some upload tasks failed.", null);
         }
+        return completeUploadFileTask(status);
+    }
+
+    private UploadFileV2Output completeUploadFileTask(DataTransferStatus status) {
         Util.postDataTransferStatus(this.input.getDataTransferListener(), status.setType(DataTransferType.DATA_TRANSFER_SUCCEED));
         CompleteMultipartUploadV2Input input = new CompleteMultipartUploadV2Input()
                 .setBucket(this.checkpoint.getBucket())
@@ -141,7 +144,8 @@ public class UploadFileTaskHandler {
                 .setHashCrc64ecma(comp.getHashCrc64ecma())
                 .setVersionID(comp.getVersionID())
                 .setSsecAlgorithm(checkpoint.getSseAlgorithm())
-                .setSsecKeyMD5(checkpoint.getSseKeyMd5());
+                .setSsecKeyMD5(checkpoint.getSseKeyMd5())
+                .setEncodingType(checkpoint.getEncodingType());
     }
 
     private boolean readyForComplete() {
@@ -169,7 +173,7 @@ public class UploadFileTaskHandler {
         return true;
     }
 
-    private void validateInput() {
+    public void validateInput() {
         if (input.getPartSize() == 0) {
             input.setPartSize(Consts.DEFAULT_PART_SIZE);
         }
@@ -177,23 +181,23 @@ public class UploadFileTaskHandler {
         input.setTaskNum(Util.determineTaskNum(input.getTaskNum()));
         File file = new File(input.getFilePath());
         if (!file.exists()) {
-            throw new IllegalArgumentException("invalid file path, the file does not exist: " + input.getFilePath());
+            throw new TosClientException("invalid file path, the file does not exist: " + input.getFilePath(), null);
         }
         if (file.isDirectory()) {
             // 不支持文件夹上传
-            throw new IllegalArgumentException("do not support directory, please specific your file path");
+            throw new TosClientException("do not support directory, please specific your file path", null);
         }
     }
 
     private void validateCheckpointPath() {
-        String checkpointFileSuffix = Util.checkpointPathMd5(input.getCreateMultipartUploadInput().getBucket(),
-                input.getCreateMultipartUploadInput().getKey(), "") + Consts.UPLOAD_CHECKPOINT_FILE_SUFFIX;
+        String checkpointFileSuffix = Util.checkpointPathMd5(input.getBucket(), input.getKey(), "")
+                + Consts.UPLOAD_CHECKPOINT_FILE_SUFFIX;
         if (StringUtils.isEmpty(input.getCheckpointFile())) {
             input.setCheckpointFile(input.getFilePath() + "." + checkpointFileSuffix);
         } else {
             File ufcf = new File(input.getCheckpointFile());
             if (ufcf.isDirectory()) {
-                input.setCheckpointFile(input.getCheckpointFile() + "/" + checkpointFileSuffix);
+                input.setCheckpointFile(input.getCheckpointFile() + File.separator + checkpointFileSuffix);
             }
         }
         ParamsChecker.ensureNotNull(input.getCheckpointFile(), "checkpointFilePath");
@@ -211,8 +215,7 @@ public class UploadFileTaskHandler {
         boolean valid = false;
         if (checkpoint != null) {
             valid = checkpoint.isValid(fileInfo.getFileSize(), fileInfo.getLastModified(),
-                    this.input.getCreateMultipartUploadInput().getBucket(),
-                    this.input.getCreateMultipartUploadInput().getKey(), input.getFilePath());
+                    this.input.getBucket(), this.input.getKey(), input.getFilePath());
             if (!valid) {
                 Util.deleteCheckpointFile(input.getCheckpointFile());
             } else {
@@ -245,18 +248,19 @@ public class UploadFileTaskHandler {
 
     private UploadFileV2Checkpoint initCheckpoint(UploadFileInfo info) throws TosException {
         UploadFileV2Checkpoint checkpoint = new UploadFileV2Checkpoint()
-                .setBucket(input.getCreateMultipartUploadInput().getBucket())
-                .setKey(input.getCreateMultipartUploadInput().getKey())
+                .setBucket(input.getBucket())
+                .setKey(input.getKey())
                 .setUploadPartInfos(getPartsFromFile(info.getFileSize(), input.getPartSize()))
                 .setFilePath(info.getFilePath()).setFileSize(info.getFileSize()).setLastModified(info.getLastModified());
         CreateMultipartUploadOutput output;
         UploadEvent createMultipart = new UploadEvent()
-                .setBucket(input.getCreateMultipartUploadInput().getBucket())
-                .setKey(input.getCreateMultipartUploadInput().getKey())
+                .setBucket(input.getBucket())
+                .setKey(input.getKey())
                 .setCheckpointFile(input.getCheckpointFile())
                 .setFilePath(input.getFilePath());
         try {
-            output = this.handler.createMultipartUpload(this.input.getCreateMultipartUploadInput());
+            output = this.handler.createMultipartUpload(new CreateMultipartUploadInput().setBucket(input.getBucket())
+                    .setKey(input.getKey()).setOptions(input.getOptions()).setEncodingType(input.getEncodingType()));
             Util.postUploadEvent(this.input.getUploadEventListener(), createMultipart.setUploadID(output.getUploadID())
                     .setUploadEventType(UploadEventType.UploadEventCreateMultipartUploadSucceed));
         }catch (TosException e) {
@@ -276,7 +280,7 @@ public class UploadFileTaskHandler {
             partNum++;
         }
         if (partNum > Consts.MAX_PART_NUM) {
-            throw new IllegalArgumentException("unsupported part number, the maximum is 10000");
+            throw new TosClientException("unsupported part number, the maximum is 10000", null);
         }
         List<UploadPartInfo> partInfoList = new ArrayList<>((int) partNum);
         for(int i = 0; i < partNum; i++) {

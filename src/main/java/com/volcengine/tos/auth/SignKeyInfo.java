@@ -1,11 +1,11 @@
 package com.volcengine.tos.auth;
 
-class SignKeyInfo {
+public class SignKeyInfo {
     private String date;
     private String region;
     private Credential credential;
 
-    SignKeyInfo() {
+    public SignKeyInfo() {
     }
 
     SignKeyInfo(String date, String region, Credential credential){

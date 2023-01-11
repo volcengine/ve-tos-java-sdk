@@ -1,7 +1,7 @@
 package com.volcengine.tos.model.object;
 
-import com.volcengine.tos.comm.common.StorageClassType;
 import com.volcengine.tos.comm.TosHeader;
+import com.volcengine.tos.comm.common.StorageClassType;
 import com.volcengine.tos.internal.TosResponse;
 import com.volcengine.tos.internal.util.DateConverter;
 import com.volcengine.tos.internal.util.TosUtils;
@@ -161,10 +161,16 @@ public class GetObjectBasicOutput {
     }
 
     private Map<String, String> parseCustomMetadata(Map<String, String> headers){
-        Map<String, String> meta = new HashMap<>();
+        if (headers == null) {
+            return null;
+        }
+        Map<String, String> meta = null;
         for (Map.Entry<String, String> entry : headers.entrySet()) {
             String key = entry.getKey();
             if (key.startsWith(TosHeader.HEADER_META_PREFIX.toLowerCase())) {
+                if (meta == null) {
+                    meta = new HashMap<>();
+                }
                 String kk = key.substring(TosHeader.HEADER_META_PREFIX.length());
                 meta.put(kk, TosUtils.tryDecodeValue(key, headers.get(key)));
             }

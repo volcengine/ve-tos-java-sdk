@@ -1,5 +1,6 @@
 package com.volcengine.tos.model.object;
 
+@Deprecated
 public class UploadFileInput {
     private String objectKey;
     private String uploadFilePath;

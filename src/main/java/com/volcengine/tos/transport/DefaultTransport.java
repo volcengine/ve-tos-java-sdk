@@ -36,6 +36,9 @@ public class DefaultTransport implements Transport {
                 .build();
     }
 
+    @Override
+    public void switchConfig(TransportConfig config) {
+    }
 
     private MediaType getMediaType(TosRequest request) {
         String type = "";

@@ -18,6 +18,7 @@ public interface Consts {
     String ACL_BUCKET_OWNER_READ = "bucket-owner-read";
     String ACL_BUCKET_OWNER_FULL_CONTROL = "bucket-owner-full-control";
     String ACL_LOG_DELIVERY_WRITE = "log-delivery-write";
+    String ACL_BUCKET_OWNER_ENTRUSTED = "bucket-owner-entrusted";
 
     String PERMISSION_TYPE_READ = "READ";
     String PERMISSION_TYPE_WRITE = "WRITE";
@@ -28,4 +29,11 @@ public interface Consts {
     String STORAGE_CLASS_STANDARD = "STANDARD";
     String STORAGE_CLASS_IA = "IA";
     String STORAGE_CLASS_ARCHIVE_FR = "ARCHIVE_FR";
+
+    String CANNED_ALL_USERS = "AllUsers";
+    String CANNED_AUTHENTICATED_USERS = "AuthenticatedUsers";
+    String CANNED_LOG_DELIVERY = "LogDelivery";
+
+    String GRANTEE_GROUP = "Group";
+    String GRANTEE_USER = "CanonicalUser";
 }

@@ -1,12 +1,21 @@
 package com.volcengine.tos.model.object;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.volcengine.tos.internal.util.DateConverter;
 import com.volcengine.tos.model.acl.Owner;
 
+import java.util.Date;
+
 public class ListedDeleteMarkerEntry {
+    @JsonProperty("IsLatest")
     private boolean isLatest;
+    @JsonProperty("Key")
     private String key;
+    @JsonProperty("LastModified")
     private String lastModified;
+    @JsonProperty("Owner")
     private Owner owner;
+    @JsonProperty("VersionId")
     private String versionID;
 
     public boolean isLatest() {
@@ -29,6 +38,10 @@ public class ListedDeleteMarkerEntry {
 
     public String getLastModified() {
         return lastModified;
+    }
+
+    public Date getLastModifiedInDate() {
+        return DateConverter.rfc1123StringToDate(lastModified);
     }
 
     public ListedDeleteMarkerEntry setLastModified(String lastModified) {

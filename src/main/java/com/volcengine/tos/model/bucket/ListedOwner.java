@@ -9,6 +9,24 @@ public class ListedOwner {
     @JsonProperty("DisplayName")
     private String displayName;
 
+    public String getId() {
+        return id;
+    }
+
+    public ListedOwner setId(String id) {
+        this.id = id;
+        return this;
+    }
+
+    public String getDisplayName() {
+        return displayName;
+    }
+
+    public ListedOwner setDisplayName(String displayName) {
+        this.displayName = displayName;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "ListedOwner{" +

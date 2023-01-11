@@ -1,5 +1,6 @@
 package com.volcengine.tos.model.object;
 
+import com.volcengine.tos.TosClientException;
 import com.volcengine.tos.comm.TosHeader;
 import com.volcengine.tos.comm.common.MetadataDirectiveType;
 import com.volcengine.tos.internal.Consts;
@@ -103,7 +104,7 @@ public class CopyObjectV2Input {
             if (Consts.CUSTOM_SERVER_SIDE_ENCRYPTION_ALGORITHM_LIST.contains(copySourceSSECAlgorithm)) {
                 withHeader(TosHeader.HEADER_SSE_CUSTOMER_ALGORITHM, copySourceSSECAlgorithm);
             } else {
-                throw new IllegalArgumentException("invalid copySourceSSECAlgorithm input, only support AES256");
+                throw new TosClientException("invalid copySourceSSECAlgorithm input, only support AES256", null);
             }
         }
         withHeader(TosHeader.HEADER_COPY_SOURCE_SSE_CUSTOMER_KEY, copySourceSSECKey);

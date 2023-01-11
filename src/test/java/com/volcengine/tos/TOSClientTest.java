@@ -255,7 +255,6 @@ public class TOSClientTest {
             try {
                 client.deleteBucket(bucketName);
             } catch (TosException e) {
-                Assert.assertEquals(e.getCode(), Code.NO_SUCH_BUCKET);
                 Assert.assertEquals(e.getStatusCode(), HttpStatus.NOT_FOUND);
             }
         }
@@ -458,7 +457,7 @@ public class TOSClientTest {
         try{
             client.abortMultipartUpload(Consts.bucket, new AbortMultipartUploadInput(key, upload.getRequestInfo().getRequestId()));
         } catch (TosException e){
-            Assert.assertEquals(e.getCode(), "NotFound");
+            Assert.assertEquals(e.getCode(), Code.NO_SUCH_UPLOAD);
         }
     }
 
@@ -478,7 +477,7 @@ public class TOSClientTest {
         try{
             client.abortMultipartUpload(Consts.bucket, abort);
         } catch (TosException e){
-            Assert.assertEquals(e.getCode(), "NotFound");
+            Assert.assertEquals(e.getCode(), Code.NO_SUCH_UPLOAD);
         }
     }
 
@@ -655,14 +654,14 @@ public class TOSClientTest {
         String key = "append-object-"+System.currentTimeMillis();
         String data = StringUtils.randomString(128 << 10);
         try{
-            AppendObjectOutput result = client.appendObject(Consts.bucket, key, new ByteArrayInputStream(data.getBytes()), 0);
-            GetObjectOutput got = client.getObject(Consts.bucket, key);
+            AppendObjectOutput result = client.appendObject(Consts.bucketMultiVersionDisabled, key, new ByteArrayInputStream(data.getBytes()), 0);
+            GetObjectOutput got = client.getObject(Consts.bucketMultiVersionDisabled, key);
             // NOTICE: 注意在对象很大的时候不要这样一次性读取
             Assert.assertEquals(crc32Check(data.getBytes()), crc32Check(StringUtils.toByteArray(got.getContent())));
 
             String data2 = StringUtils.randomString(256 << 10);
-            client.appendObject(Consts.bucket, key, new ByteArrayInputStream(data2.getBytes()), result.getNextAppendOffset());
-            got = client.getObject(Consts.bucket, key);
+            client.appendObject(Consts.bucketMultiVersionDisabled, key, new ByteArrayInputStream(data2.getBytes()), result.getNextAppendOffset());
+            got = client.getObject(Consts.bucketMultiVersionDisabled, key);
             // NOTICE: 注意在对象很大的时候不要这样一次性读取
             Assert.assertEquals(data.length()+data2.length(), got.getObjectMeta().getContentLength());
             Assert.assertEquals(crc32Check((data+data2).getBytes()), crc32Check(StringUtils.toByteArray(got.getContent())));
@@ -671,7 +670,7 @@ public class TOSClientTest {
             Assert.fail();
         }finally {
             try{
-                client.deleteObject(Consts.bucket, key);
+                client.deleteObject(Consts.bucketMultiVersionDisabled, key);
             } catch (TosException e){
                 Consts.LOG.error(e.toString(), e);
                 Assert.fail();

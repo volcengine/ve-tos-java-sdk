@@ -2,7 +2,7 @@ package com.volcengine.tos.model.object;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 @Deprecated
-class InnerUploadedPart implements Comparable<InnerUploadedPart>{
+public class InnerUploadedPart implements Comparable<InnerUploadedPart>{
     @JsonProperty("PartNumber")
     int partNumber;
     @JsonProperty("ETag")
@@ -12,12 +12,26 @@ class InnerUploadedPart implements Comparable<InnerUploadedPart>{
         this.etag = etag;
     }
 
+    public InnerUploadedPart setPartNumber(int partNumber) {
+        this.partNumber = partNumber;
+        return this;
+    }
+
+    public String getEtag() {
+        return etag;
+    }
+
+    public InnerUploadedPart setEtag(String etag) {
+        this.etag = etag;
+        return this;
+    }
+
     @Override
     public int compareTo(InnerUploadedPart o) {
         return this.partNumber - o.partNumber;
     }
 
-    int getPartNumber() {
+    public int getPartNumber() {
         return partNumber;
     }
 

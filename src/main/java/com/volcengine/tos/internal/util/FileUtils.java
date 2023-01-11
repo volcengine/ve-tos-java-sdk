@@ -3,48 +3,76 @@ package com.volcengine.tos.internal.util;
 import com.volcengine.tos.TosClientException;
 import com.volcengine.tos.comm.io.TosRepeatableBoundedFileInputStream;
 import com.volcengine.tos.comm.io.TosRepeatableFileInputStream;
-import org.jetbrains.annotations.Nullable;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.InputStream;
 import java.io.IOException;
+import java.io.InputStream;
 
 public class FileUtils {
-    public static InputStream getFileContent(FileInputStream fileInputStream, File file, String filePath) throws FileNotFoundException {
+    public static InputStream getFileContent(FileInputStream fileInputStream, File file, String filePath) {
         if (fileInputStream != null) {
             return new TosRepeatableFileInputStream(fileInputStream);
         }
         if (file != null) {
-            return new TosRepeatableFileInputStream(file);
+            try {
+                return new TosRepeatableFileInputStream(file);
+            } catch (IOException e) {
+                throw new TosClientException("getFileContent failed.", e);
+            }
         }
         if (filePath != null) {
-            FileInputStream fis = new FileInputStream(filePath);
-            return new TosRepeatableFileInputStream(fis);
+            try {
+                FileInputStream fis = new FileInputStream(filePath);
+                return new TosRepeatableFileInputStream(fis);
+            } catch (IOException e) {
+                throw new TosClientException("getFileContent failed.", e);
+            }
         }
-        throw new IllegalArgumentException("file info is not set in the input, pls set filepath at least");
+        throw new TosClientException("file info is not set in the input, please set filepath at least", null);
     }
 
-    public static InputStream getBoundedFileContent(FileInputStream fileInputStream, File file, String filePath, long offset, long partSize) throws IOException {
+    public static long getFileLength(File file, String filePath) {
+        if (file != null) {
+            return file.length();
+        }
+        if (StringUtils.isNotEmpty(filePath)) {
+            return new File(filePath).length();
+        }
+        return -1;
+    }
+
+    public static InputStream getBoundedFileContent(FileInputStream fileInputStream, File file, String filePath, long offset, long partSize) {
         if (offset < 0) {
-            throw new IllegalArgumentException("file offset is small than 0");
+            throw new TosClientException("file offset is small than 0", null);
         }
         if (fileInputStream != null) {
-            fileInputStream.skip(offset);
-            return new TosRepeatableBoundedFileInputStream(fileInputStream, partSize);
+            try{
+                fileInputStream.skip(offset);
+                return new TosRepeatableBoundedFileInputStream(fileInputStream, partSize);
+            } catch (IOException e) {
+                throw new TosClientException("getBoundedFileContent failed.", e);
+            }
         }
         if (file != null) {
-            FileInputStream fis = new FileInputStream(file);
-            fis.skip(offset);
-            return new TosRepeatableBoundedFileInputStream(fis, partSize);
+            try{
+                FileInputStream fis = new FileInputStream(file);
+                fis.skip(offset);
+                return new TosRepeatableBoundedFileInputStream(fis, partSize);
+            } catch (IOException e) {
+                throw new TosClientException("getBoundedFileContent failed.", e);
+            }
         }
         if (filePath != null) {
-            FileInputStream fis = new FileInputStream(filePath);
-            fis.skip(offset);
-            return new TosRepeatableBoundedFileInputStream(fis, partSize);
+            try{
+                FileInputStream fis = new FileInputStream(filePath);
+                fis.skip(offset);
+                return new TosRepeatableBoundedFileInputStream(fis, partSize);
+            } catch (IOException e) {
+                throw new TosClientException("getBoundedFileContent failed.", e);
+            }
         }
-        throw new IllegalArgumentException("file info is not set in the input, pls set filepath at least");
+        throw new TosClientException("file info is not set in the input, please set filepath at least", null);
     }
 
     public static String parseFilePath(String filePath, String key) {

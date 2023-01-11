@@ -4,6 +4,7 @@ import com.volcengine.tos.Consts;
 import com.volcengine.tos.TosException;
 import com.volcengine.tos.comm.Code;
 import com.volcengine.tos.comm.HttpStatus;
+import com.volcengine.tos.comm.common.ACLType;
 import com.volcengine.tos.comm.common.MetadataDirectiveType;
 import com.volcengine.tos.comm.common.StorageClassType;
 import com.volcengine.tos.comm.io.TosRepeatableBoundedFileInputStream;
@@ -25,6 +26,9 @@ import java.security.MessageDigest;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.*;
+
+import static com.volcengine.tos.Consts.bucket;
+import static com.volcengine.tos.Consts.endpoint;
 
 
 public class TosObjectRequestHandlerAppendMultipartCopyTest {
@@ -94,19 +98,18 @@ public class TosObjectRequestHandlerAppendMultipartCopyTest {
         try{
             AppendObjectInput input = AppendObjectInput.builder()
                     .contentLength(data.length())
-                    .bucket(Consts.bucket)
+                    .bucket(Consts.bucketMultiVersionDisabled)
                     .key(key)
                     .content(new ByteArrayInputStream(data.getBytes()))
                     .build();
             AppendObjectOutput appendRes = getHandler().appendObject(input);
             Assert.assertEquals(appendRes.getNextAppendOffset(), data.length());
             try(GetObjectV2Output getRes = getHandler().getObject(GetObjectV2Input.builder()
-                    .bucket(Consts.bucket)
+                    .bucket(Consts.bucketMultiVersionDisabled)
                     .key(key)
                     .build())){
-                Assert.assertNotNull(getRes.getGetObjectBasicOutput());
-                Assert.assertEquals(getRes.getGetObjectBasicOutput().getContentLength(), data.length());
-                Assert.assertEquals(getRes.getGetObjectBasicOutput().getObjectType(), "Appendable");
+                Assert.assertEquals(getRes.getContentLength(), data.length());
+                Assert.assertEquals(getRes.getObjectType(), "Appendable");
                 validateDataSame(data, StringUtils.toString(getRes.getContent()));
             } catch (IOException e) {
                 testFailed(e);
@@ -117,7 +120,7 @@ public class TosObjectRequestHandlerAppendMultipartCopyTest {
             input = AppendObjectInput.builder()
                     .contentLength(data2.length())
                     .offset(nextAppendOffset)
-                    .bucket(Consts.bucket)
+                    .bucket(Consts.bucketMultiVersionDisabled)
                     .key(key)
                     .content(new ByteArrayInputStream(data2.getBytes()))
                     .build();
@@ -131,12 +134,11 @@ public class TosObjectRequestHandlerAppendMultipartCopyTest {
             appendRes = getHandler().appendObject(input);
             Assert.assertEquals(appendRes.getNextAppendOffset(), data2.length() + nextAppendOffset);
             try(GetObjectV2Output getRes = getHandler().getObject(GetObjectV2Input.builder()
-                    .bucket(Consts.bucket)
+                    .bucket(Consts.bucketMultiVersionDisabled)
                     .key(key)
                     .build())){
-                Assert.assertNotNull(getRes.getGetObjectBasicOutput());
-                Assert.assertEquals(getRes.getGetObjectBasicOutput().getContentLength(), data.length() + data2.length());
-                Assert.assertEquals(getRes.getGetObjectBasicOutput().getObjectType(), "Appendable");
+                Assert.assertEquals(getRes.getContentLength(), data.length() + data2.length());
+                Assert.assertEquals(getRes.getObjectType(), "Appendable");
                 validateDataSame(data + data2, StringUtils.toString(getRes.getContent()));
             } catch (IOException e) {
                 testFailed(e);
@@ -145,7 +147,7 @@ public class TosObjectRequestHandlerAppendMultipartCopyTest {
             testFailed(e);
         }finally {
             try{
-                getHandler().deleteObject(DeleteObjectInput.builder().bucket(Consts.bucket).key(key).build());
+                getHandler().deleteObject(DeleteObjectInput.builder().bucket(Consts.bucketMultiVersionDisabled).key(key).build());
             } catch (TosException e){
                 Consts.LOG.error(e.toString(), e);
                 Assert.fail();
@@ -159,12 +161,9 @@ public class TosObjectRequestHandlerAppendMultipartCopyTest {
         String data = sampleData + StringUtils.randomString(new Random().nextInt(128));
         String preHash64 = null;
         try{
-            PutObjectBasicInput basicInput = PutObjectBasicInput.builder()
-                    .bucket(Consts.bucket)
-                    .key(key)
-                    .build();
             PutObjectOutput output = getHandler().putObject(PutObjectInput.builder()
-                    .putObjectBasicInput(basicInput)
+                    .bucket(Consts.bucketMultiVersionDisabled)
+                    .key(key)
                     .content(new ByteArrayInputStream(data.getBytes()))
                     .build());
             preHash64 = output.getHashCrc64ecma();
@@ -178,7 +177,7 @@ public class TosObjectRequestHandlerAppendMultipartCopyTest {
                     .contentLength(data2.length())
                     .offset(nextAppendOffset)
                     .preHashCrc64ecma(preHash64)
-                    .bucket(Consts.bucket)
+                    .bucket(Consts.bucketMultiVersionDisabled)
                     .key(key)
                     .content(new ByteArrayInputStream(data2.getBytes()))
                     .build();
@@ -188,7 +187,7 @@ public class TosObjectRequestHandlerAppendMultipartCopyTest {
             Assert.assertEquals(e.getCode(), Code.NOT_APPENDABLE);
         }finally {
             try{
-                getHandler().deleteObject(DeleteObjectInput.builder().bucket(Consts.bucket).key(key).build());
+                getHandler().deleteObject(DeleteObjectInput.builder().bucket(Consts.bucketMultiVersionDisabled).key(key).build());
             } catch (TosException e){
                 Consts.LOG.error(e.toString(), e);
                 Assert.fail();
@@ -202,12 +201,9 @@ public class TosObjectRequestHandlerAppendMultipartCopyTest {
         String data = sampleData + StringUtils.randomString(new Random().nextInt(128));
         PutObjectOutput put = null;
         try{
-            PutObjectBasicInput basicInput = PutObjectBasicInput.builder()
+            put = getHandler().putObject(PutObjectInput.builder()
                     .bucket(Consts.bucket)
                     .key(key)
-                    .build();
-            put = getHandler().putObject(PutObjectInput.builder()
-                    .putObjectBasicInput(basicInput)
                     .content(new ByteArrayInputStream(data.getBytes()))
                     .build());
         }catch (Exception e) {
@@ -224,6 +220,7 @@ public class TosObjectRequestHandlerAppendMultipartCopyTest {
                     .srcBucket(Consts.bucket)
                     // src object 1
                     .srcKey(key)
+                    .srcVersionID(put.getVersionID())
                     .build();
             CopyObjectV2Output output1 = getHandler().copyObject(cp1);
             Assert.assertEquals(output1.getEtag(), put.getEtag());
@@ -234,10 +231,9 @@ public class TosObjectRequestHandlerAppendMultipartCopyTest {
                     .bucket(Consts.bucket)
                     .key(copyKey)
                     .build())){
-                Assert.assertNotNull(getRes.getGetObjectBasicOutput());
-                Assert.assertEquals(getRes.getGetObjectBasicOutput().getContentLength(), data.length());
-                Assert.assertEquals(getRes.getGetObjectBasicOutput().getEtag(), output1.getEtag());
-                Assert.assertEquals(getRes.getGetObjectBasicOutput().getHashCrc64ecma(), output1.getHashCrc64ecma());
+                Assert.assertEquals(getRes.getContentLength(), data.length());
+                Assert.assertEquals(getRes.getEtag(), output1.getEtag());
+                Assert.assertEquals(getRes.getHashCrc64ecma(), output1.getHashCrc64ecma());
                 validateDataSame(data, StringUtils.toString(getRes.getContent()));
             } catch (IOException e) {
                 testFailed(e);
@@ -256,12 +252,9 @@ public class TosObjectRequestHandlerAppendMultipartCopyTest {
         String data = sampleData + StringUtils.randomString(new Random().nextInt(128));
         PutObjectOutput put = null;
         try{
-            PutObjectBasicInput basicInput = PutObjectBasicInput.builder()
+            put = getHandler().putObject(PutObjectInput.builder()
                     .bucket(Consts.bucket)
                     .key(key)
-                    .build();
-            put = getHandler().putObject(PutObjectInput.builder()
-                    .putObjectBasicInput(basicInput)
                     .content(new ByteArrayInputStream(data.getBytes()))
                     .build());
         }catch (Exception e) {
@@ -279,6 +272,7 @@ public class TosObjectRequestHandlerAppendMultipartCopyTest {
                     .srcBucket(Consts.bucket)
                     // src object 1
                     .srcKey(key)
+                    .srcVersionID(put.getVersionID())
                     .build();
             CopyObjectV2Output output1 = getHandler().copyObject(cp1);
             Assert.assertEquals(output1.getEtag(), put.getEtag());
@@ -289,10 +283,9 @@ public class TosObjectRequestHandlerAppendMultipartCopyTest {
                     .bucket(Consts.bucketCopy)
                     .key(copyKey)
                     .build())){
-                Assert.assertNotNull(getRes.getGetObjectBasicOutput());
-                Assert.assertEquals(getRes.getGetObjectBasicOutput().getContentLength(), data.length());
-                Assert.assertEquals(getRes.getGetObjectBasicOutput().getEtag(), output1.getEtag());
-                Assert.assertEquals(getRes.getGetObjectBasicOutput().getHashCrc64ecma(), output1.getHashCrc64ecma());
+                Assert.assertEquals(getRes.getContentLength(), data.length());
+                Assert.assertEquals(getRes.getEtag(), output1.getEtag());
+                Assert.assertEquals(getRes.getHashCrc64ecma(), output1.getHashCrc64ecma());
                 validateDataSame(data, StringUtils.toString(getRes.getContent()));
             } catch (IOException e) {
                 testFailed(e);
@@ -316,10 +309,9 @@ public class TosObjectRequestHandlerAppendMultipartCopyTest {
                     .bucket(Consts.bucket)
                     .key(copyKey1)
                     .build())){
-                Assert.assertNotNull(getRes.getGetObjectBasicOutput());
-                Assert.assertEquals(getRes.getGetObjectBasicOutput().getContentLength(), data.length());
-                Assert.assertEquals(getRes.getGetObjectBasicOutput().getEtag(), output2.getEtag());
-                Assert.assertEquals(getRes.getGetObjectBasicOutput().getHashCrc64ecma(), output2.getHashCrc64ecma());
+                Assert.assertEquals(getRes.getContentLength(), data.length());
+                Assert.assertEquals(getRes.getEtag(), output2.getEtag());
+                Assert.assertEquals(getRes.getHashCrc64ecma(), output2.getHashCrc64ecma());
                 validateDataSame(data, StringUtils.toString(getRes.getContent()));
             } catch (IOException e) {
                 testFailed(e);
@@ -344,13 +336,10 @@ public class TosObjectRequestHandlerAppendMultipartCopyTest {
         ObjectMetaRequestOptions options = ObjectMetaRequestOptions.builder()
                 .customMetadata(cus).build();
         try{
-            PutObjectBasicInput basicInput = PutObjectBasicInput.builder()
+            put = getHandler().putObject(PutObjectInput.builder()
                     .bucket(Consts.bucket)
                     .key(key)
                     .options(options)
-                    .build();
-            put = getHandler().putObject(PutObjectInput.builder()
-                    .putObjectBasicInput(basicInput)
                     .content(new ByteArrayInputStream(data.getBytes()))
                     .build());
         }catch (Exception e) {
@@ -375,10 +364,9 @@ public class TosObjectRequestHandlerAppendMultipartCopyTest {
                     .bucket(Consts.bucketCopy)
                     .key(copyKey)
                     .build())){
-                Assert.assertNotNull(getRes.getGetObjectBasicOutput());
-                Assert.assertNotNull(getRes.getGetObjectBasicOutput().getCustomMetadata());
-                Assert.assertEquals(getRes.getGetObjectBasicOutput().getCustomMetadata().get("custom"), "volc");
-                Assert.assertEquals(getRes.getGetObjectBasicOutput().getCustomMetadata().get("custom1"), "volc_test");
+                Assert.assertNotNull(getRes.getCustomMetadata());
+                Assert.assertEquals(getRes.getCustomMetadata().get("custom"), "volc");
+                Assert.assertEquals(getRes.getCustomMetadata().get("custom1"), "volc_test");
                 validateDataSame(data, StringUtils.toString(getRes.getContent()));
             } catch (IOException e) {
                 testFailed(e);
@@ -408,10 +396,9 @@ public class TosObjectRequestHandlerAppendMultipartCopyTest {
                     .bucket(Consts.bucketCopy)
                     .key(replaceKey)
                     .build())){
-                Assert.assertNotNull(getRes.getGetObjectBasicOutput());
-                Assert.assertNotNull(getRes.getGetObjectBasicOutput().getCustomMetadata());
-                Assert.assertEquals(getRes.getGetObjectBasicOutput().getCustomMetadata().get("custom"), "volc_replace");
-                Assert.assertEquals(getRes.getGetObjectBasicOutput().getCustomMetadata().get("custom1"), "volc_test_replace");
+                Assert.assertNotNull(getRes.getCustomMetadata());
+                Assert.assertEquals(getRes.getCustomMetadata().get("custom"), "volc_replace");
+                Assert.assertEquals(getRes.getCustomMetadata().get("custom1"), "volc_test_replace");
                 validateDataSame(data, StringUtils.toString(getRes.getContent()));
             } catch (IOException e) {
                 testFailed(e);
@@ -434,20 +421,17 @@ public class TosObjectRequestHandlerAppendMultipartCopyTest {
         Date lastModified = null;
         String etag = null;
         try{
-            PutObjectBasicInput basicInput = PutObjectBasicInput.builder()
+            getHandler().putObject(PutObjectInput.builder()
                     .bucket(Consts.bucket)
                     .key(key)
-                    .build();
-            getHandler().putObject(PutObjectInput.builder()
-                    .putObjectBasicInput(basicInput)
                     .content(content)
                     .build());
             HeadObjectV2Output headRes = getHandler().headObject(HeadObjectV2Input.builder()
                     .bucket(Consts.bucket)
                     .key(key)
                     .build());
-            lastModified = headRes.getHeadObjectBasicOutput().getLastModifiedInDate();
-            etag = headRes.getHeadObjectBasicOutput().getEtag();
+            lastModified = headRes.getLastModifiedInDate();
+            etag = headRes.getEtag();
         } catch (Exception e) {
             getHandler().deleteObject(DeleteObjectInput.builder().bucket(Consts.bucket).key(key).build());
             testFailed(e);
@@ -620,7 +604,7 @@ public class TosObjectRequestHandlerAppendMultipartCopyTest {
                     .bucket(Consts.bucket)
                     .key(uniqueKey)
                     .build());
-            Assert.assertEquals(head.getHeadObjectBasicOutput().getContentLength(), getPartSize());
+            Assert.assertEquals(head.getContentLength(), getPartSize());
         } catch (Exception e) {
             testFailed(e);
         } finally{
@@ -733,8 +717,7 @@ public class TosObjectRequestHandlerAppendMultipartCopyTest {
                     .bucket(Consts.bucket)
                     .key(uniqueKey)
                     .build())){
-                Assert.assertNotNull(getRes.getGetObjectBasicOutput());
-                Assert.assertEquals(getRes.getGetObjectBasicOutput().getContentLength(), fileLength);
+                Assert.assertEquals(getRes.getContentLength(), fileLength);
                 MessageDigest md5 = MessageDigest.getInstance("MD5");
                 byte[] buffer = new byte[8192];
                 int length;
@@ -833,22 +816,22 @@ public class TosObjectRequestHandlerAppendMultipartCopyTest {
                             .ssecKeyMD5(ssecKeyMD5)
                             .build())
                     .build());
-            Assert.assertEquals(headRes.getHeadObjectBasicOutput().getContentLength(), getPartSize());
-            Assert.assertEquals(headRes.getHeadObjectBasicOutput().getCacheControl(), "max-age=600");
-            Assert.assertEquals(headRes.getHeadObjectBasicOutput().getContentDisposition(), "attachment");
-            Assert.assertEquals(headRes.getHeadObjectBasicOutput().getContentEncoding(), "deflate");
-            Assert.assertEquals(headRes.getHeadObjectBasicOutput().getContentLanguage(), "en-US");
-            Assert.assertEquals(headRes.getHeadObjectBasicOutput().getContentType(), "application/json");
-            Assert.assertEquals(headRes.getHeadObjectBasicOutput().getExpiresInDate().toString(), dt.toString());
-            Assert.assertEquals(headRes.getHeadObjectBasicOutput().getExpires(), DateConverter.dateToRFC1123String(dt));
-            Assert.assertEquals(headRes.getHeadObjectBasicOutput().getCacheControl(), "max-age=600");
-            Assert.assertEquals(headRes.getHeadObjectBasicOutput().getSsecAlgorithm(), ssecAlgorithm);
-            Assert.assertEquals(headRes.getHeadObjectBasicOutput().getSsecKeyMD5(), ssecKeyMD5);
-            Assert.assertEquals(headRes.getHeadObjectBasicOutput().getStorageClass(), StorageClassType.STORAGE_CLASS_IA);
-            Assert.assertNotNull(headRes.getHeadObjectBasicOutput().getCustomMetadata());
-            Assert.assertEquals(headRes.getHeadObjectBasicOutput().getCustomMetadata().size(), 2);
-            Assert.assertEquals(headRes.getHeadObjectBasicOutput().getCustomMetadata().get("custom1"), "volc_part");
-            Assert.assertEquals(headRes.getHeadObjectBasicOutput().getCustomMetadata().get("custom2"), "volc_part1");
+            Assert.assertEquals(headRes.getContentLength(), getPartSize());
+            Assert.assertEquals(headRes.getCacheControl(), "max-age=600");
+            Assert.assertEquals(headRes.getContentDisposition(), "attachment");
+            Assert.assertEquals(headRes.getContentEncoding(), "deflate");
+            Assert.assertEquals(headRes.getContentLanguage(), "en-US");
+            Assert.assertEquals(headRes.getContentType(), "application/json");
+            Assert.assertEquals(headRes.getExpiresInDate().toString(), dt.toString());
+            Assert.assertEquals(headRes.getExpires(), DateConverter.dateToRFC1123String(dt));
+            Assert.assertEquals(headRes.getCacheControl(), "max-age=600");
+            Assert.assertEquals(headRes.getSsecAlgorithm(), ssecAlgorithm);
+            Assert.assertEquals(headRes.getSsecKeyMD5(), ssecKeyMD5);
+            Assert.assertEquals(headRes.getStorageClass(), StorageClassType.STORAGE_CLASS_IA);
+            Assert.assertNotNull(headRes.getCustomMetadata());
+            Assert.assertEquals(headRes.getCustomMetadata().size(), 2);
+            Assert.assertEquals(headRes.getCustomMetadata().get("custom1"), "volc_part");
+            Assert.assertEquals(headRes.getCustomMetadata().get("custom2"), "volc_part1");
         } catch (Exception e) {
             testFailed(e);
         } finally{
@@ -1118,12 +1101,9 @@ public class TosObjectRequestHandlerAppendMultipartCopyTest {
         File file = new File(sampleFilePath);
         String uploadID = null;
         try(FileInputStream fis = new FileInputStream(file)){
-            PutObjectBasicInput basicInput = PutObjectBasicInput.builder()
+            getHandler().putObject(PutObjectInput.builder()
                     .bucket(Consts.bucket)
                     .key(key)
-                    .build();
-            getHandler().putObject(PutObjectInput.builder()
-                    .putObjectBasicInput(basicInput)
                     .content(fis)
                     .build());
 
@@ -1175,10 +1155,8 @@ public class TosObjectRequestHandlerAppendMultipartCopyTest {
                     .bucket(Consts.bucket).key(key).build());
                 GetObjectV2Output getDst = getHandler().getObject(GetObjectV2Input.builder()
                         .bucket(Consts.bucketCopy).key(dstKey).build())){
-                Assert.assertNotNull(getSrc.getGetObjectBasicOutput());
-                Assert.assertNotNull(getDst.getGetObjectBasicOutput());
-                Assert.assertEquals(getSrc.getGetObjectBasicOutput().getContentLength(), file.length());
-                Assert.assertEquals(getDst.getGetObjectBasicOutput().getContentLength(), file.length());
+                Assert.assertEquals(getSrc.getContentLength(), file.length());
+                Assert.assertEquals(getDst.getContentLength(), file.length());
                 MessageDigest md5 = MessageDigest.getInstance("MD5");
                 byte[] buffer = new byte[8192];
                 int length;
@@ -1212,6 +1190,93 @@ public class TosObjectRequestHandlerAppendMultipartCopyTest {
             }
             getHandler().deleteObject(DeleteObjectInput.builder().bucket(Consts.bucket).key(key).build());
             getHandler().deleteObject(DeleteObjectInput.builder().bucket(Consts.bucketCopy).key(dstKey).build());
+        }
+    }
+
+    @Test
+    void fetchObjectTest() {
+        String key = getUniqueObjectKey();
+        String fetchKey = getUniqueObjectKey();
+        String data = sampleData + StringUtils.randomString(new Random().nextInt(128));
+        InputStream content = new ByteArrayInputStream(data.getBytes(StandardCharsets.UTF_8));
+        try {
+            getHandler().putObject(PutObjectInput.builder()
+                    .bucket(Consts.bucket)
+                    .key(key)
+                    .options(new ObjectMetaRequestOptions().setAclType(ACLType.ACL_PUBLIC_READ))
+                    .content(content)
+                    .build());
+            HeadObjectV2Output head = getHandler().headObject(new HeadObjectV2Input().setBucket(bucket).setKey(key));
+            String crc64 = head.getHashCrc64ecma();
+
+            // fetch
+            Map<String, String> meta = new HashMap<>();
+            meta.put("test-key", "test-value");
+            FetchObjectInput input = new FetchObjectInput().setBucket(bucket).setKey(fetchKey)
+                    .setOptions(new ObjectMetaRequestOptions().setAclType(ACLType.ACL_PRIVATE)
+                            .setStorageClass(StorageClassType.STORAGE_CLASS_IA)
+                            .setCustomMetadata(meta))
+                    .setUrl("https://" + bucket + "." + endpoint + "/" + key);
+            FetchObjectOutput output = getHandler().fetchObject(input);
+            Assert.assertNotNull(output);
+            Assert.assertNotNull(output.getEtag());
+
+            // head
+            head = getHandler().headObject(new HeadObjectV2Input().setBucket(bucket).setKey(fetchKey));
+            Assert.assertNotNull(head);
+            Assert.assertEquals(head.getEtag(), output.getEtag());
+            Assert.assertEquals(head.getStorageClass(), StorageClassType.STORAGE_CLASS_IA);
+            Assert.assertEquals(head.getContentLength(), data.length());
+            Assert.assertNotNull(head.getCustomMetadata());
+            Assert.assertEquals(head.getCustomMetadata().get("test-key"), "test-value");
+            Assert.assertEquals(head.getHashCrc64ecma(), crc64);
+        } catch (TosException e) {
+            testFailed(e);
+        }
+    }
+
+    @Test
+    void putFetchTaskTest() {
+        String key = getUniqueObjectKey();
+        String fetchKey = getUniqueObjectKey();
+        String data = sampleData + StringUtils.randomString(new Random().nextInt(128));
+        InputStream content = new ByteArrayInputStream(data.getBytes(StandardCharsets.UTF_8));
+        try {
+            getHandler().putObject(PutObjectInput.builder()
+                    .bucket(Consts.bucket)
+                    .key(key)
+                    .options(new ObjectMetaRequestOptions().setAclType(ACLType.ACL_PUBLIC_READ))
+                    .content(content)
+                    .build());
+            HeadObjectV2Output head = getHandler().headObject(new HeadObjectV2Input().setBucket(bucket).setKey(key));
+            String crc64 = head.getHashCrc64ecma();
+            String etag = head.getEtag();
+
+            // fetch
+            Map<String, String> meta = new HashMap<>();
+            meta.put("test-key", "test-value");
+            PutFetchTaskInput input = new PutFetchTaskInput().setBucket(bucket).setKey(fetchKey)
+                    .setOptions(new ObjectMetaRequestOptions().setAclType(ACLType.ACL_PRIVATE)
+                            .setStorageClass(StorageClassType.STORAGE_CLASS_IA)
+                            .setCustomMetadata(meta))
+                    .setUrl("https://" + bucket + "." + endpoint + "/" + key);
+            PutFetchTaskOutput output = getHandler().putFetchTask(input);
+            Assert.assertNotNull(output);
+            Assert.assertNotNull(output.getTaskID());
+//
+//            Thread.sleep(5 * 1000);
+//
+//            // head
+//            head = getHandler().headObject(new HeadObjectV2Input().setBucket(bucket).setKey(fetchKey));
+//            Assert.assertNotNull(head);
+//            Assert.assertEquals(head.getEtag(), etag);
+//            Assert.assertEquals(head.getStorageClass(), StorageClassType.STORAGE_CLASS_IA);
+//            Assert.assertEquals(head.getContentLength(), data.length());
+//            Assert.assertNotNull(head.getCustomMetadata());
+//            Assert.assertEquals(head.getCustomMetadata().get("test-key"), "test-value");
+//            Assert.assertEquals(head.getHashCrc64ecma(), crc64);
+        } catch (TosException e) {
+            testFailed(e);
         }
     }
 
@@ -1266,7 +1331,7 @@ public class TosObjectRequestHandlerAppendMultipartCopyTest {
 
     private void testFailed(Exception e) {
         Consts.LOG.error("object test failed, {}", e.toString());
+        e.printStackTrace();
         Assert.fail();
     }
-    // todo add multi-version tests later
 }

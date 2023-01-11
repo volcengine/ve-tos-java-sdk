@@ -1,6 +1,5 @@
 package com.volcengine.tos.model.bucket;
 
-import com.volcengine.tos.comm.common.StorageClassType;
 import com.volcengine.tos.model.RequestInfo;
 
 import java.io.Serializable;

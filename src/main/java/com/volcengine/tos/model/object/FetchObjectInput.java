@@ -1,0 +1,148 @@
+package com.volcengine.tos.model.object;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+import java.util.Map;
+
+public class FetchObjectInput {
+    @JsonIgnore
+    private String bucket;
+    @JsonIgnore
+    private String key;
+    @JsonIgnore
+    private ObjectMetaRequestOptions options;
+    @JsonProperty("URL")
+    private String url;
+    @JsonProperty("IgnoreSameKey")
+    private boolean ignoreSameKey;
+    @JsonProperty("ContentMD5")
+    private String hexMD5;
+
+    public String getBucket() {
+        return bucket;
+    }
+
+    public FetchObjectInput setBucket(String bucket) {
+        this.bucket = bucket;
+        return this;
+    }
+
+    public String getKey() {
+        return key;
+    }
+
+    public FetchObjectInput setKey(String key) {
+        this.key = key;
+        return this;
+    }
+
+    public Map<String, String> getAllSettedHeaders() {
+        return options == null ? null : options.headers();
+    }
+
+    public ObjectMetaRequestOptions getOptions() {
+        return options;
+    }
+
+    public FetchObjectInput setOptions(ObjectMetaRequestOptions options) {
+        this.options = options;
+        return this;
+    }
+
+    public String getUrl() {
+        return url;
+    }
+
+    public FetchObjectInput setUrl(String url) {
+        this.url = url;
+        return this;
+    }
+
+    public boolean isIgnoreSameKey() {
+        return ignoreSameKey;
+    }
+
+    public FetchObjectInput setIgnoreSameKey(boolean ignoreSameKey) {
+        this.ignoreSameKey = ignoreSameKey;
+        return this;
+    }
+
+    public String getHexMD5() {
+        return hexMD5;
+    }
+
+    public FetchObjectInput setHexMD5(String hexMD5) {
+        this.hexMD5 = hexMD5;
+        return this;
+    }
+
+    @Override
+    public String toString() {
+        return "FetchObjectInput{" +
+                "bucket='" + bucket + '\'' +
+                ", key='" + key + '\'' +
+                ", options=" + options +
+                ", url='" + url + '\'' +
+                ", ignoreSameKey=" + ignoreSameKey +
+                ", hexMD5='" + hexMD5 + '\'' +
+                '}';
+    }
+
+    public static FetchObjectInputBuilder builder() {
+        return new FetchObjectInputBuilder();
+    }
+
+    public static final class FetchObjectInputBuilder {
+        private String bucket;
+        private String key;
+        private ObjectMetaRequestOptions options;
+        private String url;
+        private boolean ignoreSameKey;
+        private String hexMD5;
+
+        private FetchObjectInputBuilder() {
+        }
+
+        public FetchObjectInputBuilder bucket(String bucket) {
+            this.bucket = bucket;
+            return this;
+        }
+
+        public FetchObjectInputBuilder key(String key) {
+            this.key = key;
+            return this;
+        }
+
+        public FetchObjectInputBuilder options(ObjectMetaRequestOptions options) {
+            this.options = options;
+            return this;
+        }
+
+        public FetchObjectInputBuilder url(String url) {
+            this.url = url;
+            return this;
+        }
+
+        public FetchObjectInputBuilder ignoreSameKey(boolean ignoreSameKey) {
+            this.ignoreSameKey = ignoreSameKey;
+            return this;
+        }
+
+        public FetchObjectInputBuilder hexMD5(String hexMD5) {
+            this.hexMD5 = hexMD5;
+            return this;
+        }
+
+        public FetchObjectInput build() {
+            FetchObjectInput fetchObjectInput = new FetchObjectInput();
+            fetchObjectInput.setBucket(bucket);
+            fetchObjectInput.setKey(key);
+            fetchObjectInput.setOptions(options);
+            fetchObjectInput.setUrl(url);
+            fetchObjectInput.setIgnoreSameKey(ignoreSameKey);
+            fetchObjectInput.setHexMD5(hexMD5);
+            return fetchObjectInput;
+        }
+    }
+}

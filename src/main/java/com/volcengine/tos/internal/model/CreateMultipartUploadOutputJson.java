@@ -9,6 +9,8 @@ public class CreateMultipartUploadOutputJson {
     private String key;
     @JsonProperty("UploadId")
     private String uploadID;
+    @JsonProperty("EncodingType")
+    private String encodingType;
 
     public String getBucket() {
         return bucket;
@@ -34,6 +36,15 @@ public class CreateMultipartUploadOutputJson {
 
     public CreateMultipartUploadOutputJson uploadID(String uploadID) {
         this.uploadID = uploadID;
+        return this;
+    }
+
+    public String getEncodingType() {
+        return encodingType;
+    }
+
+    public CreateMultipartUploadOutputJson encodingType(String encodingType) {
+        this.encodingType = encodingType;
         return this;
     }
 }
