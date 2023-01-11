@@ -2,6 +2,7 @@ package com.volcengine.tos;
 
 import com.volcengine.tos.auth.Credentials;
 import com.volcengine.tos.auth.StaticCredentials;
+import com.volcengine.tos.internal.util.StringUtils;
 import com.volcengine.tos.transport.TransportConfig;
 
 public class TOSV2ClientBuilder implements TOSV2Builder {
@@ -11,7 +12,10 @@ public class TOSV2ClientBuilder implements TOSV2Builder {
 
     @Override
     public TOSV2 build(String region, String endpoint, String accessKey, String secretKey) {
-        Credentials cred = new StaticCredentials(accessKey, secretKey);
+        Credentials cred = null;
+        if (StringUtils.isNotEmpty(accessKey) && StringUtils.isNotEmpty(secretKey)) {
+            cred = new StaticCredentials(accessKey, secretKey);
+        }
         TOSClientConfiguration clientConfiguration = TOSClientConfiguration.builder()
                 .region(region).endpoint(endpoint).credentials(cred).build();
         return build(clientConfiguration);
@@ -19,7 +23,10 @@ public class TOSV2ClientBuilder implements TOSV2Builder {
 
     @Override
     public TOSV2 build(String region, String endpoint, String accessKey, String secretKey, String securityToken) {
-        Credentials cred = new StaticCredentials(accessKey, secretKey).withSecurityToken(securityToken);
+        Credentials cred = null;
+        if (StringUtils.isNotEmpty(accessKey) && StringUtils.isNotEmpty(secretKey) && StringUtils.isNotEmpty(securityToken)) {
+            cred = new StaticCredentials(accessKey, secretKey).withSecurityToken(securityToken);
+        }
         TOSClientConfiguration clientConfiguration = TOSClientConfiguration.builder()
                 .region(region).endpoint(endpoint).credentials(cred).build();
         return build(clientConfiguration);
@@ -34,7 +41,10 @@ public class TOSV2ClientBuilder implements TOSV2Builder {
 
     @Override
     public TOSV2 build(String region, String endpoint, String accessKey, String secretKey, TransportConfig conf) {
-        Credentials cred = new StaticCredentials(accessKey, secretKey);
+        Credentials cred = null;
+        if (StringUtils.isNotEmpty(accessKey) && StringUtils.isNotEmpty(secretKey)) {
+            cred = new StaticCredentials(accessKey, secretKey);
+        }
         TOSClientConfiguration clientConfiguration = TOSClientConfiguration.builder()
                 .region(region).endpoint(endpoint).credentials(cred).transportConfig(conf).build();
         return build(clientConfiguration);
@@ -49,7 +59,10 @@ public class TOSV2ClientBuilder implements TOSV2Builder {
 
     @Override
     public TOSV2 build(String region, String endpoint, String accessKey, String secretKey, String securityToken, TransportConfig conf) {
-        Credentials cred = new StaticCredentials(accessKey, secretKey).withSecurityToken(securityToken);
+        Credentials cred = null;
+        if (StringUtils.isNotEmpty(accessKey) && StringUtils.isNotEmpty(secretKey) && StringUtils.isNotEmpty(securityToken)) {
+            cred = new StaticCredentials(accessKey, secretKey).withSecurityToken(securityToken);
+        }
         TOSClientConfiguration clientConfiguration = TOSClientConfiguration.builder()
                 .region(region).endpoint(endpoint).credentials(cred).transportConfig(conf).build();
         return build(clientConfiguration);

@@ -1,5 +1,6 @@
 package com.volcengine.tos.model.object;
 
+import com.volcengine.tos.TosClientException;
 import com.volcengine.tos.comm.common.ACLType;
 import com.volcengine.tos.comm.common.StorageClassType;
 import com.volcengine.tos.comm.TosHeader;
@@ -405,7 +406,7 @@ public class ObjectMetaRequestOptions {
                 Consts.CUSTOM_SERVER_SIDE_ENCRYPTION_ALGORITHM_LIST.contains(ssecAlgorithm)) {
             withHeader(TosHeader.HEADER_SSE_CUSTOMER_ALGORITHM, ssecAlgorithm);
         } else {
-            throw new IllegalArgumentException("invalid encryption-decryption algorithm");
+            throw new TosClientException("invalid encryption-decryption algorithm", null);
         }
         return this;
     }
@@ -426,7 +427,7 @@ public class ObjectMetaRequestOptions {
                 Consts.CUSTOM_SERVER_SIDE_ENCRYPTION_ALGORITHM_LIST.contains(serverSideEncryption)) {
             withHeader(TosHeader.HEADER_SSE, serverSideEncryption);
         } else {
-            throw new IllegalArgumentException("invalid serverSideEncryption input, only support AES256");
+            throw new TosClientException("invalid serverSideEncryption input, only support AES256", null);
         }
         return this;
     }
@@ -572,7 +573,7 @@ public class ObjectMetaRequestOptions {
                     Consts.CUSTOM_SERVER_SIDE_ENCRYPTION_ALGORITHM_LIST.contains(ssecAlgorithm)) {
                 withHeader(TosHeader.HEADER_SSE_CUSTOMER_ALGORITHM, ssecAlgorithm);
             } else {
-                throw new IllegalArgumentException("invalid encryption-decryption algorithm");
+                throw new TosClientException("invalid encryption-decryption algorithm", null);
             }
             return this;
         }
@@ -593,7 +594,7 @@ public class ObjectMetaRequestOptions {
                     Consts.CUSTOM_SERVER_SIDE_ENCRYPTION_ALGORITHM_LIST.contains(serverSideEncryption)) {
                 withHeader(TosHeader.HEADER_SSE, serverSideEncryption);
             } else {
-                throw new IllegalArgumentException("invalid serverSideEncryption input, only support AES256");
+                throw new TosClientException("invalid serverSideEncryption input, only support AES256", null);
             }
             return this;
         }

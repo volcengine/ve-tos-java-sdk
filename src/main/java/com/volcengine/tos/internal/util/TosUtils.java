@@ -184,4 +184,11 @@ public class TosUtils {
         }
         return (long)(backoff * 1000);
     }
+
+    public static String convertInteger(int value) {
+        if (value == 0) {
+            return null;
+        }
+        return String.valueOf(value);
+    }
 }

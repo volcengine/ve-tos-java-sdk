@@ -8,13 +8,14 @@ import com.volcengine.tos.auth.StaticCredentials;
 import com.volcengine.tos.transport.TransportConfig;
 
 public class ClientInstance {
-    private static final TransportConfig config = TransportConfig.builder().build();
+    private static final TransportConfig config = TransportConfig.builder().dnsCacheTimeMinutes(1).build();
     private static Transport transport;
     private static Signer signer;
     private static TosRequestFactory factory;
     private static TosBucketRequestHandler bucketHandler = null;
     private static TosObjectRequestHandler objectHandler = null;
     private static TosFileRequestHandler fileHandler = null;
+    private static TosPreSignedRequestHandler preSignedRequestHandler = null;
 
     public static TosBucketRequestHandler getBucketRequestHandlerInstance() {
         if (bucketHandler != null) {
@@ -22,7 +23,7 @@ public class ClientInstance {
         }
         synchronized (ClientInstance.class) {
             init();
-            bucketHandler = new TosBucketRequestHandlerImpl(transport, factory);
+            bucketHandler = new TosBucketRequestHandler(transport, factory);
         }
         return bucketHandler;
     }
@@ -33,7 +34,7 @@ public class ClientInstance {
         }
         synchronized (ClientInstance.class) {
             init();
-            objectHandler = new TosObjectRequestHandlerImpl(transport, factory).setEnableCrcCheck(true);
+            objectHandler = new TosObjectRequestHandler(transport, factory).setEnableCrcCheck(true);
         }
         return objectHandler;
     }
@@ -44,10 +45,21 @@ public class ClientInstance {
         }
         synchronized (ClientInstance.class) {
             init();
-            fileHandler = new TosFileRequestHandlerImpl(getObjectRequestHandlerInstance(), transport, factory)
+            fileHandler = new TosFileRequestHandler(getObjectRequestHandlerInstance(), transport, factory)
                     .setEnableCrcCheck(true);
         }
         return fileHandler;
+    }
+
+    public static TosPreSignedRequestHandler getPreSignedRequestHandlerInstance() {
+        if (preSignedRequestHandler != null) {
+            return preSignedRequestHandler;
+        }
+        synchronized (ClientInstance.class) {
+            init();
+            preSignedRequestHandler = new TosPreSignedRequestHandler(factory, signer);
+        }
+        return preSignedRequestHandler;
     }
 
     private static void init() {
@@ -59,7 +71,7 @@ public class ClientInstance {
             signer = new SignV4(credentials, Consts.region);
         }
         if (factory == null) {
-            factory = new TosRequestFactoryImpl(signer, Consts.endpoint);
+            factory = new TosRequestFactory(signer, Consts.endpoint);
         }
     }
 }

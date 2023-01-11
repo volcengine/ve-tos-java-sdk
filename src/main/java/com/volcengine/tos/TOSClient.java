@@ -44,7 +44,7 @@ public class TOSClient implements TOS{
 
     private static final Logger LOG = LoggerFactory.getLogger(TOSClient.class);
 
-    private static final String VERSION = "v2.2.0";
+    private static final String VERSION = "v2.3.0";
     private static final String SDK_NAME = "ve-tos-java-sdk";
     private static final String USER_AGENT = String.format("%s/%s (%s/%s;%s)", SDK_NAME, VERSION,
             System.getProperty("os.name"), System.getProperty("os.arch"), System.getProperty("java.version", "0"));

@@ -1266,6 +1266,7 @@ public class TosObjectRequestHandlerAppendMultipartCopyTest {
 
     private void testFailed(Exception e) {
         Consts.LOG.error("object test failed, {}", e.toString());
+        e.printStackTrace();
         Assert.fail();
     }
     // todo add multi-version tests later

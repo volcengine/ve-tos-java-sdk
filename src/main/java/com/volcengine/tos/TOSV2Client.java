@@ -1,5 +1,6 @@
 package com.volcengine.tos;
 
+import com.volcengine.tos.auth.Credentials;
 import com.volcengine.tos.auth.SignV4;
 import com.volcengine.tos.auth.Signer;
 import com.volcengine.tos.internal.*;
@@ -12,6 +13,7 @@ import com.volcengine.tos.model.bucket.*;
 import com.volcengine.tos.model.object.*;
 import com.volcengine.tos.internal.Transport;
 import com.volcengine.tos.internal.util.StringUtils;
+import com.volcengine.tos.transport.TransportConfig;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -26,6 +28,7 @@ public class TOSV2Client implements TOSV2 {
     private TosBucketRequestHandler bucketRequestHandler;
     private TosObjectRequestHandler objectRequestHandler;
     private TosFileRequestHandler fileRequestHandler;
+    private TosPreSignedRequestHandler preSignedRequestHandler;
 
     private Transport transport;
     private Signer signer;
@@ -40,13 +43,16 @@ public class TOSV2Client implements TOSV2 {
     private void validateAndInitConfig(TOSClientConfiguration conf) {
         ParamsChecker.ensureNotNull(conf, "TOSClientConfiguration");
         ParamsChecker.ensureNotNull(conf.getRegion(), "region");
-        ParamsChecker.ensureNotNull(conf.getCredentials(), "credentials");
         this.config = conf;
+        validateEndpoint();
+    }
+
+    private void validateEndpoint() {
         if (StringUtils.isEmpty(this.config.getEndpoint())) {
             if (TosUtils.getSupportedRegion().containsKey(this.config.getRegion())) {
                 this.config.setEndpoint(TosUtils.getSupportedRegion().get(this.config.getRegion()).get(0));
             } else {
-                throw new IllegalArgumentException("endpoint is null and region is invalid");
+                throw new TosClientException("endpoint is null and region is invalid", null);
             }
         }
     }
@@ -56,17 +62,19 @@ public class TOSV2Client implements TOSV2 {
             if (this.transport == null) {
                 this.transport = new RequestTransport(this.config.getTransportConfig());
             }
-            if (this.signer == null) {
+            if (this.signer == null && this.config.getCredentials() != null) {
+                // 允许 signer 为空，匿名访问
                 this.signer = new SignV4(this.config.getCredentials(), this.config.getRegion());
             }
-            this.factory = new TosRequestFactoryImpl(this.signer, this.config.getEndpoint());
+            this.factory = new TosRequestFactory(this.signer, this.config.getEndpoint());
         }
-        this.bucketRequestHandler = new TosBucketRequestHandlerImpl(this.transport, this.factory);
-        this.objectRequestHandler = new TosObjectRequestHandlerImpl(this.transport, this.factory)
+        this.bucketRequestHandler = new TosBucketRequestHandler(this.transport, this.factory);
+        this.objectRequestHandler = new TosObjectRequestHandler(this.transport, this.factory)
                 .setClientAutoRecognizeContentType(this.config.isClientAutoRecognizeContentType())
                 .setEnableCrcCheck(this.config.isEnableCrc());
-        this.fileRequestHandler = new TosFileRequestHandlerImpl(objectRequestHandler, this.transport, this.factory)
+        this.fileRequestHandler = new TosFileRequestHandler(objectRequestHandler, this.transport, this.factory)
                 .setEnableCrcCheck(this.config.isEnableCrc());
+        this.preSignedRequestHandler = new TosPreSignedRequestHandler(this.factory, this.signer);
     }
 
     private void initV1Client() {
@@ -75,6 +83,51 @@ public class TOSV2Client implements TOSV2 {
                 ClientOptions.withCredentials(this.config.getCredentials()),
                 ClientOptions.withTransport(this.transport),
                 ClientOptions.withSigner(this.signer));
+    }
+
+    @Override
+    public void changeCredentials(Credentials credentials) {
+        this.config.setCredentials(credentials);
+        if (credentials == null) {
+            // 匿名访问
+            this.signer = null;
+        } else {
+            this.signer = new SignV4(credentials, this.config.getRegion());
+        }
+        this.factory.setSigner(this.signer);
+        cascadeUpdateRequestFactory();
+    }
+
+    private void cascadeUpdateRequestFactory() {
+        this.bucketRequestHandler.setFactory(this.factory);
+        this.objectRequestHandler.setFactory(this.factory);
+        this.fileRequestHandler.setObjectHandler(this.objectRequestHandler);
+        this.fileRequestHandler.setFactory(this.factory);
+        this.preSignedRequestHandler.setSigner(this.signer);
+        this.preSignedRequestHandler.setFactory(this.factory);
+    }
+
+    private void cascadeUpdateTransport() {
+        this.bucketRequestHandler.setTransport(this.transport);
+        this.objectRequestHandler.setTransport(this.transport);
+        this.fileRequestHandler.setObjectHandler(this.objectRequestHandler);
+        this.fileRequestHandler.setTransport(this.transport);
+    }
+
+    @Override
+    public void changeRegionAndEndpoint(String region, String endpoint) {
+        this.config.setRegion(region);
+        this.config.setEndpoint(endpoint);
+        validateEndpoint();
+        this.factory.setEndpoint(endpoint);
+        cascadeUpdateRequestFactory();
+    }
+
+    @Override
+    public void changeTransportConfig(TransportConfig config) {
+        this.config.setTransportConfig(config);
+        this.transport.switchConfig(this.config.getTransportConfig());
+        cascadeUpdateTransport();
     }
 
     @Override
@@ -259,15 +312,7 @@ public class TOSV2Client implements TOSV2 {
 
     @Override
     public PreSignedURLOutput preSignedURL(PreSignedURLInput input) throws TosException {
-        ParamsChecker.ensureNotNull(input, "PreSignedURLInput");
-        ParamsChecker.isValidBucketNameAndKey(input.getBucket(), input.getKey());
-        RequestBuilder builder = this.factory.init(input.getBucket(), "", input.getHeader());
-        if (input.getQuery() != null) {
-            input.getQuery().forEach(builder::withQuery);
-        }
-        // todo where is header?
-        return new PreSignedURLOutput(builder.preSignedURL(input.getHttpMethod().toString(),
-                Duration.ofSeconds(input.getExpires())), null);
+        return preSignedRequestHandler.preSignedURL(input);
     }
 
     @Override

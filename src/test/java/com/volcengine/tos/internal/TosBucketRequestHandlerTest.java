@@ -150,6 +150,7 @@ public class TosBucketRequestHandlerTest {
 
     private void testFailed(Exception e) {
         Consts.LOG.error("bucket test failed, {}", e.toString());
+        e.printStackTrace();
         Assert.fail();
     }
 }

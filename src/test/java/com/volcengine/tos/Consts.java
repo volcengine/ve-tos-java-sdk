@@ -16,6 +16,7 @@ public class Consts {
     public static final String accessKey = System.getenv("ACCESS_KEY");
     public static final String secretKey = System.getenv("SECRET_KEY");
     public static final String bucketCopy = System.getenv("TEST_BUCKET_COPY");
+    public static final String alternativeEndpoint = System.getenv("TEST_ALTERNATIVE_ENDPOINT");
 
     // for internal package uts
     public static final String internalBucketCrudPrefix = "internal-bucket-crud-test-prefix-";

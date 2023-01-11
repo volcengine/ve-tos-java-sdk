@@ -1,9 +1,7 @@
 package com.volcengine.tos.internal;
 
+import com.volcengine.tos.*;
 import com.volcengine.tos.Consts;
-import com.volcengine.tos.TosException;
-import com.volcengine.tos.TosServerException;
-import com.volcengine.tos.UnexpectedStatusCodeException;
 import com.volcengine.tos.comm.Code;
 import com.volcengine.tos.comm.HttpStatus;
 import com.volcengine.tos.comm.Utils;
@@ -106,7 +104,7 @@ public class TosObjectRequestHandlerBasicTest {
         try {
             PutObjectBasicInput basicInput = PutObjectBasicInput.builder().bucket(Consts.bucketCopy).key(invisibleString).build();
             getHandler().putObject(PutObjectInput.builder().putObjectBasicInput(basicInput).build());
-        } catch (IllegalArgumentException e) {
+        } catch (TosClientException e) {
             Assert.assertEquals(e.getMessage(), "object key should not contain invisible unicode characters");
         }
 
@@ -118,7 +116,7 @@ public class TosObjectRequestHandlerBasicTest {
         try {
             PutObjectBasicInput basicInput = PutObjectBasicInput.builder().bucket(Consts.bucket).key(invisibleString).build();
             getHandler().putObject(PutObjectInput.builder().putObjectBasicInput(basicInput).build());
-        } catch (IllegalArgumentException e) {
+        } catch (TosClientException e) {
             Assert.assertEquals(e.getMessage(), "object key should not contain invisible unicode characters");
         }
 
@@ -131,7 +129,7 @@ public class TosObjectRequestHandlerBasicTest {
                 PutObjectBasicInput basicInput = PutObjectBasicInput.builder().bucket(Consts.bucket).key(key).build();
                 getHandler().putObject(PutObjectInput.builder().putObjectBasicInput(basicInput).build());
                 Assert.fail();
-            } catch (IllegalArgumentException e) {
+            } catch (TosClientException e) {
                 Assert.assertEquals(e.getMessage(), "invalid object name, the length must be [1,696]");
             }
         }
@@ -142,7 +140,7 @@ public class TosObjectRequestHandlerBasicTest {
             try {
                 PutObjectBasicInput basicInput = PutObjectBasicInput.builder().bucket(Consts.bucket).key(key).build();
                 getHandler().putObject(PutObjectInput.builder().putObjectBasicInput(basicInput).build());
-            } catch (IllegalArgumentException e) {
+            } catch (TosClientException e) {
             Assert.assertEquals(e.getMessage(), "invalid object name, the object name can not start with / or \\");
             }
         }
@@ -152,7 +150,7 @@ public class TosObjectRequestHandlerBasicTest {
             try {
                 PutObjectBasicInput basicInput = PutObjectBasicInput.builder().bucket(Consts.bucket).key(key).build();
                 getHandler().putObject(PutObjectInput.builder().putObjectBasicInput(basicInput).build());
-            } catch (IllegalArgumentException e) {
+            } catch (TosClientException e) {
                 Assert.assertEquals(e.getMessage(), "object key should not be . or ..");
             }
         }
@@ -541,7 +539,7 @@ public class TosObjectRequestHandlerBasicTest {
                     .ssecAlgorithm("AES128") // wrong algorithm
                     .build();
 
-        } catch (IllegalArgumentException e) {
+        } catch (TosClientException e) {
             Assert.assertEquals(e.getMessage(), "invalid encryption-decryption algorithm");
         }
 
@@ -550,7 +548,7 @@ public class TosObjectRequestHandlerBasicTest {
                     .serverSideEncryption("AES128") // wrong algorithm
                     .build();
 
-        } catch (IllegalArgumentException e) {
+        } catch (TosClientException e) {
             Assert.assertEquals(e.getMessage(), "invalid serverSideEncryption input, only support AES256");
         }
 
@@ -1288,6 +1286,7 @@ public class TosObjectRequestHandlerBasicTest {
 
     private void testFailed(Exception e) {
         Consts.LOG.error("object test failed, {}", e.toString());
+        e.printStackTrace();
         Assert.fail();
     }
 }

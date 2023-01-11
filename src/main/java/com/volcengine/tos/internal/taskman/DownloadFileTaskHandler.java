@@ -144,12 +144,15 @@ public class DownloadFileTaskHandler {
     }
 
     private void validateCheckpointPath() {
+        String checkpointFileSuffix = Util.checkpointPathMd5(input.getHeadObjectV2Input().getBucket(),
+                input.getHeadObjectV2Input().getKey(), input.getHeadObjectV2Input().getVersionID()) +
+                Consts.DOWNLOAD_CHECKPOINT_FILE_SUFFIX;
         if (StringUtils.isEmpty(input.getCheckpointFile())) {
-            input.setCheckpointFile(input.getFilePath() + Consts.DOWNLOAD_CHECKPOINT_FILE_SUFFIX);
+            input.setCheckpointFile(input.getFilePath() + checkpointFileSuffix);
         } else {
             File ufcf = new File(input.getCheckpointFile());
             if (ufcf.isDirectory()) {
-                throw new IllegalArgumentException("The input checkpoint file is directory: " + input.getCheckpointFile());
+                throw new TosClientException("The input checkpoint file is directory: " + input.getCheckpointFile(), null);
             }
         }
     }
@@ -183,6 +186,7 @@ public class DownloadFileTaskHandler {
             try{
                 checkpoint = loadCheckpointFromFile(input.getCheckpointFile());
             } catch (IOException | ClassNotFoundException e){
+                logger.debug("loadCheckpointFromFile failed, {}", e.toString());
                 Util.deleteCheckpointFile(input.getCheckpointFile());
             }
         }
@@ -224,8 +228,7 @@ public class DownloadFileTaskHandler {
     private DownloadFileCheckpoint loadCheckpointFromFile(String checkpointFilePath) throws IOException, ClassNotFoundException{
         ParamsChecker.ensureNotNull(checkpointFilePath, "checkpointFilePath is null");
         File f = new File(checkpointFilePath);
-        try(FileInputStream checkpointFile = new FileInputStream(f))
-        {
+        try(FileInputStream checkpointFile = new FileInputStream(f)) {
             byte[] data = new byte[(int)f.length()];
             checkpointFile.read(data);
             return TosUtils.JSON.readValue(data, new TypeReference<DownloadFileCheckpoint>(){});
@@ -259,8 +262,7 @@ public class DownloadFileTaskHandler {
         }
         List<DownloadPartInfo> partInfoList = new ArrayList<>((int) partNum);
         for(int i = 0; i < partNum; i++) {
-            partInfoList.add(new DownloadPartInfo().setPartNumber(i+1)
-                    .setRangeStart(i * partSize).setRangeEnd((i+1) * partSize - 1));
+            partInfoList.add(new DownloadPartInfo().setPartNumber(i+1).setRangeStart(i * partSize).setRangeEnd((i+1) * partSize - 1));
         }
         partInfoList.get((int)partNum-1).setRangeEnd((partNum-1) * partSize + lastPartSize- 1);
         return partInfoList;

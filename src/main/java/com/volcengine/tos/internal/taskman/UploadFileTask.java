@@ -6,10 +6,10 @@ import com.volcengine.tos.comm.event.DataTransferStatus;
 import com.volcengine.tos.comm.event.DataTransferType;
 import com.volcengine.tos.comm.event.UploadEventType;
 import com.volcengine.tos.comm.ratelimit.RateLimiter;
+import com.volcengine.tos.internal.TosObjectRequestHandler;
 import com.volcengine.tos.internal.model.ConcurrentDataTransferListenInputStream;
 import com.volcengine.tos.internal.util.CRC64Utils;
 import com.volcengine.tos.model.object.UploadEvent;
-import com.volcengine.tos.internal.TosObjectRequestHandler;
 import com.volcengine.tos.internal.util.FileUtils;
 import com.volcengine.tos.model.object.*;
 
@@ -42,8 +42,7 @@ class UploadFileTask extends TosTask implements TaskOutput<UploadPartV2Output> {
             InputStream in = FileUtils.getBoundedFileContent(null, null,
                     this.checkpoint.getFilePath(), this.partInfo.getOffset(), this.partInfo.getPartSize());
             if (dataTransferListener != null) {
-                in = new ConcurrentDataTransferListenInputStream(in,
-                        dataTransferListener, checkpoint.getFileSize(), consumedBytes);
+                in = new ConcurrentDataTransferListenInputStream(in, dataTransferListener, checkpoint.getFileSize(), consumedBytes);
             }
             UploadPartBasicInput basic = UploadPartBasicInput.builder()
                     .bucket(checkpoint.getBucket())

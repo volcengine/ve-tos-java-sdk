@@ -7,15 +7,14 @@ import com.volcengine.tos.comm.Utils;
 import com.volcengine.tos.comm.event.DataTransferStatus;
 import com.volcengine.tos.comm.event.DataTransferType;
 import com.volcengine.tos.comm.event.UploadEventType;
+import com.volcengine.tos.internal.TosObjectRequestHandler;
 import com.volcengine.tos.internal.util.CRC64Utils;
 import com.volcengine.tos.model.object.UploadEvent;
 import com.volcengine.tos.internal.Consts;
-import com.volcengine.tos.internal.TosObjectRequestHandler;
 import com.volcengine.tos.internal.util.ParamsChecker;
 import com.volcengine.tos.internal.util.StringUtils;
 import com.volcengine.tos.internal.util.TosUtils;
 import com.volcengine.tos.model.object.*;
-import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -38,7 +37,6 @@ public class UploadFileTaskHandler {
     public UploadFileTaskHandler(UploadFileV2Input input, TosObjectRequestHandler handler, boolean enableCrcCheck) {
         ParamsChecker.ensureNotNull(input, "UploadFileV2Input");
         ParamsChecker.ensureNotNull(input.getFilePath(), "UploadFilePath");
-        ParamsChecker.ensureNotNull(input.getCreateMultipartUploadInput(), "CreateMultipartUploadInput");
         ParamsChecker.isValidBucketNameAndKey(input.getCreateMultipartUploadInput().getBucket(),
                 input.getCreateMultipartUploadInput().getKey());
         ParamsChecker.ensureNotNull(handler, "TosObjectRequestHandler");
@@ -177,11 +175,11 @@ public class UploadFileTaskHandler {
         input.setTaskNum(Util.determineTaskNum(input.getTaskNum()));
         File file = new File(input.getFilePath());
         if (!file.exists()) {
-            throw new IllegalArgumentException("invalid file path, the file does not exist: " + input.getFilePath());
+            throw new TosClientException("invalid file path, the file does not exist: " + input.getFilePath(), null);
         }
         if (file.isDirectory()) {
             // 不支持文件夹上传
-            throw new IllegalArgumentException("do not support directory, please specific your file path");
+            throw new TosClientException("do not support directory, please specific your file path", null);
         }
     }
 
@@ -244,6 +242,7 @@ public class UploadFileTaskHandler {
     }
 
     private UploadFileV2Checkpoint initCheckpoint(UploadFileInfo info) throws TosException {
+        ParamsChecker.ensureNotNull(input.getCreateMultipartUploadInput(), "CreateMultipartUploadInput");
         UploadFileV2Checkpoint checkpoint = new UploadFileV2Checkpoint()
                 .setBucket(input.getCreateMultipartUploadInput().getBucket())
                 .setKey(input.getCreateMultipartUploadInput().getKey())
@@ -276,7 +275,7 @@ public class UploadFileTaskHandler {
             partNum++;
         }
         if (partNum > Consts.MAX_PART_NUM) {
-            throw new IllegalArgumentException("unsupported part number, the maximum is 10000");
+            throw new TosClientException("unsupported part number, the maximum is 10000", null);
         }
         List<UploadPartInfo> partInfoList = new ArrayList<>((int) partNum);
         for(int i = 0; i < partNum; i++) {

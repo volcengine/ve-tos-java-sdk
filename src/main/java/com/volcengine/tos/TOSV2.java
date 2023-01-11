@@ -1,9 +1,16 @@
 package com.volcengine.tos;
 
+import com.volcengine.tos.auth.Credentials;
 import com.volcengine.tos.model.bucket.*;
 import com.volcengine.tos.model.object.*;
+import com.volcengine.tos.transport.TransportConfig;
 
 public interface TOSV2 extends TOS {
+    void changeCredentials(Credentials credentials);
+
+    void changeRegionAndEndpoint(String region, String endpoint);
+
+    void changeTransportConfig(TransportConfig config);
     /**
      * create a new bucket
      *

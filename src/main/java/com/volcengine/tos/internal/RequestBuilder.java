@@ -16,13 +16,17 @@ import java.util.Map;
 import java.util.Objects;
 import java.net.URLEncoder;
 
+import static com.volcengine.tos.internal.Consts.URL_MODE_DEFAULT;
+import static com.volcengine.tos.internal.Consts.URL_MODE_PATH;
+
 public class RequestBuilder {
     private Signer signer;
     private String scheme;
     private String host;
+    private int port;
     private String bucket;
     private String object;
-    private int URLMode;
+    private int urlMode = URL_MODE_DEFAULT;
     private long contentLength;
     private HttpRange range;
     private Map<String, String> headers = new HashMap<>(1);
@@ -41,7 +45,7 @@ public class RequestBuilder {
         this.host = host;
         this.bucket = bucket;
         this.object = object;
-        this.URLMode = urlMode;
+        this.urlMode = urlMode;
         this.headers = headers;
         this.query = query;
     }
@@ -50,8 +54,6 @@ public class RequestBuilder {
         Objects.requireNonNull(scheme, "scheme is null");
         Objects.requireNonNull(host, "host is null");
         Objects.requireNonNull(bucket, "bucket is null");
-        Objects.requireNonNull(object, "object is null");
-        Objects.requireNonNull(signer, "signer is null");
         this.bucket = bucket;
         this.object = object;
         this.scheme = scheme;
@@ -115,9 +117,39 @@ public class RequestBuilder {
         return this;
     }
 
-    private TosRequest build(String method, InputStream stream) throws IOException{
+    public String getHost() {
+        return host;
+    }
+
+    public RequestBuilder setHost(String host) {
+        this.host = host;
+        return this;
+    }
+
+    public int getUrlMode() {
+        return urlMode;
+    }
+
+    public RequestBuilder setUrlMode(int urlMode) {
+        this.urlMode = urlMode;
+        return this;
+    }
+
+    public int getPort() {
+        return port;
+    }
+
+    public RequestBuilder setPort(int port) {
+        this.port = port;
+        return this;
+    }
+
+    private TosRequest build(String method, InputStream stream) throws IOException {
         String[] hostAndPath = hostPath();
         TosRequest request = new TosRequest(scheme, method, hostAndPath[0], hostAndPath[1], stream, query, headers);
+        if (this.port != 0) {
+            request.setPort(this.port);
+        }
         if (stream != null){
             if (this.contentLength > 0) {
                 request.setContentLength(contentLength);
@@ -133,6 +165,7 @@ public class RequestBuilder {
             }
             if (StringUtils.equals(method, HttpMethod.PUT)) {
                 if (!stream.markSupported()) {
+                    // 不支持重试
                     request.setRetryableOnClientException(false);
                     request.setRetryableOnServerException(false);
                 }
@@ -145,6 +178,10 @@ public class RequestBuilder {
         String[] res = new String[]{this.host, ""};
         if (StringUtils.isEmpty(this.bucket)){
             res[1] = "/";
+            return res;
+        }
+        if (urlMode == URL_MODE_PATH) {
+            res[1] = "/" + this.bucket + "/" + this.object;
             return res;
         }
         res[0] = this.bucket+"."+this.host;
@@ -212,12 +249,11 @@ public class RequestBuilder {
             throw new TosClientException("build tos request failed", e);
         }
 
-        if (this.signer == null){
-            throw new TosClientException("tos: credentials is not set when the tos client was created", null);
-        }
-        Map<String, String> query = this.signer.signQuery(request, ttl);
-        for (String key : query.keySet()){
-            request.getQuery().put(key, query.get(key));
+        if (this.signer != null){
+            Map<String, String> query = this.signer.signQuery(request, ttl);
+            for (String key : query.keySet()){
+                request.getQuery().put(key, query.get(key));
+            }
         }
         return request.toURL().toString();
     }

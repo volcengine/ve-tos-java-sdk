@@ -5,6 +5,7 @@ import java.util.Map;
 public class CreateMultipartUploadInput {
     private String bucket;
     private String key;
+    private String encodingType;
 
     private ObjectMetaRequestOptions options;
 
@@ -39,11 +40,21 @@ public class CreateMultipartUploadInput {
         return this;
     }
 
+    public String getEncodingType() {
+        return encodingType;
+    }
+
+    public CreateMultipartUploadInput setEncodingType(String encodingType) {
+        this.encodingType = encodingType;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "CreateMultipartUploadInput{" +
                 "bucket='" + bucket + '\'' +
                 ", key='" + key + '\'' +
+                ", encodingType='" + encodingType + '\'' +
                 ", options=" + options +
                 '}';
     }
@@ -55,6 +66,7 @@ public class CreateMultipartUploadInput {
     public static final class CreateMultipartUploadInputBuilder {
         private String bucket;
         private String key;
+        private String encodingType;
         private ObjectMetaRequestOptions options;
 
         private CreateMultipartUploadInputBuilder() {
@@ -70,6 +82,11 @@ public class CreateMultipartUploadInput {
             return this;
         }
 
+        public CreateMultipartUploadInputBuilder encodingType(String encodingType) {
+            this.encodingType = encodingType;
+            return this;
+        }
+
         public CreateMultipartUploadInputBuilder options(ObjectMetaRequestOptions options) {
             this.options = options;
             return this;
@@ -77,9 +94,10 @@ public class CreateMultipartUploadInput {
 
         public CreateMultipartUploadInput build() {
             CreateMultipartUploadInput createMultipartUploadInput = new CreateMultipartUploadInput();
-            createMultipartUploadInput.key = this.key;
-            createMultipartUploadInput.bucket = this.bucket;
-            createMultipartUploadInput.options = this.options;
+            createMultipartUploadInput.setBucket(bucket);
+            createMultipartUploadInput.setKey(key);
+            createMultipartUploadInput.setEncodingType(encodingType);
+            createMultipartUploadInput.setOptions(options);
             return createMultipartUploadInput;
         }
     }

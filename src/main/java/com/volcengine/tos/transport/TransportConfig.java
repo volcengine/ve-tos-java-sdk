@@ -49,7 +49,13 @@ public class TransportConfig {
     /**
      * DNS 缓存的有效期，单位：毫秒，小与等于 0 时代表关闭 DNS 缓存，默认为 0
      */
+    @Deprecated
     private int dnsCacheTimeMills;
+
+    /**
+     * DNS 缓存的有效期，单位：分钟，小与等于 0 时代表关闭 DNS 缓存，默认为 0
+     */
+    private int dnsCacheTimeMinutes;
 
     /**
      * 最大重试次数，默认为 3 次
@@ -146,12 +152,23 @@ public class TransportConfig {
         return this;
     }
 
+    @Deprecated
     public int getDnsCacheTimeMills() {
         return dnsCacheTimeMills;
     }
 
+    @Deprecated
     public TransportConfig setDnsCacheTimeMills(int dnsCacheTimeMills) {
         this.dnsCacheTimeMills = dnsCacheTimeMills;
+        return this;
+    }
+
+    public int getDnsCacheTimeMinutes() {
+        return dnsCacheTimeMinutes;
+    }
+
+    public TransportConfig setDnsCacheTimeMinutes(int dnsCacheTimeMinutes) {
+        this.dnsCacheTimeMinutes = dnsCacheTimeMinutes;
         return this;
     }
 
@@ -179,7 +196,9 @@ public class TransportConfig {
         private String proxyUserName;
         private String proxyPassword;
         private boolean enableVerifySSL;
+        @Deprecated
         private int dnsCacheTimeMills;
+        private int dnsCacheTimeMinutes;
         private int maxRetryCount;
 
         private TransportConfigBuilder() {
@@ -188,7 +207,6 @@ public class TransportConfig {
             this.connectTimeoutMills = 10000;
             this.readTimeoutMills = 30000;
             this.writeTimeoutMills = 30000;
-            this.dnsCacheTimeMills = 0;
         }
 
         public TransportConfigBuilder maxConnections(int maxConnections) {
@@ -241,8 +259,14 @@ public class TransportConfig {
             return this;
         }
 
+        @Deprecated
         public TransportConfigBuilder dnsCacheTimeMills(int dnsCacheTimeMills) {
             this.dnsCacheTimeMills = dnsCacheTimeMills;
+            return this;
+        }
+
+        public TransportConfigBuilder dnsCacheTimeMinutes(int dnsCacheTimeMinutes) {
+            this.dnsCacheTimeMinutes = dnsCacheTimeMinutes;
             return this;
         }
 
@@ -263,7 +287,7 @@ public class TransportConfig {
             transportConfig.setProxyUserName(proxyUserName);
             transportConfig.setProxyPassword(proxyPassword);
             transportConfig.setEnableVerifySSL(enableVerifySSL);
-            transportConfig.setDnsCacheTimeMills(dnsCacheTimeMills);
+            transportConfig.setDnsCacheTimeMinutes(dnsCacheTimeMinutes);
             transportConfig.setMaxRetryCount(maxRetryCount);
             return transportConfig;
         }
@@ -282,7 +306,8 @@ public class TransportConfig {
                 ", proxyUserName='" + proxyUserName + '\'' +
                 ", proxyPassword='" + proxyPassword + '\'' +
                 ", enableVerifySSL=" + enableVerifySSL +
-                ", dnsCacheTimeMills=" + dnsCacheTimeMills +
+                ", dnsCacheTimeMinutes=" + dnsCacheTimeMinutes +
+                ", maxRetryCount=" + maxRetryCount +
                 '}';
     }
 

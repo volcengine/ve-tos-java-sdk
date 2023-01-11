@@ -69,7 +69,7 @@ public class TosRequest {
         }
         this.query = query;
         this.headers = headers;
-        // default retry
+        // 默认可重试
         this.retryableOnClientException = true;
         this.retryableOnServerException = true;
     }
@@ -78,8 +78,7 @@ public class TosRequest {
         HttpUrl.Builder builder = new HttpUrl.Builder();
         if (query != null) {
             for (Map.Entry<String, String> entry : query.entrySet()) {
-                builder.addEncodedQueryParameter(
-                        entry.getKey(), TosUtils.uriEncode(entry.getValue(), true));
+                builder.addEncodedQueryParameter(entry.getKey(), TosUtils.uriEncode(entry.getValue(), true));
             }
         }
         // path 带了'/'，addPathSegment 会自动添加'/'，因此这里移除之

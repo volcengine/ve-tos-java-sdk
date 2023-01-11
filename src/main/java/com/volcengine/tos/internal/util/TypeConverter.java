@@ -1,5 +1,6 @@
 package com.volcengine.tos.internal.util;
 
+import com.volcengine.tos.TosClientException;
 import com.volcengine.tos.comm.common.ACLType;
 import com.volcengine.tos.comm.common.MetadataDirectiveType;
 import com.volcengine.tos.comm.common.StorageClassType;
@@ -26,7 +27,7 @@ public class TypeConverter {
         } else if (StringUtils.equals(type, ACL_LOG_DELIVERY_WRITE)) {
             return ACLType.ACL_LOG_DELIVERY_WRITE;
         } else {
-            throw new IllegalArgumentException("invalid acl type: " + type);
+            throw new TosClientException("invalid acl type: " + type, null);
         }
     }
 
@@ -41,7 +42,7 @@ public class TypeConverter {
         } else if (StringUtils.equals(storageClass, STORAGE_CLASS_ARCHIVE_FR)) {
             return StorageClassType.STORAGE_CLASS_ARCHIVE_FR;
         } else {
-            throw new IllegalArgumentException("invalid storage class: " + storageClass);
+            throw new TosClientException("invalid storage class: " + storageClass, null);
         }
     }
 
@@ -54,7 +55,7 @@ public class TypeConverter {
         } else if (StringUtils.equals(metadataDirectiveType, METADATA_DIRECTIVE_REPLACE)) {
             return MetadataDirectiveType.METADATA_DIRECTIVE_REPLACE;
         } else {
-            throw new IllegalArgumentException("invalid metadataDirectiveType: " + metadataDirectiveType);
+            throw new TosClientException("invalid metadataDirectiveType: " + metadataDirectiveType, null);
         }
     }
 }

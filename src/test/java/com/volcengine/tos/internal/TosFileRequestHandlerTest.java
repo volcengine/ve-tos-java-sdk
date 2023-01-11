@@ -230,14 +230,14 @@ public class TosFileRequestHandlerTest {
             downloadFileInput.setPartSize(5L * 1024 * 1024 * 1024 + 1000);
             getHandler().downloadFile(downloadFileInput);
             Assert.fail();
-        } catch (IllegalArgumentException e) {
+        } catch (TosClientException e) {
             Assert.assertTrue(e.getMessage().contains("invalid part size"));
         }
         try{
             downloadFileInput.setPartSize(3L * 1024 * 1024);
             getHandler().downloadFile(downloadFileInput);
             Assert.fail();
-        } catch (IllegalArgumentException e) {
+        } catch (TosClientException e) {
             Assert.assertTrue(e.getMessage().contains("invalid part size"));
         }
         downloadFileInput.setPartSize(5 * 1024 * 1024);
@@ -559,6 +559,7 @@ public class TosFileRequestHandlerTest {
 
     private void testFailed(Exception e) {
         LOG.error("object test failed, {}", e.toString());
+        e.printStackTrace();
         Assert.fail();
     }
 }

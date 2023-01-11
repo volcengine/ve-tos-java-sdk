@@ -1,5 +1,6 @@
 package com.volcengine.tos.auth;
 
+import com.volcengine.tos.TosClientException;
 import com.volcengine.tos.internal.TosRequest;
 import com.volcengine.tos.internal.util.ParamsChecker;
 import com.volcengine.tos.internal.util.StringUtils;
@@ -62,6 +63,8 @@ public class SignV4 implements Signer {
     private signKey signKey;
 
     public SignV4(Credentials credentials, String region) {
+        ParamsChecker.ensureNotNull(credentials, "Credentials");
+        ParamsChecker.ensureNotNull(region, "Region");
         this.credentials = credentials;
         this.region = region;
         this.signingHeader = SignV4::defaultSigningHeaderV4;
@@ -137,7 +140,7 @@ public class SignV4 implements Signer {
 
         String host = req.getHost();
         if (StringUtils.isEmpty(host)) {
-            throw new IllegalArgumentException("params.getHost() get null/empty");
+            throw new TosClientException("empty host", null);
         }
         signedHeader.add(new SimpleEntry<>("host", host));
         Collections.sort(signedHeader, new Comparator<Map.Entry<String, String>>() {
@@ -355,7 +358,7 @@ public class SignV4 implements Signer {
             hmac.init(secretKey);
             return hmac.doFinal(value);
         } catch (NoSuchAlgorithmException | InvalidKeyException e) {
-            throw new IllegalArgumentException(e.getMessage());
+            throw new TosClientException("tos: compute hmac-sha256 failed", e);
         }
     }
 
@@ -364,8 +367,8 @@ public class SignV4 implements Signer {
             MessageDigest md = MessageDigest.getInstance("SHA-256");
             md.update(data.getBytes(StandardCharsets.UTF_8));
             return md.digest();
-        } catch (Exception e) {
-            throw new IllegalArgumentException(e.getMessage());
+        } catch (NoSuchAlgorithmException e) {
+            throw new TosClientException("tos: compute sha256 failed.", e);
         }
     }
 

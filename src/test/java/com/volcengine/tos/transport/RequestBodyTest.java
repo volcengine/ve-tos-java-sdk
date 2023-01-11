@@ -10,7 +10,7 @@ import java.io.*;
 
 public class RequestBodyTest {
     @Test
-    void inputStreamTypeTest() throws ClassNotFoundException, FileNotFoundException {
+    void inputStreamTypeTest() throws ClassNotFoundException, IOException {
         InputStream is = new ByteArrayInputStream("aaa".getBytes());
         InputStreamRequestBody body = new InputStreamRequestBody(MediaType.parse("application/json"), is, 20);
         Assert.assertEquals(body.getInputStream().getClass(), Class.forName("com.volcengine.tos.comm.io.TosRepeatableInputStream"));
