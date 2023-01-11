@@ -1,5 +1,6 @@
 package com.volcengine.tos.comm.io;
 
+import com.volcengine.tos.TosClientException;
 import com.volcengine.tos.model.object.TosObjectInputStream;
 
 import java.io.FileInputStream;
@@ -18,8 +19,8 @@ public class TosRepeatableBoundedFileInputStream extends TosObjectInputStream {
         super(in);
         this.rfis = new TosRepeatableFileInputStream(in);
         if (size < 0) {
-            throw new IllegalArgumentException("TosRepeatableBoundedFileInputStream " +
-                    "input size is invalid, please make it not less than 0");
+            throw new TosClientException("TosRepeatableBoundedFileInputStream " +
+                    "input size is invalid, please make it not less than 0", null);
         }
         this.totalSize = size;
     }

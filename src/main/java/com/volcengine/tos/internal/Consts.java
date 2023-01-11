@@ -10,7 +10,7 @@ public interface Consts {
     String SCHEME_HTTP = "http";
     String SCHEME_HTTPS = "https";
     String SDK_NAME = "ve-tos-java-sdk";
-    String SDK_VERSION = "v2.2.0";
+    String SDK_VERSION = "v2.4.0";
 
     int MIN_PART_NUM = 1;
     int MAX_PART_NUM = 10000;
@@ -33,6 +33,17 @@ public interface Consts {
     String TEMP_FILE_SUFFIX = ".temp";
     String UPLOAD_CHECKPOINT_FILE_SUFFIX = ".upload";
     String DOWNLOAD_CHECKPOINT_FILE_SUFFIX = ".download";
+
+    /**
+     * URL_MODE_DEFAULT url pattern is http(s)://{bucket}.domain/{object}
+     */
+    int URL_MODE_DEFAULT = 0;
+    /**
+     * URL_MODE_PATH url pattern is http(s)://domain/{bucket}/{object}
+     */
+    int URL_MODE_PATH = 1;
+
+    int DEFAULT_HTTPS_PORT = 443;
 
     Set<String> CUSTOM_SERVER_SIDE_ENCRYPTION_ALGORITHM_LIST = new HashSet<>(Collections.singletonList("AES256"));
 }

@@ -1,6 +1,7 @@
 package com.volcengine.tos.internal;
 
 import com.volcengine.tos.internal.util.DateConverter;
+import com.volcengine.tos.internal.util.ParamsChecker;
 import com.volcengine.tos.internal.util.TosUtils;
 import org.testng.annotations.Test;
 
@@ -45,6 +46,9 @@ public class TosUtilsTest {
 
         String formattedISO8601 = DateConverter.dateToISO8601String(date);
         Assert.assertEquals(formattedISO8601, iso8601String);
+
+        Date now = new Date();
+        System.out.println(DateConverter.dateToRFC3339String(now));
     }
 
     @Test
@@ -54,5 +58,23 @@ public class TosUtilsTest {
         Assert.assertEquals(supportedRegion.get("cn-beijing").get(0), "tos-cn-beijing.volces.com");
         Assert.assertEquals(supportedRegion.get("cn-shanghai").get(0), "tos-cn-shanghai.volces.com");
         Assert.assertEquals(supportedRegion.get("cn-guangzhou").get(0), "tos-cn-guangzhou.volces.com");
+    }
+
+    @Test
+    void ipTest() {
+        String addr = null;
+        Assert.assertFalse(ParamsChecker.isLocalhostOrIpAddress(addr));
+        addr = "localhost";
+        Assert.assertTrue(ParamsChecker.isLocalhostOrIpAddress(addr));
+        addr = "127.0.0.1";
+        Assert.assertTrue(ParamsChecker.isLocalhostOrIpAddress(addr));
+        addr = "127.0.0.256";
+        Assert.assertFalse(ParamsChecker.isLocalhostOrIpAddress(addr));
+        addr = "0::0::0";
+        Assert.assertFalse(ParamsChecker.isLocalhostOrIpAddress(addr));
+        addr = "fe80::1551:1234:fbb:fcc3";
+        Assert.assertFalse(ParamsChecker.isLocalhostOrIpAddress(addr));
+        addr = "[fe80::1551:1234:fbb:fcc3]";
+        Assert.assertTrue(ParamsChecker.isLocalhostOrIpAddress(addr));
     }
 }

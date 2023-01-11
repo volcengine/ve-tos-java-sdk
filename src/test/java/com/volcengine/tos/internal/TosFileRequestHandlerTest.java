@@ -12,7 +12,6 @@ import com.volcengine.tos.model.bucket.CreateBucketV2Input;
 import com.volcengine.tos.model.bucket.HeadBucketV2Input;
 import com.volcengine.tos.model.bucket.HeadBucketV2Output;
 import com.volcengine.tos.model.object.*;
-import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.Hex;
 import org.testng.Assert;
 import org.testng.annotations.BeforeTest;
@@ -23,7 +22,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.concurrent.*;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static com.volcengine.tos.Consts.LOG;
@@ -94,9 +93,8 @@ public class TosFileRequestHandlerTest {
     @Test
     void uploadFileTest() {
         String key = Consts.internalFileCrudPrefix + getUniqueObjectKey();
-        CreateMultipartUploadInput create = CreateMultipartUploadInput.builder().bucket(Consts.bucket).key(key).build();
         UploadFileV2Input input = UploadFileV2Input.builder()
-                .createMultipartUploadInput(create)
+                .bucket(Consts.bucket).key(key)
                 .filePath(sampleFilePath)
                 .enableCheckpoint(true)
                 .taskNum(3)
@@ -139,9 +137,8 @@ public class TosFileRequestHandlerTest {
         Assert.assertEquals(uploadPart.get(), 3);
         Assert.assertEquals(complete.get(), 1);
         getHandler().getObjectToFile(GetObjectToFileInput.builder()
-                .getObjectInputV2(GetObjectV2Input.builder()
-                        .bucket(Consts.bucket)
-                        .key(key).build())
+                .bucket(Consts.bucket)
+                .key(key)
                 .filePath(sampleFilePath + ".1")
                 .build());
         try(FileInputStream inputStream = new FileInputStream(sampleFilePath + ".1")){
@@ -162,10 +159,8 @@ public class TosFileRequestHandlerTest {
     @Test
     void putObjectFromFileTest() {
         String key = Consts.internalFileCrudPrefix + getUniqueObjectKey();
-        PutObjectBasicInput basicInput = PutObjectBasicInput.builder()
-                .bucket(Consts.bucket).key(key).build();
         PutObjectFromFileInput input = PutObjectFromFileInput.builder()
-                .filePath(sampleFilePath).putObjectBasicInput(basicInput).build();
+                .filePath(sampleFilePath).bucket(bucket).key(key).build();
         try{
             PutObjectFromFileOutput output = getHandler().putObjectFromFile(input);
             Assert.assertNotNull(output.getPutObjectOutput());
@@ -173,9 +168,8 @@ public class TosFileRequestHandlerTest {
             testFailed(e);
         }
         getHandler().getObjectToFile(GetObjectToFileInput.builder()
-                .getObjectInputV2(GetObjectV2Input.builder()
-                        .bucket(Consts.bucket)
-                        .key(key).build())
+                .bucket(Consts.bucket)
+                .key(key)
                 .filePath(sampleFilePath + ".2")
                 .build());
         try(FileInputStream inputStream = new FileInputStream(sampleFilePath + ".2")){
@@ -199,10 +193,8 @@ public class TosFileRequestHandlerTest {
     void downloadFileTest() {
         // upload data
         String key = Consts.internalFileCrudPrefix + getUniqueObjectKey();
-        PutObjectBasicInput basicInput = PutObjectBasicInput.builder()
-                .bucket(Consts.bucket).key(key).build();
         PutObjectFromFileInput input = PutObjectFromFileInput.builder()
-                .filePath(sampleFilePath).putObjectBasicInput(basicInput).build();
+                .filePath(sampleFilePath).bucket(Consts.bucket).key(key).build();
         try{
             PutObjectFromFileOutput output = getHandler().putObjectFromFile(input);
             Assert.assertNotNull(output.getPutObjectOutput());
@@ -213,12 +205,12 @@ public class TosFileRequestHandlerTest {
         // head it
         HeadObjectV2Output head = ClientInstance.getObjectRequestHandlerInstance()
                 .headObject(new HeadObjectV2Input().setBucket(Consts.bucket).setKey(key));
-        long contentLength = head.getHeadObjectBasicOutput().getContentLength();
+        long contentLength = head.getContentLength();
         Assert.assertEquals(contentLength, new File(sampleFilePath).length());
 
         DownloadFileInput downloadFileInput = DownloadFileInput.builder()
-                .headObjectV2Input(HeadObjectV2Input.builder()
-                        .bucket(Consts.bucket).key(key).build())
+                .bucket(Consts.bucket)
+                .key(key)
                 .filePath(notFound + ".3")
                 .enableCheckpoint(true)
                 .taskNum(3)
@@ -230,22 +222,21 @@ public class TosFileRequestHandlerTest {
             downloadFileInput.setPartSize(5L * 1024 * 1024 * 1024 + 1000);
             getHandler().downloadFile(downloadFileInput);
             Assert.fail();
-        } catch (IllegalArgumentException e) {
+        } catch (TosClientException e) {
             Assert.assertTrue(e.getMessage().contains("invalid part size"));
         }
         try{
             downloadFileInput.setPartSize(3L * 1024 * 1024);
             getHandler().downloadFile(downloadFileInput);
             Assert.fail();
-        } catch (IllegalArgumentException e) {
+        } catch (TosClientException e) {
             Assert.assertTrue(e.getMessage().contains("invalid part size"));
         }
         downloadFileInput.setPartSize(5 * 1024 * 1024);
 
         // download not found object
         try{
-            downloadFileInput.setHeadObjectV2Input(HeadObjectV2Input.builder()
-                    .bucket(Consts.bucket).key(key+"notfound"+System.currentTimeMillis()).build());
+            downloadFileInput.setBucket(bucket).setKey(key+"notfound"+System.currentTimeMillis());
             getHandler().downloadFile(downloadFileInput);
             Assert.fail();
         } catch (TosException e) {
@@ -253,8 +244,8 @@ public class TosFileRequestHandlerTest {
         }
 
         downloadFileInput = DownloadFileInput.builder()
-                .headObjectV2Input(HeadObjectV2Input.builder()
-                        .bucket(Consts.bucket).key(key).build())
+                .bucket(Consts.bucket)
+                .key(key)
                 .filePath(notFound + ".3")
                 .enableCheckpoint(true)
                 .taskNum(3)
@@ -290,7 +281,6 @@ public class TosFileRequestHandlerTest {
             }
         });
         DownloadFileOutput output = getHandler().downloadFile(downloadFileInput);
-        Assert.assertNotNull(output.getOutput().getHeadObjectBasicOutput());
         Assert.assertEquals(createTempFile.get(), 1);
         Assert.assertEquals(downloadPart.get(), 3);
         Assert.assertEquals(renameTempFile.get(), 1);
@@ -316,9 +306,8 @@ public class TosFileRequestHandlerTest {
 //    @Test
     void abortUploadFileDownloadFileTest() throws InterruptedException {
         String key = Consts.internalFileCrudPrefix + getUniqueObjectKey();
-        CreateMultipartUploadInput create = CreateMultipartUploadInput.builder().bucket(Consts.bucket).key(key).build();
         UploadFileV2Input input = UploadFileV2Input.builder()
-                .createMultipartUploadInput(create)
+                .bucket(Consts.bucket).key(key)
                 .filePath(sampleFilePath)
                 .enableCheckpoint(true)
                 .taskNum(3)
@@ -427,7 +416,8 @@ public class TosFileRequestHandlerTest {
         AtomicInteger downloadPart = new AtomicInteger();
         AtomicInteger renameTempFile = new AtomicInteger();
         DownloadFileInput downloadFileInput = DownloadFileInput.builder()
-                .headObjectV2Input(HeadObjectV2Input.builder().bucket(Consts.bucket).key(key).build())
+                .bucket(Consts.bucket)
+                .key(key)
                 .filePath(randomFilePathToDownload)
                 .enableCheckpoint(true)
                 .taskNum(3)
@@ -559,6 +549,7 @@ public class TosFileRequestHandlerTest {
 
     private void testFailed(Exception e) {
         LOG.error("object test failed, {}", e.toString());
+        e.printStackTrace();
         Assert.fail();
     }
 }

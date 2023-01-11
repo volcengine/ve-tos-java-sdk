@@ -1,7 +1,9 @@
 package com.volcengine.tos;
 
+import com.volcengine.tos.auth.Credentials;
 import com.volcengine.tos.model.bucket.*;
 import com.volcengine.tos.model.object.*;
+import com.volcengine.tos.transport.TransportConfig;
 
 public interface TOSV2 extends TOS {
     /**
@@ -112,6 +114,110 @@ public interface TOSV2 extends TOS {
 
 
     /**
+     * set the CORS of a bucket
+     * @param input set bucket name and the bucket CORS rules
+     * @return PutBucketCORSOutput
+     * @throws TosException
+     */
+    PutBucketCORSOutput putBucketCORS(PutBucketCORSInput input) throws TosException;
+
+    /**
+     * get the CORS of a bucket
+     * @param input set bucket name
+     * @return GetBucketCORSOutput
+     * @throws TosException
+     */
+    GetBucketCORSOutput getBucketCORS(GetBucketCORSInput input) throws TosException;
+
+    /**
+     * delete the CORS of a bucket
+     * @param input set bucket name
+     * @return DeleteBucketCORSOutput
+     * @throws TosException
+     */
+    DeleteBucketCORSOutput deleteBucketCORS(DeleteBucketCORSInput input) throws TosException;
+
+    /**
+     * set storageClass of a bucket
+     * @param input set bucket name and the specific storageClassType
+     * @return PutBucketStorageClassOutput
+     * @throws TosException
+     */
+    PutBucketStorageClassOutput putBucketStorageClass(PutBucketStorageClassInput input) throws TosException;
+
+    /**
+     * get the location of a bucket
+     * @param input set bucket name
+     * @return GetBucketLocationOutput
+     * @throws TosException
+     */
+    GetBucketLocationOutput getBucketLocation(GetBucketLocationInput input) throws TosException;
+
+    /**
+     * set the lifecycle rules of a bucket
+     * @param input set bucket name and the bucket lifecycle rules
+     * @return PutBucketLifecycleOutput
+     * @throws TosException
+     */
+    PutBucketLifecycleOutput putBucketLifecycle(PutBucketLifecycleInput input) throws TosException;
+
+    /**
+     * get the lifecycle rules of a bucket
+     * @param input set bucket name
+     * @return GetBucketLifecycleOutput
+     * @throws TosException
+     */
+    GetBucketLifecycleOutput getBucketLifecycle(GetBucketLifecycleInput input) throws TosException;
+
+    /**
+     * delete the lifecycle rules of a bucket
+     * @param input set bucket name
+     * @return DeleteBucketLifecycleOutput
+     * @throws TosException
+     */
+    DeleteBucketLifecycleOutput deleteBucketLifecycle(DeleteBucketLifecycleInput input) throws TosException;
+
+    /**
+     * set the mirrorBack rules of a bucket
+     * @param input set bucket name and the bucket mirrorBack rules
+     * @return PutBucketMirrorBackOutput
+     * @throws TosException
+     */
+    PutBucketMirrorBackOutput putBucketMirrorBack(PutBucketMirrorBackInput input) throws TosException;
+
+    /**
+     * get the mirrorBack rules of a bucket
+     * @param input set bucket name
+     * @return GetBucketMirrorBackOutput
+     * @throws TosException
+     */
+    GetBucketMirrorBackOutput getBucketMirrorBack(GetBucketMirrorBackInput input) throws TosException;
+
+    /**
+     * delete the mirrorBack rules of a bucket
+     * @param input set bucket name
+     * @return DeleteBucketMirrorBackOutput
+     * @throws TosException
+     */
+    DeleteBucketMirrorBackOutput deleteBucketMirrorBack(DeleteBucketMirrorBackInput input) throws TosException;
+
+    /**
+     * set the acl rules of a bucket
+     * @param input set bucket name and the bucket lifecycle rules
+     * @return PutBucketACLOutput
+     * @throws TosException
+     */
+    PutBucketACLOutput putBucketACL(PutBucketACLInput input) throws TosException;
+
+    /**
+     * get the acl rules of a bucket
+     * @param input set bucket name
+     * @return GetBucketACLOutput
+     * @throws TosException
+     */
+    GetBucketACLOutput getBucketACL(GetBucketACLInput input) throws TosException;
+
+    /**
      * get data and metadata of an object
      *
      * @param input set get object options
@@ -198,12 +304,23 @@ public interface TOSV2 extends TOS {
 
     /**
      * list objects of a bucket
+     * deprecated since v2.4.0, use listObjectsType2 instead
      *
      * @param input list object options
      * @return {@link ListObjectsV2Output}
      * @throws TosException
      */
+    @Deprecated
     ListObjectsV2Output listObjects(ListObjectsV2Input input) throws TosException;
+
+    /**
+     * list objects of a bucket
+     *
+     * @param input list object options
+     * @return {@link ListObjectsType2Output}
+     * @throws TosException
+     */
+    ListObjectsType2Output listObjectsType2(ListObjectsType2Input input) throws TosException;
 
     /**
      * list multi-version objects of a bucket
@@ -243,11 +360,56 @@ public interface TOSV2 extends TOS {
     /**
      * get object's acl grants or rules
      *
-     * @param input set acl option.
+     * @param input set bucket, key and versionID.
      * @return {@link GetObjectACLV2Output}
      * @throws TosException
      */
     GetObjectACLV2Output getObjectAcl(GetObjectACLV2Input input) throws TosException;
+
+    /**
+     * set object's tags in the object meta info
+     *
+     * @param input set object tag set.
+     * @return {@link PutObjectTaggingOutput}
+     * @throws TosException
+     */
+    PutObjectTaggingOutput putObjectTagging(PutObjectTaggingInput input) throws TosException;
+
+    /**
+     * get object's tags in the object meta info
+     *
+     * @param input set bucket, key and versionID.
+     * @return {@link GetObjectTaggingOutput}
+     * @throws TosException
+     */
+    GetObjectTaggingOutput getObjectTagging(GetObjectTaggingInput input) throws TosException;
+
+    /**
+     * delete object's tags in the object meta info
+     *
+     * @param input set bucket, key and versionID.
+     * @return {@link DeleteObjectTaggingOutput}
+     * @throws TosException
+     */
+    DeleteObjectTaggingOutput deleteObjectTagging(DeleteObjectTaggingInput input) throws TosException;
+
+    /**
+     * fetch an object in the specific url synchronously
+     *
+     * @param input set fetch options.
+     * @return {@link FetchObjectOutput}
+     * @throws TosException
+     */
+    FetchObjectOutput fetchObject(FetchObjectInput input) throws TosException;
+
+    /**
+     * fetch an object in the specific url asynchronously
+     *
+     * @param input set fetch options.
+     * @return {@link PutFetchTaskOutput}
+     * @throws TosException
+     */
+    PutFetchTaskOutput putFetchTask(PutFetchTaskInput input) throws TosException;
 
     /**
      * create a multipart upload operation
@@ -320,4 +482,18 @@ public interface TOSV2 extends TOS {
      * @throws TosException
      */
     PreSignedURLOutput preSignedURL(PreSignedURLInput input) throws TosException;
+
+    /**
+     * create a pre-signed for postObject request
+     * @param input PreSignedURLInput
+     * @return {@link PreSignedURLOutput}
+     * @throws TosException
+     */
+    PreSignedPostSignatureOutput preSignedPostSignature(PreSignedPostSignatureInput input) throws TosException;
+
+    void changeCredentials(Credentials credentials);
+
+    void changeRegionAndEndpoint(String region, String endpoint);
+
+    void changeTransportConfig(TransportConfig config);
 }

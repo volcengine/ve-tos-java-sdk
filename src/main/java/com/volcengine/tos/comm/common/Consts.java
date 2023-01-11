@@ -28,4 +28,11 @@ public interface Consts {
     String STORAGE_CLASS_STANDARD = "STANDARD";
     String STORAGE_CLASS_IA = "IA";
     String STORAGE_CLASS_ARCHIVE_FR = "ARCHIVE_FR";
+
+    String CANNED_ALL_USERS = "AllUsers";
+    String CANNED_AUTHENTICATED_USERS = "AuthenticatedUsers";
+    String CANNED_LOG_DELIVERY = "LogDelivery";
+
+    String GRANTEE_GROUP = "Group";
+    String GRANTEE_USER = "CanonicalUser";
 }

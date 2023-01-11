@@ -43,7 +43,7 @@ class Util {
 
     static void validatePartSize(long partSize) {
         if (partSize < Consts.MIN_PART_SIZE || partSize > Consts.MAX_PART_SIZE) {
-            throw new IllegalArgumentException("invalid part size, the size must be [5242880, 5368709120]");
+            throw new TosClientException("invalid part size, the size must be [5242880, 5368709120]", null);
         }
     }
 

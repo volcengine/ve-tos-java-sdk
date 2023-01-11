@@ -11,6 +11,8 @@ import com.volcengine.tos.internal.util.CRC64Utils;
 import com.volcengine.tos.internal.util.ParamsChecker;
 import com.volcengine.tos.internal.util.StringUtils;
 import com.volcengine.tos.internal.util.TosUtils;
+import com.volcengine.tos.internal.util.dnscache.DefaultDnsCacheService;
+import com.volcengine.tos.internal.util.dnscache.DnsCacheService;
 import com.volcengine.tos.internal.util.ratelimit.RateLimitedInputStream;
 import com.volcengine.tos.model.object.TosObjectInputStream;
 import com.volcengine.tos.transport.TransportConfig;
@@ -30,8 +32,7 @@ import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.zip.CheckedInputStream;
 
@@ -48,9 +49,11 @@ import java.util.zip.CheckedInputStream;
  */
 public class RequestTransport implements Transport {
     private static final MediaType DEFAULT_MEDIA_TYPE = null;
+    private static final int DEFAULT_MAX_RETRY_COUNT = 3;
     private final OkHttpClient client;
     private static final Logger LOG = LoggerFactory.getLogger(RequestTransport.class);
     private int maxRetries;
+    private DnsCacheService dnsCacheService;
 
     public RequestTransport(TransportConfig config){
         ConnectionPool connectionPool = new ConnectionPool(config.getMaxConnections(),
@@ -74,7 +77,17 @@ public class RequestTransport implements Transport {
             }
         }
 
+        RequestEventListener.RequestEventListenerFactory eventListener = new RequestEventListener.RequestEventListenerFactory(LOG);
+        if (config.getDnsCacheTimeMinutes() > 0) {
+            dnsCacheService = new DefaultDnsCacheService(config.getDnsCacheTimeMinutes());
+            eventListener.setDnsCacheService(dnsCacheService);
+            builder.dns(createDnsWithCache());
+        }
+
         this.maxRetries = config.getMaxRetryCount();
+        if (maxRetries == 0) {
+            maxRetries = DEFAULT_MAX_RETRY_COUNT;
+        }
         if (maxRetries < 0) {
             maxRetries = 0;
         }
@@ -87,8 +100,43 @@ public class RequestTransport implements Transport {
                 // 默认关闭重定向
                 .followRedirects(false)
                 .followSslRedirects(false)
-                .eventListenerFactory(new RequestEventListener.RequestEventListenerFactory(LOG))
+                .eventListenerFactory(eventListener)
                 .build();
+    }
+
+    private Dns createDnsWithCache() {
+        return new Dns() {
+            @Override
+            public List<InetAddress> lookup(String host) throws UnknownHostException {
+                if (host != null && dnsCacheService != null) {
+                    List<InetAddress> cache = dnsCacheService.getIpList(host);
+                    if (cache != null && cache.size() > 0) {
+                        return cache;
+                    }
+                }
+                try {
+                    return Arrays.asList(InetAddress.getAllByName(host));
+                } catch (NullPointerException e) {
+                    UnknownHostException unknownHostException =
+                            new UnknownHostException("Broken system behaviour for dns lookup of " + host);
+                    unknownHostException.initCause(e);
+                    throw unknownHostException;
+                }
+            }
+        };
+    }
+
+    @Override
+    public void switchConfig(TransportConfig config) {
+        // 先只支持重试次数修改
+        maxRetries = config.getMaxRetryCount();
+        if (maxRetries < 0) {
+            maxRetries = 0;
+        }
+    }
+
+    public OkHttpClient getClient() {
+        return client;
     }
 
     @Override
@@ -208,15 +256,19 @@ public class RequestTransport implements Transport {
                     // only appendObject use, not support chunk
                     // make sure the content length is set
                     builder.post(new WrappedTransportRequestBody(getMediaType(request), request.getContent(), request.getContentLength()));
-                } else {
+                } else if (request.getData() != null){
                     builder.post(RequestBody.create(getMediaType(request), request.getData()));
+                } else {
+                    builder.post(RequestBody.create(getMediaType(request), new byte[0]));
                 }
                 break;
             case HttpMethod.PUT: {
                 if (request.getContent() != null) {
                     builder.put(new WrappedTransportRequestBody(getMediaType(request), request.getContent(), request.getContentLength()));
-                } else {
+                } else if (request.getData() != null){
                     builder.put(RequestBody.create(getMediaType(request), request.getData()));
+                } else {
+                    builder.put(RequestBody.create(getMediaType(request), new byte[0]));
                 }
                 break;
             }
@@ -227,7 +279,7 @@ public class RequestTransport implements Transport {
                 builder.delete();
                 break;
             default:
-                throw new UnsupportedOperationException("Method is not supported: " + request.getMethod());
+                throw new TosClientException("Method is not supported: " + request.getMethod(), null);
         }
         return builder.build();
     }
@@ -250,7 +302,7 @@ public class RequestTransport implements Transport {
 
 
     private OkHttpClient.Builder ignoreCertificate(OkHttpClient.Builder builder) throws TosClientException {
-        LOG.warn("ignore ssl certificate verification");
+        LOG.warn("tos: ignore ssl certificate verification");
         try {
             final TrustManager[] trustAllCerts = new TrustManager[] {
                 new X509TrustManager() {
@@ -271,7 +323,7 @@ public class RequestTransport implements Transport {
             builder.sslSocketFactory(sslSocketFactory, (X509TrustManager)trustAllCerts[0]);
             builder.hostnameVerifier((hostname, session) -> true);
         } catch (NoSuchAlgorithmException | KeyManagementException e) {
-            LOG.warn("exception occurred while configuring ignoreSslCertificate");
+            LOG.warn("tos: exception occurred while configuring ignoreSslCertificate");
             throw new TosClientException("tos: set ignoreCertificate failed", e);
         }
         return builder;

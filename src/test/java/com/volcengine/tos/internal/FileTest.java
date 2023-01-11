@@ -1,6 +1,7 @@
 package com.volcengine.tos.internal;
 
 import com.volcengine.tos.internal.util.FileUtils;
+import okhttp3.HttpUrl;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
@@ -60,6 +61,13 @@ public class FileTest {
             }
         }
         return dirFile.delete();
+    }
+
+    @Test
+    void urlParseTest() {
+        String url = "https://localhost";
+        HttpUrl parsedUrl = HttpUrl.parse(url);
+        System.out.println(parsedUrl.port());
     }
 
 //    @Test

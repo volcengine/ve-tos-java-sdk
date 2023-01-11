@@ -458,7 +458,7 @@ public class TOSClientTest {
         try{
             client.abortMultipartUpload(Consts.bucket, new AbortMultipartUploadInput(key, upload.getRequestInfo().getRequestId()));
         } catch (TosException e){
-            Assert.assertEquals(e.getCode(), "NotFound");
+            Assert.assertEquals(e.getCode(), Code.NO_SUCH_UPLOAD);
         }
     }
 
@@ -478,7 +478,7 @@ public class TOSClientTest {
         try{
             client.abortMultipartUpload(Consts.bucket, abort);
         } catch (TosException e){
-            Assert.assertEquals(e.getCode(), "NotFound");
+            Assert.assertEquals(e.getCode(), Code.NO_SUCH_UPLOAD);
         }
     }
 

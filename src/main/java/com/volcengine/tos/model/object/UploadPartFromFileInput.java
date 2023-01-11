@@ -1,19 +1,18 @@
 package com.volcengine.tos.model.object;
 
+import com.volcengine.tos.comm.event.DataTransferListener;
+import com.volcengine.tos.comm.ratelimit.RateLimiter;
+
 import java.io.File;
 import java.io.FileInputStream;
 
 public class UploadPartFromFileInput {
-    private UploadPartBasicInput uploadPartBasicInput;
+    private UploadPartBasicInput uploadPartBasicInput = new UploadPartBasicInput();
     private String filePath;
     private File file;
     private FileInputStream fileInputStream;
     private long offset;
     private long partSize;
-
-    public UploadPartBasicInput getUploadPartBasicInput() {
-        return uploadPartBasicInput;
-    }
 
     public String getFilePath() {
         return filePath;
@@ -33,11 +32,6 @@ public class UploadPartFromFileInput {
 
     public long getPartSize() {
         return partSize;
-    }
-
-    public UploadPartFromFileInput setUploadPartBasicInput(UploadPartBasicInput uploadPartBasicInput) {
-        this.uploadPartBasicInput = uploadPartBasicInput;
-        return this;
     }
 
     public UploadPartFromFileInput setFilePath(String filePath) {
@@ -65,10 +59,79 @@ public class UploadPartFromFileInput {
         return this;
     }
 
+    public String getBucket() {
+        return uploadPartBasicInput.getBucket();
+    }
+
+    public UploadPartFromFileInput setBucket(String bucket) {
+        this.uploadPartBasicInput.setBucket(bucket);
+        return this;
+    }
+
+    public String getKey() {
+        return uploadPartBasicInput.getKey();
+    }
+
+    public UploadPartFromFileInput setKey(String key) {
+        this.uploadPartBasicInput.setKey(key);
+        return this;
+    }
+
+    public String getUploadID() {
+        return uploadPartBasicInput.getUploadID();
+    }
+
+    public UploadPartFromFileInput setUploadID(String uploadID) {
+        this.uploadPartBasicInput.setUploadID(uploadID);
+        return this;
+    }
+
+    public int getPartNumber() {
+        return uploadPartBasicInput.getPartNumber();
+    }
+
+    public UploadPartFromFileInput setPartNumber(int partNumber) {
+        this.uploadPartBasicInput.setPartNumber(partNumber);
+        return this;
+    }
+
+    public ObjectMetaRequestOptions getOptions() {
+        return uploadPartBasicInput.getOptions();
+    }
+
+    public UploadPartFromFileInput setOptions(ObjectMetaRequestOptions options) {
+        this.uploadPartBasicInput.setOptions(options);
+        return this;
+    }
+
+    public DataTransferListener getDataTransferListener() {
+        return uploadPartBasicInput.getDataTransferListener();
+    }
+
+    public UploadPartFromFileInput setDataTransferListener(DataTransferListener dataTransferListener) {
+        this.uploadPartBasicInput.setDataTransferListener(dataTransferListener);
+        return this;
+    }
+
+    public RateLimiter getRateLimiter() {
+        return uploadPartBasicInput.getRateLimiter();
+    }
+
+    public UploadPartFromFileInput setRateLimiter(RateLimiter rateLimiter) {
+        this.uploadPartBasicInput.setRateLimiter(rateLimiter);
+        return this;
+    }
+
     @Override
     public String toString() {
         return "UploadPartFromFileInput{" +
-                "uploadPartBasicInput=" + uploadPartBasicInput +
+                "bucket='" + getBucket() + '\'' +
+                ", key='" + getKey() + '\'' +
+                ", uploadID='" + getUploadID() + '\'' +
+                ", partNumber=" + getPartNumber() +
+                ", options=" + getOptions() +
+                ", dataTransferListener=" + getDataTransferListener() +
+                ", rateLimit=" + getRateLimiter() +
                 ", filePath='" + filePath + '\'' +
                 ", offset=" + offset +
                 ", partSize=" + partSize +
@@ -80,7 +143,7 @@ public class UploadPartFromFileInput {
     }
 
     public static final class UploadPartFromFileInputBuilder {
-        private UploadPartBasicInput uploadPartBasicInput;
+        private UploadPartBasicInput uploadPartBasicInput = new UploadPartBasicInput();
         private String filePath;
         private File file;
         private FileInputStream fileInputStream;
@@ -90,6 +153,7 @@ public class UploadPartFromFileInput {
         private UploadPartFromFileInputBuilder() {
         }
 
+        @Deprecated
         public UploadPartFromFileInputBuilder uploadPartBasicInput(UploadPartBasicInput uploadPartBasicInput) {
             this.uploadPartBasicInput = uploadPartBasicInput;
             return this;
@@ -120,6 +184,41 @@ public class UploadPartFromFileInput {
             return this;
         }
 
+        public UploadPartFromFileInputBuilder bucket(String bucket) {
+            this.uploadPartBasicInput.setBucket(bucket);
+            return this;
+        }
+
+        public UploadPartFromFileInputBuilder key(String key) {
+            this.uploadPartBasicInput.setKey(key);
+            return this;
+        }
+
+        public UploadPartFromFileInputBuilder uploadID(String uploadID) {
+            this.uploadPartBasicInput.setUploadID(uploadID);
+            return this;
+        }
+
+        public UploadPartFromFileInputBuilder partNumber(int partNumber) {
+            this.uploadPartBasicInput.setPartNumber(partNumber);
+            return this;
+        }
+
+        public UploadPartFromFileInputBuilder options(ObjectMetaRequestOptions options) {
+            this.uploadPartBasicInput.setOptions(options);
+            return this;
+        }
+
+        public UploadPartFromFileInputBuilder dataTransferListener(DataTransferListener dataTransferListener) {
+            this.uploadPartBasicInput.setDataTransferListener(dataTransferListener);
+            return this;
+        }
+
+        public UploadPartFromFileInputBuilder rateLimiter(RateLimiter rateLimiter) {
+            this.uploadPartBasicInput.setRateLimiter(rateLimiter);
+            return this;
+        }
+
         public UploadPartFromFileInput build() {
             UploadPartFromFileInput uploadPartFromFileInput = new UploadPartFromFileInput();
             uploadPartFromFileInput.filePath = this.filePath;
@@ -130,5 +229,16 @@ public class UploadPartFromFileInput {
             uploadPartFromFileInput.partSize = this.partSize;
             return uploadPartFromFileInput;
         }
+    }
+
+    @Deprecated
+    public UploadPartFromFileInput setUploadPartBasicInput(UploadPartBasicInput uploadPartBasicInput) {
+        this.uploadPartBasicInput = uploadPartBasicInput;
+        return this;
+    }
+
+    @Deprecated
+    public UploadPartBasicInput getUploadPartBasicInput() {
+        return uploadPartBasicInput;
     }
 }

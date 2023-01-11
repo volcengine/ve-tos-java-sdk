@@ -1,5 +1,6 @@
 package com.volcengine.tos.internal.model;
 
+import com.volcengine.tos.TosClientException;
 import com.volcengine.tos.comm.event.DataTransferListener;
 import com.volcengine.tos.comm.event.DataTransferStatus;
 import com.volcengine.tos.comm.event.DataTransferType;
@@ -19,7 +20,7 @@ public class SimpleDataTransferListenInputStream extends DataTransferListenInput
     public SimpleDataTransferListenInputStream(InputStream is, DataTransferListener listener, long total) {
         super(is);
         if (is == null || listener == null) {
-            throw new IllegalArgumentException();
+            throw new TosClientException("invalid input", null);
         }
         this.listener = listener;
         this.totalBytes = total;

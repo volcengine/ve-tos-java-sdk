@@ -1,9 +1,7 @@
 package com.volcengine.tos.model.object;
 
-import com.volcengine.tos.comm.TosHeader;
 import com.volcengine.tos.comm.event.DataTransferListener;
 import com.volcengine.tos.comm.ratelimit.RateLimiter;
-import com.volcengine.tos.internal.util.DateConverter;
 
 import java.util.Collections;
 import java.util.Date;
@@ -143,31 +141,29 @@ public class GetObjectV2Input {
     }
 
     public Map<String, String> getAllSettedHeaders() {
-        Map<String, String> allHeaders = new HashMap<>(options == null ? Collections.emptyMap() : options.headers());
-        addRespHeaders(allHeaders);
-        return allHeaders;
+        return new HashMap<>(options == null ? Collections.emptyMap() : options.headers());
     }
 
-    private void addRespHeaders(Map<String, String> allHeaders) {
-        if (this.responseCacheControl != null) {
-            allHeaders.put(TosHeader.HEADER_RESPONSE_CACHE_CONTROL, responseCacheControl);
-        }
-        if (this.responseContentLanguage != null) {
-            allHeaders.put(TosHeader.HEADER_RESPONSE_CONTENT_LANGUAGE, responseContentLanguage);
-        }
-        if (this.responseContentDisposition != null) {
-            allHeaders.put(TosHeader.HEADER_RESPONSE_CONTENT_DISPOSITION, responseContentDisposition);
-        }
-        if (this.responseContentType != null) {
-            allHeaders.put(TosHeader.HEADER_RESPONSE_CONTENT_TYPE, responseContentType);
-        }
-        if (this.responseContentEncoding != null) {
-            allHeaders.put(TosHeader.HEADER_RESPONSE_CONTENT_ENCODING, responseContentEncoding);
-        }
-        if (this.responseExpires != null) {
-            allHeaders.put(TosHeader.HEADER_RESPONSE_EXPIRES, DateConverter.dateToRFC1123String(responseExpires));
-        }
-    }
+//    private void addRespHeaders(Map<String, String> allHeaders) {
+//        if (this.responseCacheControl != null) {
+//            allHeaders.put(TosHeader.HEADER_RESPONSE_CACHE_CONTROL, responseCacheControl);
+//        }
+//        if (this.responseContentLanguage != null) {
+//            allHeaders.put(TosHeader.HEADER_RESPONSE_CONTENT_LANGUAGE, responseContentLanguage);
+//        }
+//        if (this.responseContentDisposition != null) {
+//            allHeaders.put(TosHeader.HEADER_RESPONSE_CONTENT_DISPOSITION, responseContentDisposition);
+//        }
+//        if (this.responseContentType != null) {
+//            allHeaders.put(TosHeader.HEADER_RESPONSE_CONTENT_TYPE, responseContentType);
+//        }
+//        if (this.responseContentEncoding != null) {
+//            allHeaders.put(TosHeader.HEADER_RESPONSE_CONTENT_ENCODING, responseContentEncoding);
+//        }
+//        if (this.responseExpires != null) {
+//            allHeaders.put(TosHeader.HEADER_RESPONSE_EXPIRES, DateConverter.dateToRFC1123String(responseExpires));
+//        }
+//    }
 
     @Override
     public String toString() {

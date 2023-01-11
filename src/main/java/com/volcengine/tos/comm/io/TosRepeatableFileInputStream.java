@@ -14,7 +14,7 @@ public class TosRepeatableFileInputStream extends TosObjectInputStream {
     private FileChannel fileChannel;
     private FileInputStream fileInputStream;
     private long markPos = 0;
-    public TosRepeatableFileInputStream(File file) throws FileNotFoundException {
+    public TosRepeatableFileInputStream(File file) throws IOException {
         this(new FileInputStream(file), file);
     }
     public TosRepeatableFileInputStream(FileInputStream in) {
