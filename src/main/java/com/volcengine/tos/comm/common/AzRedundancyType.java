@@ -8,7 +8,9 @@ public enum AzRedundancyType {
     /**
      * 多 az
      */
-    AZ_REDUNDANCY_MULTI_AZ("multi-az");
+    AZ_REDUNDANCY_MULTI_AZ("multi-az"),
+
+    AZ_REDUNDANCY_UNKNOWN("unknown");
     private String az;
     private AzRedundancyType(String az) {
         this.az = az;

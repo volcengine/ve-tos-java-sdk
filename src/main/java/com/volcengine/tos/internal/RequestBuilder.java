@@ -2,20 +2,18 @@ package com.volcengine.tos.internal;
 
 import com.volcengine.tos.TosClientException;
 import com.volcengine.tos.auth.Signer;
-import com.volcengine.tos.comm.HttpMethod;
 import com.volcengine.tos.comm.TosHeader;
 import com.volcengine.tos.internal.model.HttpRange;
 import com.volcengine.tos.internal.util.StringUtils;
-import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
+import java.net.URLEncoder;
 import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
-import java.net.URLEncoder;
 
 import static com.volcengine.tos.internal.Consts.URL_MODE_DEFAULT;
 import static com.volcengine.tos.internal.Consts.URL_MODE_PATH;
@@ -167,23 +165,15 @@ public class RequestBuilder {
                     long cl = Long.parseLong(headers.get(TosHeader.HEADER_CONTENT_LENGTH));
                     request.setContentLength(cl > 0 ? cl : -1L);
                 } catch (NumberFormatException e) {
-                    request.setContentLength(contentLength > 0 ? contentLength : -1L);
+                    request.setContentLength(-1L);
                 }
             } else {
                 request.setContentLength(-1L);
-            }
-            if (StringUtils.equals(method, HttpMethod.PUT)) {
-                if (!stream.markSupported()) {
-                    // 不支持重试
-                    request.setRetryableOnClientException(false);
-                    request.setRetryableOnServerException(false);
-                }
             }
         }
         return request;
     }
 
-    @NotNull
     private TosRequest genTosRequest(String method, InputStream stream) {
         String[] hostAndPath = hostPath();
         TosRequest request = new TosRequest(scheme, method, hostAndPath[0], hostAndPath[1], stream, query, headers);

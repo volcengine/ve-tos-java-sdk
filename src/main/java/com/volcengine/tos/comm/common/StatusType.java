@@ -1,10 +1,13 @@
 package com.volcengine.tos.comm.common;
 
+import com.fasterxml.jackson.annotation.JsonEnumDefaultValue;
 import com.fasterxml.jackson.annotation.JsonValue;
 
 public enum StatusType {
     STATUS_ENABLED("Enabled"),
-    STATUS_DISABLED("Disabled");
+    STATUS_DISABLED("Disabled"),
+    @JsonEnumDefaultValue
+    STATUS_UNKNOWN("Unknown");
 
     private String type;
     private StatusType(String type) {

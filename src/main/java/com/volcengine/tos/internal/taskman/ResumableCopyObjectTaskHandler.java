@@ -265,9 +265,16 @@ public class ResumableCopyObjectTaskHandler {
         }
         List<CopyPartInfo> partInfoList = new ArrayList<>((int) partNum);
         for(int i = 0; i < partNum; i++) {
-            partInfoList.add(new CopyPartInfo().setPartNumber(i+1).setCopySourceRangeStart(i * partSize).setCopySourceRangeEnd((i+1) * partSize - 1));
+            if (i < partNum-1) {
+                partInfoList.add(new CopyPartInfo().setPartNumber(i+1).setCopySourceRangeStart(i * partSize).setCopySourceRangeEnd((i+1) * partSize - 1));
+            } else {
+                partInfoList.add(new CopyPartInfo().setPartNumber(i+1).setCopySourceRangeStart(i * partSize).setCopySourceRangeEnd((partNum-1) * partSize + lastPartSize- 1));
+            }
         }
-        partInfoList.get((int)partNum-1).setCopySourceRangeEnd((partNum-1) * partSize + lastPartSize- 1);
+        if (partNum == 0) {
+            // 空对象场景
+            partInfoList.add(new CopyPartInfo().setPartNumber(1).setCopySourceRangeStart(0).setCopySourceRangeEnd(0));
+        }
         return partInfoList;
     }
 
@@ -277,7 +284,7 @@ public class ResumableCopyObjectTaskHandler {
         try(FileInputStream checkpointFile = new FileInputStream(f)) {
             byte[] data = new byte[(int)f.length()];
             checkpointFile.read(data);
-            return TosUtils.JSON.readValue(data, new TypeReference<ResumableCopyObjectCheckpoint>(){});
+            return TosUtils.getJsonMapper().readValue(data, new TypeReference<ResumableCopyObjectCheckpoint>(){});
         }
     }
 }

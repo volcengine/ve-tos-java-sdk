@@ -16,6 +16,7 @@ import com.volcengine.tos.internal.util.ratelimit.RateLimitedInputStream;
 import com.volcengine.tos.model.object.*;
 
 import java.io.ByteArrayInputStream;
+import java.io.FileInputStream;
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
@@ -167,6 +168,7 @@ public class TosObjectRequestHandler {
     private PutObjectOutput putObject(PutObjectBasicInput input, InputStream content) {
         ParamsChecker.ensureNotNull(input, "PutObjectBasicInput");
         ParamsChecker.isValidBucketNameAndKey(input.getBucket(), input.getKey());
+        content = ensureNotNullContent(content);
         RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), input.getAllSettedHeaders())
                 .withContentLength(input.getContentLength());
         addContentType(builder, input.getKey());
@@ -174,7 +176,21 @@ public class TosObjectRequestHandler {
                 .setEnableCrcCheck(this.enableCrcCheck)
                 .setRateLimiter(input.getRateLimiter())
                 .setDataTransferListener(input.getDataTransferListener());
+        setRetryStrategy(req, content);
         return objectHandler.doRequest(req, HttpStatus.OK, this::buildPutObjectOutput);
+    }
+
+    private InputStream ensureNotNullContent(InputStream content) {
+        if (content == null) {
+            content = new ByteArrayInputStream("".getBytes());
+        }
+        return content;
+    }
+
+    private static void setRetryStrategy(TosRequest request, InputStream stream) {
+        boolean canRetry = stream.markSupported() || stream instanceof FileInputStream;
+        request.setRetryableOnServerException(canRetry);
+        request.setRetryableOnClientException(canRetry);
     }
 
     private PutObjectOutput buildPutObjectOutput(TosResponse res) {
@@ -511,6 +527,7 @@ public class TosObjectRequestHandler {
     private UploadPartV2Output uploadPart(UploadPartBasicInput input, long contentLength, InputStream content) {
         ParamsChecker.ensureNotNull(input, "UploadPartBasicInput");
         ParamsChecker.ensureNotNull(input.getUploadID(), "uploadID");
+        ParamsChecker.ensureNotNull(content, "InputStream");
         ParamsChecker.isValidPartNumber(input.getPartNumber());
         ParamsChecker.isValidBucketNameAndKey(input.getBucket(), input.getKey());
         RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), input.getAllSettedHeaders())
@@ -520,6 +537,7 @@ public class TosObjectRequestHandler {
         TosRequest req = this.factory.build(builder, HttpMethod.PUT, content)
                 .setEnableCrcCheck(this.enableCrcCheck).setRateLimiter(input.getRateLimiter())
                 .setDataTransferListener(input.getDataTransferListener());
+        setRetryStrategy(req, content);
         return objectHandler.doRequest(req, HttpStatus.OK, response -> buildUploadPartV2Output(response, input.getPartNumber()));
     }
 

@@ -1,11 +1,15 @@
 package com.volcengine.tos.comm.common;
 
+import com.fasterxml.jackson.annotation.JsonEnumDefaultValue;
 import com.fasterxml.jackson.annotation.JsonValue;
 
 public enum ProtocolType {
     PROTOCOL_HTTP("http"),
 
-    PROTOCOL_HTTPS("https");
+    PROTOCOL_HTTPS("https"),
+
+    @JsonEnumDefaultValue
+    PROTOCOL_UNKNOWN("unknown");
 
     private String protocolType;
     private ProtocolType(String type) {

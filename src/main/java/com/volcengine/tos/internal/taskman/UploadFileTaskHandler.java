@@ -49,6 +49,7 @@ public class UploadFileTaskHandler {
     }
 
     public void initTask() {
+        validateInput();
         if (this.input.isEnableCheckpoint()) {
             validateCheckpointPath();
         }
@@ -161,7 +162,7 @@ public class UploadFileTaskHandler {
             if (!part.isCompleted()) {
                 return false;
             }
-            if (enableCrcCheck && part.getHashCrc64ecma() == 0) {
+            if (enableCrcCheck && part.getPartSize() > 0 && part.getHashCrc64ecma() == 0) {
                 return false;
             }
         }
@@ -290,6 +291,10 @@ public class UploadFileTaskHandler {
                 partInfoList.add(new UploadPartInfo().setPartSize(lastPartSize).setPartNumber(i+1).setOffset(i * partSize));
             }
         }
+        if (partNum == 0) {
+            // 空文件场景
+            partInfoList.add(new UploadPartInfo().setPartNumber(1).setPartSize(0).setOffset(0));
+        }
         return partInfoList;
     }
 
@@ -299,7 +304,7 @@ public class UploadFileTaskHandler {
         try(FileInputStream checkpointFile = new FileInputStream(f)) {
             byte[] data = new byte[(int)f.length()];
             checkpointFile.read(data);
-            return TosUtils.JSON.readValue(data, new TypeReference<UploadFileV2Checkpoint>(){});
+            return TosUtils.getJsonMapper().readValue(data, new TypeReference<UploadFileV2Checkpoint>(){});
         }
     }
 

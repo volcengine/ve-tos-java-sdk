@@ -4,16 +4,14 @@ import com.volcengine.tos.TosException;
 import com.volcengine.tos.comm.HttpStatus;
 import com.volcengine.tos.internal.TosObjectRequestHandler;
 import com.volcengine.tos.internal.util.StringUtils;
+import com.volcengine.tos.internal.util.TosUtils;
 import com.volcengine.tos.model.object.AbortMultipartUploadInput;
 import com.volcengine.tos.model.object.CancelHook;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class ResumableCopyObjectTaskCanceler implements InternalCancelHook, CancelHook, AbortTaskHook {
-    private static final Logger log = LoggerFactory.getLogger(ResumableCopyObjectTaskCanceler.class);
     private TosObjectRequestHandler handler;
     private String bucket;
     private String key;
@@ -67,7 +65,7 @@ public class ResumableCopyObjectTaskCanceler implements InternalCancelHook, Canc
             if (e.getStatusCode() != HttpStatus.NOT_FOUND) {
                 throw e;
             }
-            log.debug("tos: abortMultipartUpload return 404 and will ignore it.");
+            TosUtils.getLogger().debug("tos: abortMultipartUpload return 404 and will ignore it.");
         } finally {
             if (taskMan != null) {
                 // only used for user abort, program abort do not need to shut down.
