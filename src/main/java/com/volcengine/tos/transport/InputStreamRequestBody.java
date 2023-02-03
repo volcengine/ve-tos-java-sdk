@@ -14,7 +14,6 @@ import okio.Source;
 import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Objects;
 
 @Deprecated
 class InputStreamRequestBody extends RequestBody implements Closeable {

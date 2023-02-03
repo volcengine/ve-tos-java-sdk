@@ -34,7 +34,7 @@ public class ClientInstance {
         }
         synchronized (ClientInstance.class) {
             init();
-            objectHandler = new TosObjectRequestHandler(transport, factory).setEnableCrcCheck(true);
+            objectHandler = new TosObjectRequestHandler(transport, factory).setEnableCrcCheck(true).setClientAutoRecognizeContentType(true);
         }
         return objectHandler;
     }

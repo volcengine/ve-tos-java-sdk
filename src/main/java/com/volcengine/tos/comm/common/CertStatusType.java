@@ -1,5 +1,6 @@
 package com.volcengine.tos.comm.common;
 
+import com.fasterxml.jackson.annotation.JsonEnumDefaultValue;
 import com.fasterxml.jackson.annotation.JsonValue;
 
 public enum CertStatusType {
@@ -7,7 +8,10 @@ public enum CertStatusType {
 
     CERT_STATUS_UNBOUND("CertUnbound"),
 
-    CERT_STATUS_EXPIRED("CertExpired");
+    CERT_STATUS_EXPIRED("CertExpired"),
+
+    @JsonEnumDefaultValue
+    CERT_STATUS_UNKNOWN("Unknown");
 
     private String certStatusType;
     private CertStatusType(String type) {

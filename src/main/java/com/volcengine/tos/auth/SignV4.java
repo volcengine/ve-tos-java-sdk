@@ -5,16 +5,18 @@ import com.volcengine.tos.internal.TosRequest;
 import com.volcengine.tos.internal.util.ParamsChecker;
 import com.volcengine.tos.internal.util.SigningUtils;
 import com.volcengine.tos.internal.util.StringUtils;
+import com.volcengine.tos.internal.util.TosUtils;
 
 import java.nio.charset.StandardCharsets;
-import java.time.*;
-import java.util.*;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
 import java.util.AbstractMap.SimpleEntry;
+import java.util.*;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @FunctionalInterface
 interface signingHeader{
@@ -27,8 +29,6 @@ interface signKey{
 }
 
 public class SignV4 implements Signer {
-    private static final Logger LOG = LoggerFactory.getLogger(SignV4.class);
-
     private Credentials credentials;
     private final String region;
     private signingHeader signingHeader;
@@ -274,7 +274,7 @@ public class SignV4 implements Signer {
 
         String req = this.canonicalRequest(method, path, contentSha256, header, query);
 
-        LOG.debug("canonical request:\n{}", req);
+        TosUtils.getLogger().debug("canonical request:\n{}", req);
 
         StringBuilder buf = new StringBuilder(SigningUtils.signPrefix.length() + 128);
 
@@ -291,7 +291,7 @@ public class SignV4 implements Signer {
 
         byte[] sum = SigningUtils.sha256(req);
         buf.append(SigningUtils.toHex(sum));
-        LOG.debug("string to sign:\n {}", buf.toString());
+        TosUtils.getLogger().debug("string to sign:\n {}", buf.toString());
         byte[] signK = SigningUtils.signKey(new SignKeyInfo(date, this.region, cred));
         byte[] sign = SigningUtils.hmacSha256(signK, buf.toString().getBytes(StandardCharsets.UTF_8));
         return String.valueOf(SigningUtils.toHex(sign));

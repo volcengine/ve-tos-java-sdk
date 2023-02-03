@@ -3,6 +3,8 @@ package com.volcengine.tos.internal.util;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.volcengine.tos.TosClientException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
@@ -11,13 +13,13 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
-import static com.volcengine.tos.internal.Consts.SDK_NAME;
-import static com.volcengine.tos.internal.Consts.SDK_VERSION;
+import static com.volcengine.tos.internal.Consts.*;
 
 public class TosUtils {
     private static final String USER_AGENT = String.format("%s/%s (%s/%s;%s)", SDK_NAME, SDK_VERSION,
             System.getProperty("os.name"), System.getProperty("os.arch"), System.getProperty("java.version", "0"));
-    public static final ObjectMapper JSON = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    private static final ObjectMapper JSON = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+            .enable(DeserializationFeature.READ_UNKNOWN_ENUM_VALUES_USING_DEFAULT_VALUE);
 
     private static final long MAX_PRE_SIGNED_TTL = 604800;
     private static final long DEFAULT_PRE_SIGNED_TTL = 3600;
@@ -30,8 +32,18 @@ public class TosUtils {
     private static final double jitter = 0.2;
     private static final ThreadLocalRandom random = ThreadLocalRandom.current();
 
+    private static final Logger logger = LoggerFactory.getLogger(SDK_LOG_NAMESPACE);
+
+    public static Logger getLogger() {
+        return logger;
+    }
+
     public static String getUserAgent() {
         return USER_AGENT;
+    }
+
+    public static ObjectMapper getJsonMapper() {
+        return JSON;
     }
 
     public static Map<String, List<String>> getSupportedRegion() {
