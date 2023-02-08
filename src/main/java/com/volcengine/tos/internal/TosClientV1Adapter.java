@@ -2,8 +2,6 @@ package com.volcengine.tos.internal;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.volcengine.tos.TosClientException;
 import com.volcengine.tos.TosException;
 import com.volcengine.tos.TosServerException;
@@ -13,8 +11,6 @@ import com.volcengine.tos.internal.util.*;
 import com.volcengine.tos.model.acl.*;
 import com.volcengine.tos.model.bucket.*;
 import com.volcengine.tos.model.object.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -28,8 +24,6 @@ public class TosClientV1Adapter {
     private final TosObjectRequestHandler objectRequestHandler;
     private final TosFileRequestHandler fileRequestHandler;
     private final TosPreSignedRequestHandler preSignedRequestHandler;
-    private static final ObjectMapper JSON = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
-    private static final Logger log = LoggerFactory.getLogger(TosClientV1Adapter.class);
 
     public TosClientV1Adapter(TosBucketRequestHandler bucketRequestHandler,
                               TosObjectRequestHandler objectRequestHandler,
@@ -234,7 +228,7 @@ public class TosClientV1Adapter {
                     .setCrc64(res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_CRC64))
                     .setVersionID(res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_VERSIONID));
         }catch (IOException e) {
-            log.debug("tos: close response body failed, {}", e.toString());
+            TosUtils.getLogger().debug("tos: close response body failed, {}", e.toString());
         }
         return output;
     }
@@ -624,7 +618,7 @@ public class TosClientV1Adapter {
                 try {
                     request.getContent().close();
                 } catch (IOException e) {
-                    log.debug("tos: close request body failed, {}", e.toString());
+                    TosUtils.getLogger().debug("tos: close request body failed, {}", e.toString());
                 }
             }
         }
@@ -636,7 +630,7 @@ public class TosClientV1Adapter {
                 String s = StringUtils.toString(res.getInputStream());
                 if (s.length() > 0) {
                     try{
-                        ServerExceptionJson se = JSON.readValue(s, new TypeReference<ServerExceptionJson>(){});
+                        ServerExceptionJson se = TosUtils.getJsonMapper().readValue(s, new TypeReference<ServerExceptionJson>(){});
                         throw new TosServerException(res.getStatusCode(), se.getCode(), se.getMessage(), se.getRequestID(), se.getHostID());
                     } catch (JsonProcessingException e) {
                         if (res.getStatusCode() == HttpStatus.BAD_REQUEST) {

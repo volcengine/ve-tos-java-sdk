@@ -3,8 +3,6 @@ package com.volcengine.tos;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.volcengine.tos.auth.Credentials;
 import com.volcengine.tos.auth.SignV4;
 import com.volcengine.tos.auth.Signer;
@@ -13,6 +11,8 @@ import com.volcengine.tos.comm.io.TosRepeatableBoundedFileInputStream;
 import com.volcengine.tos.internal.*;
 import com.volcengine.tos.internal.util.ParamsChecker;
 import com.volcengine.tos.internal.util.PayloadConverter;
+import com.volcengine.tos.internal.util.StringUtils;
+import com.volcengine.tos.internal.util.TosUtils;
 import com.volcengine.tos.model.acl.GetObjectAclOutput;
 import com.volcengine.tos.model.acl.ObjectAclGrant;
 import com.volcengine.tos.model.acl.PutObjectAclInput;
@@ -23,16 +23,15 @@ import com.volcengine.tos.session.Session;
 import com.volcengine.tos.session.SessionOptionsBuilder;
 import com.volcengine.tos.session.SessionTransport;
 import com.volcengine.tos.transport.DefaultTransport;
-import com.volcengine.tos.internal.Transport;
 import com.volcengine.tos.transport.TransportConfig;
-import com.volcengine.tos.internal.util.StringUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.*;
 
 @Deprecated
@@ -42,13 +41,10 @@ public class TOSClient implements TOS{
      */
     static final int URL_MODE_DEFAULT = 0;
 
-    private static final Logger LOG = LoggerFactory.getLogger(TOSClient.class);
-
-    private static final String VERSION = "v2.5.0";
+    private static final String VERSION = "v2.5.1";
     private static final String SDK_NAME = "ve-tos-java-sdk";
     private static final String USER_AGENT = String.format("%s/%s (%s/%s;%s)", SDK_NAME, VERSION,
             System.getProperty("os.name"), System.getProperty("os.arch"), System.getProperty("java.version", "0"));
-    static final ObjectMapper JSON = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
 
     private String scheme;
     private String host;
@@ -157,7 +153,7 @@ public class TOSClient implements TOS{
                 String s = StringUtils.toString(res.getInputStream());
                 if (s.length() > 0) {
                     try{
-                        ServerExceptionJson se = JSON.readValue(s, new TypeReference<ServerExceptionJson>(){});
+                        ServerExceptionJson se = TosUtils.getJsonMapper().readValue(s, new TypeReference<ServerExceptionJson>(){});
                         throw new TosServerException(res.getStatusCode(), se.getCode(), se.getMessage(), se.getRequestID(), se.getHostID());
                     } catch (JsonProcessingException e) {
                         if (res.getStatusCode() == HttpStatus.BAD_REQUEST) {
@@ -424,7 +420,7 @@ public class TOSClient implements TOS{
             checkpoint = initCheckpoint(bucket, input, fileInfo, builders);
             if (input.isEnableCheckpoint()) {
                 try{
-                    checkpoint.writeToFile(input.getCheckpointFile(), JSON);
+                    checkpoint.writeToFile(input.getCheckpointFile(), TosUtils.getJsonMapper());
                 } catch (IOException e) {
                     throw new TosClientException("record to checkpoint file failed", e);
                 }
@@ -448,7 +444,7 @@ public class TOSClient implements TOS{
         {
             byte[] data = new byte[(int)f.length()];
             checkpointFile.read(data);
-            return JSON.readValue(data, new TypeReference<UploadFileCheckpoint>(){});
+            return TosUtils.getJsonMapper().readValue(data, new TypeReference<UploadFileCheckpoint>(){});
         }
     }
 
@@ -485,7 +481,7 @@ public class TOSClient implements TOS{
         ExecutorService executor = Executors.newFixedThreadPool(input.getTaskNum());
         List<Future<MultipartUploadedPart>> futures = new ArrayList<>(checkpoint.getPartInfoList().size());
         List<MultipartUploadedPart> uploadPartOutputs = new ArrayList<>(checkpoint.getPartInfoList().size());
-        LOG.debug("Upload file split to {} parts.", checkpoint.getPartInfoList().size());
+        TosUtils.getLogger().debug("Upload file split to {} parts.", checkpoint.getPartInfoList().size());
         for (int i = 0; i < checkpoint.getPartInfoList().size(); i++) {
             UploadFilePartInfo partInfo = checkpoint.getPartInfoList().get(i);
             if (!partInfo.isCompleted()) {
@@ -506,10 +502,10 @@ public class TOSClient implements TOS{
                     partInfo.setPart(output);
                     partInfo.setCompleted(true);
                     if (input.isEnableCheckpoint()) {
-                        checkpoint.writeToFile(input.getCheckpointFile(), JSON);
+                        checkpoint.writeToFile(input.getCheckpointFile(), TosUtils.getJsonMapper());
                     }
                     long end = System.nanoTime();
-                    LOG.debug("Upload No.{} part cost {} milliseconds, part size is {}", (finalI +1), (end-start) / 1000000, partInfo.getPartSize());
+                    TosUtils.getLogger().debug("Upload No.{} part cost {} milliseconds, part size is {}", (finalI +1), (end-start) / 1000000, partInfo.getPartSize());
                     return output;
                 });
                 futures.add(future);
@@ -702,7 +698,7 @@ public class TOSClient implements TOS{
         byte[] content = null;
         try {
             if (input.getAclRules() != null) {
-                content = JSON.writeValueAsBytes(input.getAclRules());
+                content = TosUtils.getJsonMapper().writeValueAsBytes(input.getAclRules());
             } else {
                 // 防止NPE
                 content = new byte[0];
@@ -781,7 +777,7 @@ public class TOSClient implements TOS{
         Objects.requireNonNull(input, "CompleteMultipartUploadInput is null");
         Objects.requireNonNull(input.getUploadID(), "upload id is null");
         isValidBucketName(bucket);
-        byte[] data = input.getUploadedPartData(JSON);
+        byte[] data = input.getUploadedPartData(TosUtils.getJsonMapper());
         TosRequest req = newBuilder(bucket, input.getKey())
                 .withQuery("uploadId", input.getUploadID())
                 .buildRequest(HttpMethod.POST, null).setData(data);
@@ -864,7 +860,7 @@ public class TOSClient implements TOS{
     
     private <T> T marshalOutput(InputStream reader, TypeReference<T> valueTypeRef) throws TosException{
         try{
-            return JSON.readValue(reader, valueTypeRef);
+            return TosUtils.getJsonMapper().readValue(reader, valueTypeRef);
         } catch (IOException e){
             throw new TosClientException("Marshal Output Exception", e);
         }

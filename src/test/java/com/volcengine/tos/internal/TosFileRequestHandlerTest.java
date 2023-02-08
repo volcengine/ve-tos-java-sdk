@@ -18,6 +18,7 @@ import org.testng.Assert;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
 
+import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -176,7 +177,7 @@ public class TosFileRequestHandlerTest {
                 .build();
         try{
             UploadFileV2Output output = getHandler().uploadFile(input);
-            Assert.assertNull(output.getUploadID());
+            Assert.assertNotNull(output.getUploadID());
         } catch (TosException e) {
             testFailed(e);
         } finally {
@@ -629,6 +630,31 @@ public class TosFileRequestHandlerTest {
             ClientInstance.getObjectRequestHandlerInstance().deleteObject(new DeleteObjectInput().setBucket(Consts.bucket).setKey(key));
             ClientInstance.getObjectRequestHandlerInstance().deleteObject(new DeleteObjectInput().setBucket(Consts.bucket).setKey(srcKey));
         }
+    }
+
+    @Test
+    void resumableCopyNullObjectTest() {
+        String srcKey = Consts.internalFileCrudPrefix + getUniqueObjectKey();
+        String key = Consts.internalFileCrudPrefix + getUniqueObjectKey();
+
+        // upload src data
+        ClientInstance.getObjectRequestHandlerInstance().putObject(new PutObjectInput()
+                .setContent(new ByteArrayInputStream("".getBytes()))
+                .setBucket(bucket).setKey(srcKey).setContentLength(0));
+
+        ResumableCopyObjectInput input = ResumableCopyObjectInput.builder()
+                .bucket(Consts.bucket).key(key)
+                .enableCheckpoint(true)
+                .taskNum(3)
+                .partSize(5 * 1024 * 1024)
+                .srcBucket(bucket)
+                .srcKey(srcKey)
+                .checkpointFile(sampleFilePath+".copy")
+                .build();
+
+        ResumableCopyObjectOutput output = getHandler().resumableCopyObject(input);
+        Assert.assertEquals(output.getBucket(), Consts.bucket);
+        Assert.assertEquals(output.getKey(), key);
     }
 
     public String getMD5() {

@@ -4,7 +4,7 @@ import com.volcengine.tos.TosClientException;
 import com.volcengine.tos.comm.HttpMethod;
 import com.volcengine.tos.comm.HttpStatus;
 import com.volcengine.tos.comm.TosHeader;
-import com.volcengine.tos.comm.io.TosRepeatableInputStream;
+import com.volcengine.tos.comm.io.TosRepeatableFileInputStream;
 import com.volcengine.tos.internal.model.CRC64Checksum;
 import com.volcengine.tos.internal.model.SimpleDataTransferListenInputStream;
 import com.volcengine.tos.internal.util.CRC64Utils;
@@ -14,16 +14,10 @@ import com.volcengine.tos.internal.util.TosUtils;
 import com.volcengine.tos.internal.util.dnscache.DefaultDnsCacheService;
 import com.volcengine.tos.internal.util.dnscache.DnsCacheService;
 import com.volcengine.tos.internal.util.ratelimit.RateLimitedInputStream;
-import com.volcengine.tos.model.object.TosObjectInputStream;
 import com.volcengine.tos.transport.TransportConfig;
-import okhttp3.*;
 import okhttp3.Authenticator;
-import okhttp3.internal.Util;
+import okhttp3.*;
 import okio.BufferedSink;
-import okio.Okio;
-import okio.Source;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import javax.net.ssl.*;
 import java.io.*;
@@ -32,7 +26,10 @@ import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.zip.CheckedInputStream;
 
@@ -56,7 +53,6 @@ public class RequestTransport implements Transport {
     private static final int DEFAULT_WRITE_TIMEOUT_MILLS = 30000;
     private static final int DEFAULT_CONNECT_TIMEOUT_MILLS = 10000;
     private final OkHttpClient client;
-    private static final Logger LOG = LoggerFactory.getLogger(RequestTransport.class);
     private int maxRetries;
     private DnsCacheService dnsCacheService;
 
@@ -100,7 +96,7 @@ public class RequestTransport implements Transport {
             }
         }
 
-        RequestEventListener.RequestEventListenerFactory eventListener = new RequestEventListener.RequestEventListenerFactory(LOG);
+        RequestEventListener.RequestEventListenerFactory eventListener = new RequestEventListener.RequestEventListenerFactory(TosUtils.getLogger());
         if (config.getDnsCacheTimeMinutes() > 0) {
             dnsCacheService = new DefaultDnsCacheService(config.getDnsCacheTimeMinutes());
             eventListener.setDnsCacheService(dnsCacheService);
@@ -160,9 +156,9 @@ public class RequestTransport implements Transport {
         Response response = null;
         long start = System.currentTimeMillis();
         int reqTimes = 1;
+        Request request = buildRequest(tosRequest);
         for (int i = 0; i < maxRetries+1; i++, reqTimes++) {
             try{
-                Request request = buildRequest(tosRequest);
                 response = client.newCall(request).execute();
                 if (response.code() >= HttpStatus.INTERNAL_SERVER_ERROR
                 || response.code() == HttpStatus.TOO_MANY_REQUESTS) {
@@ -172,16 +168,13 @@ public class RequestTransport implements Transport {
                             Thread.sleep(TosUtils.backoff(i));
                             // close response body before retry
                             response.close();
-                            if (tosRequest.getContent() != null) {
-                                tosRequest.getContent().reset();
-                            }
                             continue;
                         }
                     }
                 }
                 break;
             } catch (InterruptedException e) {
-                LOG.debug("tos: request interrupted while sleeping in retry");
+                TosUtils.getLogger().debug("tos: request interrupted while sleeping in retry");
                 printAccessLogFailed(e);
                 throw new TosClientException("tos: request interrupted", e);
             } catch (IOException e) {
@@ -198,12 +191,9 @@ public class RequestTransport implements Transport {
                             if (response != null) {
                                 response.close();
                             }
-                            if (tosRequest.getContent() != null) {
-                                tosRequest.getContent().reset();
-                            }
                             continue;
                         } catch (InterruptedException ie) {
-                            LOG.debug("tos: request interrupted while sleeping in retry");
+                            TosUtils.getLogger().debug("tos: request interrupted while sleeping in retry");
                             printAccessLogFailed(e);
                             throw new TosClientException("tos: request interrupted", e);
                         }
@@ -225,11 +215,11 @@ public class RequestTransport implements Transport {
     }
 
     private void printAccessLogSucceed(int code, String reqId, long cost, int reqTimes) {
-        LOG.info("tos: status code:{}, request id:{}, request cost {} ms, request {} times\n", code, reqId, cost, reqTimes);
+        TosUtils.getLogger().info("tos: status code:{}, request id:{}, request cost {} ms, request {} times\n", code, reqId, cost, reqTimes);
     }
 
     private void printAccessLogFailed(Exception e) {
-        LOG.info("tos: request exception: {}\n", e.toString());
+        TosUtils.getLogger().info("tos: request exception: {}\n", e.toString());
     }
 
     private void checkCrc(TosRequest tosRequest, Response response) {
@@ -262,7 +252,6 @@ public class RequestTransport implements Transport {
                 if (request.getContent() != null && request.getContentLength() <= 0) {
                     // 兼容 ClientV1 旧接口，有bug，ClientV2 新接口不会走到这里
                     byte[] data = new byte[request.getContent().available()];
-                    // Warning 当输入流是网络IO时，这里可能会出错
                     int exact = request.getContent().read(data);
                     if (exact != data.length) {
                         throw new IOException("expected "+data.length+" bytes, but got "+exact+" bytes.");
@@ -318,7 +307,7 @@ public class RequestTransport implements Transport {
 
 
     private OkHttpClient.Builder ignoreCertificate(OkHttpClient.Builder builder) throws TosClientException {
-        LOG.warn("tos: ignore ssl certificate verification");
+        TosUtils.getLogger().warn("tos: ignore ssl certificate verification");
         try {
             final TrustManager[] trustAllCerts = new TrustManager[] {
                 new X509TrustManager() {
@@ -339,7 +328,7 @@ public class RequestTransport implements Transport {
             builder.sslSocketFactory(sslSocketFactory, (X509TrustManager)trustAllCerts[0]);
             builder.hostnameVerifier((hostname, session) -> true);
         } catch (NoSuchAlgorithmException | KeyManagementException e) {
-            LOG.warn("tos: exception occurred while configuring ignoreSslCertificate");
+            TosUtils.getLogger().warn("tos: exception occurred while configuring ignoreSslCertificate");
             throw new TosClientException("tos: set ignoreCertificate failed", e);
         }
         return builder;
@@ -347,7 +336,7 @@ public class RequestTransport implements Transport {
 
     private MediaType getMediaType(TosRequest request) {
         String type = "";
-        if (request.getHeaders() != null) {
+        if (request.getHeaders() != null && request.getHeaders().containsKey(TosHeader.HEADER_CONTENT_TYPE)) {
             type = request.getHeaders().get(TosHeader.HEADER_CONTENT_TYPE);
         }
         return StringUtils.isEmpty(type) ? DEFAULT_MEDIA_TYPE : MediaType.parse(type);
@@ -374,20 +363,25 @@ class WrappedTransportRequestBody extends RequestBody implements Closeable {
     private InputStream content;
     private final MediaType contentType;
     private long contentLength;
+    private volatile long totalBytesRead = 0;
 
     WrappedTransportRequestBody(MediaType contentType, InputStream inputStream, long contentLength) {
         ParamsChecker.ensureNotNull(inputStream, "inputStream");
         this.contentType = contentType;
         this.contentLength = contentLength;
-        if (this.contentLength < -1L) {
+        if (this.contentLength < 0) {
             // chunked
             this.contentLength = -1L;
         }
         this.content = inputStream;
-        if (!(this.content instanceof TosObjectInputStream)) {
-            // 继承自 TosObjectInputStream 的 inputStream，已经实现 repeatable 特性
-            this.content = new TosRepeatableInputStream(inputStream, Consts.DEFAULT_READ_BUFFER_SIZE);
+        if (!this.content.markSupported()) {
+            if (this.content instanceof FileInputStream) {
+                this.content = new TosRepeatableFileInputStream((FileInputStream) this.content);
+            } else {
+                this.content = new BufferedInputStream(this.content, Consts.DEFAULT_TOS_BUFFER_STREAM_SIZE);
+            }
         }
+        this.content.mark(0);
     }
 
     @Override
@@ -402,13 +396,43 @@ class WrappedTransportRequestBody extends RequestBody implements Closeable {
 
     @Override
     public void writeTo(BufferedSink sink) throws IOException {
-        // add time cost log
-        Source source = null;
-        try {
-            source = Okio.source(content);
-            sink.writeAll(source);
-        } finally {
-            Util.closeQuietly(source);
+        if (totalBytesRead > 0) {
+            this.content.reset();
+            totalBytesRead = 0;
+        }
+        if (this.contentLength < 0) {
+            writeAllWithChunked(sink);
+        } else {
+            writeAll(sink);
+        }
+    }
+
+    private void writeAll(BufferedSink sink) throws IOException {
+        int bytesRead = 0;
+        byte[] tmp = new byte[Consts.DEFAULT_READ_BUFFER_SIZE];
+        long remaining = this.contentLength;
+        while (remaining > 0) {
+            int maxToRead = tmp.length < remaining ? tmp.length: (int) remaining;
+            bytesRead = this.content.read(tmp, 0, maxToRead);
+            if (bytesRead == -1) {
+                // eof
+                break;
+            }
+            sink.write(tmp, 0, bytesRead);
+            totalBytesRead += bytesRead;
+            remaining -= bytesRead;
+        }
+    }
+
+    private void writeAllWithChunked(BufferedSink sink) throws IOException {
+        int bytesRead = 0;
+        byte[] tmp = new byte[Consts.DEFAULT_READ_BUFFER_SIZE];
+        // chunked
+        bytesRead = this.content.read(tmp);
+        while (bytesRead != -1) {
+            sink.write(tmp, 0, bytesRead);
+            totalBytesRead += bytesRead;
+            bytesRead = this.content.read(tmp);
         }
     }
 

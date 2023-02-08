@@ -2,6 +2,7 @@ package com.volcengine.tos.internal.util.dnscache;
 
 import com.volcengine.tos.internal.util.ParamsChecker;
 import com.volcengine.tos.internal.util.StringUtils;
+import com.volcengine.tos.internal.util.TosUtils;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -67,13 +68,13 @@ class DnsCache {
         try {
             ipList = new ArrayList<>(Arrays.asList(InetAddress.getAllByName(this.host)));
             if (ipList.size() == 0) {
-                DefaultDnsCacheService.getLog().debug("tos: host {} look up 0 address.", this.host);
+                TosUtils.getLogger().debug("tos: host {} look up 0 address.", this.host);
             }
             lastUpdateTimeNanos = System.nanoTime();
         } catch (UnknownHostException e) {
             // 0 length means cannot look up any addresses.
             ipList = new ArrayList<>();
-            DefaultDnsCacheService.getLog().debug("tos: host {} look up address failed, exception is {}.", this.host, e.toString());
+            TosUtils.getLogger().debug("tos: host {} look up address failed, exception is {}.", this.host, e.toString());
         } finally {
             refreshing.set(0);
         }

@@ -7,7 +7,8 @@ import org.slf4j.LoggerFactory;
 
 public class Consts {
     public static final Logger LOG = LoggerFactory.getLogger(Consts.class);
-    public static final ObjectMapper JSON = new ObjectMapper().disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+    public static final ObjectMapper JSON = new ObjectMapper().disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
+            .enable(DeserializationFeature.READ_UNKNOWN_ENUM_VALUES_USING_DEFAULT_VALUE);
 
     // boe
     // bucket with multi-version enabled

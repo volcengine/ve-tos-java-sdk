@@ -1,4 +1,9 @@
 ## Release Note
+### 2023.1.18 Version 2.5.1
+- fix upload null file upload bug.
+- headBucket/headObject methods throw TosServerException while error happens.
+- optimize RateLimiter token acquire method.
+- fix InputStream reset bug in retrying request.
 ### 2022.11.28 Version 2.5.0
 - A brand-new version with multiple features.
 - Multiple Bucket APIs.

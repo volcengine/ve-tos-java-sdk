@@ -1,6 +1,5 @@
 package com.volcengine.tos.internal.util;
 
-import com.volcengine.tos.TosClientException;
 import com.volcengine.tos.comm.common.*;
 
 import static com.volcengine.tos.comm.common.Consts.*;
@@ -27,7 +26,7 @@ public class TypeConverter {
         } else if (StringUtils.equals(type, ACL_BUCKET_OWNER_ENTRUSTED)) {
             return ACLType.ACL_BUCKET_OWNER_ENTRUSTED;
         } else {
-            throw new TosClientException("invalid acl type: " + type, null);
+            return ACLType.ACL_UNKNOWN;
         }
     }
 
@@ -42,7 +41,7 @@ public class TypeConverter {
         } else if (StringUtils.equals(storageClass, STORAGE_CLASS_ARCHIVE_FR)) {
             return StorageClassType.STORAGE_CLASS_ARCHIVE_FR;
         } else {
-            throw new TosClientException("invalid storage class: " + storageClass, null);
+            return StorageClassType.STORAGE_CLASS_UNKNOWN;
         }
     }
 
@@ -55,7 +54,7 @@ public class TypeConverter {
         } else if (StringUtils.equals(metadataDirectiveType, METADATA_DIRECTIVE_REPLACE)) {
             return MetadataDirectiveType.METADATA_DIRECTIVE_REPLACE;
         } else {
-            throw new TosClientException("invalid metadataDirectiveType: " + metadataDirectiveType, null);
+            return MetadataDirectiveType.METADATA_DIRECTIVE_UNKNOWN;
         }
     }
 
@@ -74,7 +73,7 @@ public class TypeConverter {
         } else if (StringUtils.equals(permissionType, PERMISSION_TYPE_WRITE_ACP)) {
             return PermissionType.PERMISSION_WRITE_ACP;
         } else {
-            throw new TosClientException("invalid permissionType: " + permissionType, null);
+            return PermissionType.PERMISSION_UNKNOWN;
         }
     }
 
@@ -89,7 +88,7 @@ public class TypeConverter {
         } else if (StringUtils.equals(cannedType, CANNED_LOG_DELIVERY)) {
             return CannedType.CANNED_LOG_DELIVERY;
         } else {
-            throw new TosClientException("invalid cannedType: " + cannedType, null);
+            return CannedType.CANNED_UNKNOWN;
         }
     }
 
@@ -102,7 +101,7 @@ public class TypeConverter {
         } else if (StringUtils.equals(granteeType, GRANTEE_USER)) {
             return GranteeType.GRANTEE_USER;
         } else {
-            throw new TosClientException("invalid granteeType: " + granteeType, null);
+            return GranteeType.GRANTEE_UNKNOWN;
         }
     }
 }

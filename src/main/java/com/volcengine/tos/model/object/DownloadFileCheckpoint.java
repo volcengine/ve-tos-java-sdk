@@ -38,7 +38,7 @@ public class DownloadFileCheckpoint {
 
     public synchronized void writeToFile(String checkpointFile) throws IOException {
         try(FileOutputStream fos = new FileOutputStream(checkpointFile)) {
-            fos.write(TosUtils.JSON.writeValueAsBytes(this));
+            fos.write(TosUtils.getJsonMapper().writeValueAsBytes(this));
         } catch (JsonProcessingException e) {
             throw new TosClientException("tos: unable to do serialization", e);
         }

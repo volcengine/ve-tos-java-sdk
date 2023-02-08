@@ -1,8 +1,14 @@
 package com.volcengine.tos.internal;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.volcengine.tos.Consts;
+import com.volcengine.tos.comm.common.*;
 import com.volcengine.tos.internal.util.DateConverter;
 import com.volcengine.tos.internal.util.ParamsChecker;
 import com.volcengine.tos.internal.util.TosUtils;
+import com.volcengine.tos.model.object.ListPartsOutput;
 import org.testng.annotations.Test;
 
 import org.testng.Assert;
@@ -76,5 +82,170 @@ public class TosUtilsTest {
         Assert.assertFalse(ParamsChecker.isLocalhostOrIpAddress(addr));
         addr = "[fe80::1551:1234:fbb:fcc3]";
         Assert.assertTrue(ParamsChecker.isLocalhostOrIpAddress(addr));
+    }
+
+    @Test
+    void jsonMapperTest() throws JsonProcessingException {
+        String data = "{\"Bucket\": \"bucket-example\",\"Key\": \"object-aa\",\"UploadId\": \"6e72287f9de97be8012970c691db8e31\"," +
+                "\"PartNumberMarker\": 0,\"NextPartNumberMarker\": 0,\"MaxParts\": 1000,\"IsTruncated\": true,\"StorageClass\": " +
+                "\"STANDARD\",\"Parts\": [{\"PartNumber\": 1,\"LastModified\": \"2022-02-02T22:22:22.000Z\",\"ETag\": " +
+                "\"\\\"1e0688ec5fc9689bb1e93d201925579d\\\"\",\"Size\": 5242880}]}";
+        ListPartsOutput output = Consts.JSON.readValue(data, new TypeReference<ListPartsOutput>(){});
+        Assert.assertEquals(output.getStorageClass(), StorageClassType.STORAGE_CLASS_STANDARD);
+        data = data.replace("STANDARD", "IA");
+        output = Consts.JSON.readValue(data, new TypeReference<ListPartsOutput>(){});
+        Assert.assertEquals(output.getStorageClass(), StorageClassType.STORAGE_CLASS_IA);
+        // unknown type
+        data = data.replace("IA", "XXX-YYY");
+        output = Consts.JSON.readValue(data, new TypeReference<ListPartsOutput>(){});
+        Assert.assertEquals(output.getStorageClass(), StorageClassType.STORAGE_CLASS_UNKNOWN);
+    }
+
+    private static class AllEnumType {
+        @JsonProperty("StorageClass")
+        private StorageClassType storageClassType;
+        @JsonProperty("Canned")
+        private CannedType cannedType;
+        @JsonProperty("CertStatus")
+        private CertStatusType certStatusType;
+        @JsonProperty("Grantee")
+        private GranteeType granteeType;
+        @JsonProperty("Permission")
+        private PermissionType permissionType;
+        @JsonProperty("Protocol")
+        private ProtocolType protocolType;
+        @JsonProperty("Redirect")
+        private RedirectType redirectType;
+        @JsonProperty("Status")
+        private StatusType statusType;
+        @JsonProperty("StorageClassID")
+        private StorageClassInheritDirectiveType storageClassInheritDirectiveType;
+        @JsonProperty("VersioningStatus")
+        private VersioningStatusType versioningStatusType;
+
+        public StorageClassType getStorageClassType() {
+            return storageClassType;
+        }
+
+        public AllEnumType setStorageClassType(StorageClassType storageClassType) {
+            this.storageClassType = storageClassType;
+            return this;
+        }
+
+        public CannedType getCannedType() {
+            return cannedType;
+        }
+
+        public AllEnumType setCannedType(CannedType cannedType) {
+            this.cannedType = cannedType;
+            return this;
+        }
+
+        public CertStatusType getCertStatusType() {
+            return certStatusType;
+        }
+
+        public AllEnumType setCertStatusType(CertStatusType certStatusType) {
+            this.certStatusType = certStatusType;
+            return this;
+        }
+
+        public GranteeType getGranteeType() {
+            return granteeType;
+        }
+
+        public AllEnumType setGranteeType(GranteeType granteeType) {
+            this.granteeType = granteeType;
+            return this;
+        }
+
+        public PermissionType getPermissionType() {
+            return permissionType;
+        }
+
+        public AllEnumType setPermissionType(PermissionType permissionType) {
+            this.permissionType = permissionType;
+            return this;
+        }
+
+        public ProtocolType getProtocolType() {
+            return protocolType;
+        }
+
+        public AllEnumType setProtocolType(ProtocolType protocolType) {
+            this.protocolType = protocolType;
+            return this;
+        }
+
+        public RedirectType getRedirectType() {
+            return redirectType;
+        }
+
+        public AllEnumType setRedirectType(RedirectType redirectType) {
+            this.redirectType = redirectType;
+            return this;
+        }
+
+        public StatusType getStatusType() {
+            return statusType;
+        }
+
+        public AllEnumType setStatusType(StatusType statusType) {
+            this.statusType = statusType;
+            return this;
+        }
+
+        public StorageClassInheritDirectiveType getStorageClassInheritDirectiveType() {
+            return storageClassInheritDirectiveType;
+        }
+
+        public AllEnumType setStorageClassInheritDirectiveType(StorageClassInheritDirectiveType storageClassInheritDirectiveType) {
+            this.storageClassInheritDirectiveType = storageClassInheritDirectiveType;
+            return this;
+        }
+
+        public VersioningStatusType getVersioningStatusType() {
+            return versioningStatusType;
+        }
+
+        public AllEnumType setVersioningStatusType(VersioningStatusType versioningStatusType) {
+            this.versioningStatusType = versioningStatusType;
+            return this;
+        }
+    }
+
+    @Test
+    void enumTypeJsonMapperTest() throws JsonProcessingException {
+        AllEnumType allEnumType = new AllEnumType().setStorageClassType(StorageClassType.STORAGE_CLASS_STANDARD)
+                .setCannedType(CannedType.CANNED_ALL_USERS).setVersioningStatusType(VersioningStatusType.VERSIONING_STATUS_SUSPENDED)
+                .setCertStatusType(CertStatusType.CERT_STATUS_BOUND).setGranteeType(GranteeType.GRANTEE_USER)
+                .setPermissionType(PermissionType.PERMISSION_READ).setProtocolType(ProtocolType.PROTOCOL_HTTP)
+                .setRedirectType(RedirectType.REDIRECT_MIRROR).setStatusType(StatusType.STATUS_ENABLED)
+                .setStorageClassInheritDirectiveType(StorageClassInheritDirectiveType.STORAGE_CLASS_ID_SOURCE_OBJECT);
+        String data = Consts.JSON.writeValueAsString(allEnumType);
+        Assert.assertEquals(data, "{\"StorageClass\":\"STANDARD\",\"Canned\":\"AllUsers\",\"CertStatus\":\"CertBound\"," +
+                "\"Grantee\":\"CanonicalUser\",\"Permission\":\"READ\",\"Protocol\":\"http\",\"Redirect\":\"Mirror\"," +
+                "\"Status\":\"Enabled\",\"StorageClassID\":\"SOURCE_OBJECT\",\"VersioningStatus\":\"Suspended\"}");
+        data = data.replace("STANDARD", "XXX")
+                .replace("AllUsers", "XXX")
+                .replace("CertBound", "XXX")
+                .replace("CanonicalUser", "XXX")
+                .replace("READ", "XXX")
+                .replace("http", "XXX")
+                .replace("Mirror", "XXX")
+                .replace("Enabled", "XXX")
+                .replace("SOURCE_OBJECT", "XXX")
+                .replace("Suspended", "XXX");
+        AllEnumType unknownType = Consts.JSON.readValue(data, new TypeReference<AllEnumType>(){});
+        Assert.assertEquals(unknownType.getStorageClassType(), StorageClassType.STORAGE_CLASS_UNKNOWN);
+        Assert.assertEquals(unknownType.getCannedType(), CannedType.CANNED_UNKNOWN);
+        Assert.assertEquals(unknownType.getCertStatusType(), CertStatusType.CERT_STATUS_UNKNOWN);
+        Assert.assertEquals(unknownType.getGranteeType(), GranteeType.GRANTEE_UNKNOWN);
+        Assert.assertEquals(unknownType.getPermissionType(), PermissionType.PERMISSION_UNKNOWN);
+        Assert.assertEquals(unknownType.getProtocolType(), ProtocolType.PROTOCOL_UNKNOWN);
+        Assert.assertEquals(unknownType.getRedirectType(), RedirectType.REDIRECT_UNKNOWN);
+        Assert.assertEquals(unknownType.getStatusType(), StatusType.STATUS_UNKNOWN);
+        Assert.assertEquals(unknownType.getStorageClassInheritDirectiveType(), StorageClassInheritDirectiveType.STORAGE_CLASS_ID_UNKNOWN);
+        Assert.assertEquals(unknownType.getVersioningStatusType(), VersioningStatusType.VERSIONING_STATUS_UNKNOWN);
     }
 }

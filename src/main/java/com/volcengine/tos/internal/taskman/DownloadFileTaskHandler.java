@@ -11,8 +11,6 @@ import com.volcengine.tos.internal.Consts;
 import com.volcengine.tos.internal.TosObjectRequestHandler;
 import com.volcengine.tos.internal.util.*;
 import com.volcengine.tos.model.object.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -23,7 +21,6 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class DownloadFileTaskHandler {
-    private static final Logger logger = LoggerFactory.getLogger(DownloadFileTaskHandler.class);
     private DownloadFileInput input;
     private TosObjectRequestHandler handler;
     private DownloadFileCheckpoint checkpoint;
@@ -166,7 +163,7 @@ public class DownloadFileTaskHandler {
         File file = new File(this.input.getTempFilePath());
         try{
             if (file.exists()) {
-                logger.debug("tos: temp file already exists.");
+                TosUtils.getLogger().debug("tos: temp file already exists.");
             } else {
                 file.getParentFile().mkdirs();
                 file.createNewFile();
@@ -186,7 +183,7 @@ public class DownloadFileTaskHandler {
             try{
                 checkpoint = loadCheckpointFromFile(input.getCheckpointFile());
             } catch (IOException | ClassNotFoundException e){
-                logger.debug("loadCheckpointFromFile failed, {}", e.toString());
+                TosUtils.getLogger().debug("loadCheckpointFromFile failed, {}", e.toString());
                 Util.deleteCheckpointFile(input.getCheckpointFile());
             }
         }
@@ -230,7 +227,7 @@ public class DownloadFileTaskHandler {
         try(FileInputStream checkpointFile = new FileInputStream(f)) {
             byte[] data = new byte[(int)f.length()];
             checkpointFile.read(data);
-            return TosUtils.JSON.readValue(data, new TypeReference<DownloadFileCheckpoint>(){});
+            return TosUtils.getJsonMapper().readValue(data, new TypeReference<DownloadFileCheckpoint>(){});
         }
     }
 

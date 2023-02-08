@@ -610,7 +610,7 @@ public class TosObjectRequestHandlerBasicTest {
             } catch (IOException e) {
                 testFailed(e);
             } catch (TosException e) {
-                Assert.assertTrue(e instanceof UnexpectedStatusCodeException);
+                Assert.assertTrue(e instanceof TosServerException);
                 Assert.assertEquals(e.getStatusCode(), HttpStatus.NOT_MODIFIED);
             }
 
@@ -624,7 +624,7 @@ public class TosObjectRequestHandlerBasicTest {
             } catch (IOException e) {
                 testFailed(e);
             } catch (TosException e) {
-                Assert.assertTrue(e instanceof UnexpectedStatusCodeException);
+                Assert.assertTrue(e instanceof TosServerException);
                 Assert.assertEquals(e.getStatusCode(), HttpStatus.NOT_MODIFIED);
             }
 
