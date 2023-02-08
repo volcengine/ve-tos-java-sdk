@@ -49,7 +49,6 @@ public class DefaultRateLimiter implements RateLimiter {
         double duration = (timeMicros - lastTokenGivenNanos) / 1e9;
         long increaseToken = (long) (duration * rate);
         currentAmount = Math.min(increaseToken + currentAmount, capacity);
-//        System.out.printf("want: %d, currentAmount: %d, rate:%d, last:%d \n", want, currentAmount, rate, lastTokenGivenNanos);
         if (want > capacity) {
             return new RateLimitRes().setOk(true).setTimeToWaitNanos(0);
         }

@@ -1,11 +1,15 @@
 package com.volcengine.tos.comm.common;
 
+import com.fasterxml.jackson.annotation.JsonEnumDefaultValue;
 import com.fasterxml.jackson.annotation.JsonValue;
 
 public enum VersioningStatusType {
     VERSIONING_STATUS_ENABLED("Enabled"),
 
-    VERSIONING_STATUS_SUSPENDED("Suspended");
+    VERSIONING_STATUS_SUSPENDED("Suspended"),
+
+    @JsonEnumDefaultValue
+    VERSIONING_STATUS_UNKNOWN("Unknown");
 
     private String versioningStatusType;
     private VersioningStatusType(String type) {

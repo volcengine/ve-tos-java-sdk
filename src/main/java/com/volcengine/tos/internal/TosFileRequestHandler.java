@@ -151,28 +151,9 @@ public class TosFileRequestHandler {
 
     public UploadFileV2Output uploadFile(UploadFileV2Input input) throws TosException {
         UploadFileTaskHandler handler = new UploadFileTaskHandler(input, this.objectHandler, this.enableCrcCheck);
-        handler.validateInput();
-        if (handler.isNullFile()) {
-            // 上传空文件
-            return uploadNullFile(input);
-        }
         handler.initTask();
         handler.dispatch();
         return handler.handle();
-    }
-
-    private UploadFileV2Output uploadNullFile(UploadFileV2Input input) {
-        ParamsChecker.ensureNotNull(input, "UploadFileV2Input");
-        try{
-            PutObjectOutput output = objectHandler.putObject(new PutObjectInput().setBucket(input.getBucket())
-                    .setKey(input.getKey()).setContent(new FileInputStream(input.getFilePath())));
-            return new UploadFileV2Output().setRequestInfo(output.getRequestInfo()).setVersionID(output.getVersionID())
-                    .setEtag(output.getEtag()).setHashCrc64ecma(output.getHashCrc64ecma())
-                    .setSsecKeyMD5(output.getSseCustomerKeyMD5()).setSsecAlgorithm(output.getSseCustomerAlgorithm())
-                    .setBucket(input.getBucket()).setKey(input.getKey());
-        } catch (FileNotFoundException e) {
-            throw new TosClientException("tos: invalid file path", e);
-        }
     }
 
     public DownloadFileOutput downloadFile(DownloadFileInput input) throws TosException {

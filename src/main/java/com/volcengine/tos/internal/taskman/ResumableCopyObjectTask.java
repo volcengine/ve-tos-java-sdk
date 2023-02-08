@@ -6,6 +6,8 @@ import com.volcengine.tos.internal.TosObjectRequestHandler;
 import com.volcengine.tos.internal.util.ParamsChecker;
 import com.volcengine.tos.model.object.*;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.util.concurrent.Callable;
 
 public class ResumableCopyObjectTask extends TosTask implements TaskOutput<UploadPartCopyV2Output> {
@@ -30,6 +32,15 @@ public class ResumableCopyObjectTask extends TosTask implements TaskOutput<Uploa
     @Override
     public Callable<TaskOutput<?>> getCallableTask() {
         return () -> {
+            if (partInfo.getPartNumber() == 1 && partInfo.getCopySourceRangeStart() == 0
+            && partInfo.getCopySourceRangeEnd() == 0) {
+                UploadPartV2Input input = UploadPartV2Input.builder()
+                        .content(new ByteArrayInputStream("".getBytes())).contentLength(0)
+                        .bucket(checkpoint.getBucket()).key(checkpoint.getKey()).partNumber(1)
+                        .uploadID(checkpoint.getUploadID()).options(this.options).build();
+                uploadNullPart(input);
+                return this;
+            }
             UploadPartCopyV2Input input = UploadPartCopyV2Input.builder()
                     .bucket(checkpoint.getBucket())
                     .key(checkpoint.getKey())
@@ -54,7 +65,6 @@ public class ResumableCopyObjectTask extends TosTask implements TaskOutput<Uploa
             try{
                 this.output = this.handler.uploadPartCopy(input);
                 this.partInfo.setCompleted(true);
-                System.out.println("we set it!!");
                 this.partInfo.setEtag(this.output.getEtag());
                 if (this.enableCheckpoint) {
                     this.checkpoint.writeToFile(this.checkpointFile);
@@ -73,6 +83,33 @@ public class ResumableCopyObjectTask extends TosTask implements TaskOutput<Uploa
             }
             return this;
         };
+    }
+
+    private void uploadNullPart(UploadPartV2Input input) throws IOException {
+        CopyEvent event = new CopyEvent().setBucket(checkpoint.getBucket()).setKey(checkpoint.getKey())
+                .setSrcBucket(checkpoint.getSrcBucket()).setSrcKey(checkpoint.getSrcKey())
+                .setSrcVersionID(checkpoint.getSrcVersionID()).setCheckpointFile(checkpointFile)
+                .setUploadID(checkpoint.getUploadID());
+        try{
+            UploadPartV2Output output = this.handler.uploadPart(input);
+            this.output = new UploadPartCopyV2Output().etag(output.getEtag()).partNumber(1).requestInfo(output.getRequestInfo());
+            this.partInfo.setCompleted(true);
+            this.partInfo.setEtag(this.output.getEtag());
+            if (this.enableCheckpoint) {
+                this.checkpoint.writeToFile(this.checkpointFile);
+            }
+            Util.postCopyEvent(this.copyEventListener, event.setCopyPartInfo(this.partInfo)
+                    .setType(CopyEventType.CopyEventUploadPartCopySucceed));
+        } catch (TosException e) {
+            if (Util.needAbortTask(e.getStatusCode())) {
+                Util.postCopyEvent(this.copyEventListener, event.setException(e)
+                        .setType(CopyEventType.CopyEventUploadPartCopyAborted));
+                throw e;
+            } else {
+                Util.postCopyEvent(this.copyEventListener, event.setException(e)
+                        .setType(CopyEventType.CopyEventUploadPartCopyFailed));
+            }
+        }
     }
 
     @Override

@@ -1,10 +1,13 @@
 package com.volcengine.tos.comm.common;
 
+import com.fasterxml.jackson.annotation.JsonEnumDefaultValue;
 import com.fasterxml.jackson.annotation.JsonValue;
 
 public enum RedirectType {
     REDIRECT_MIRROR("Mirror"),
-    REDIRECT_ASYNC("Async");
+    REDIRECT_ASYNC("Async"),
+    @JsonEnumDefaultValue
+    REDIRECT_UNKNOWN("Unknown");
 
     private String type;
     private RedirectType(String type) {

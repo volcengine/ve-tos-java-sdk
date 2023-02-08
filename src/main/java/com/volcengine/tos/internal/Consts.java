@@ -6,11 +6,14 @@ import java.util.Set;
 
 public interface Consts {
     int DEFAULT_READ_BUFFER_SIZE = 8192;
+    int DEFAULT_TOS_BUFFER_STREAM_SIZE = 512 * 1024;
 
     String SCHEME_HTTP = "http";
     String SCHEME_HTTPS = "https";
     String SDK_NAME = "ve-tos-java-sdk";
-    String SDK_VERSION = "v2.5.0";
+    String SDK_VERSION = "v2.5.1";
+
+    String SDK_LOG_NAMESPACE = "com.volcengine.tos";
 
     int MIN_PART_NUM = 1;
     int MAX_PART_NUM = 10000;

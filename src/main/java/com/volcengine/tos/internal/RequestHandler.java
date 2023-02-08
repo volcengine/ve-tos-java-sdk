@@ -9,15 +9,12 @@ import com.volcengine.tos.comm.Code;
 import com.volcengine.tos.comm.HttpStatus;
 import com.volcengine.tos.internal.util.StringUtils;
 import com.volcengine.tos.internal.util.TosUtils;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.List;
 
 class RequestHandler {
     private Transport transport;
-    private static final Logger log = LoggerFactory.getLogger(RequestHandler.class);
 
     RequestHandler(Transport transport) {
         this.transport = transport;
@@ -32,7 +29,7 @@ class RequestHandler {
         return this;
     }
 
-    protected  <T> T doRequest(TosRequest request, int expectedCode, Action<TosResponse, T> action) {
+    protected <T> T doRequest(TosRequest request, int expectedCode, Action<TosResponse, T> action) {
         try (TosResponse res = doRequest(request)) {
             if (containExpectedCode(res.getStatusCode(), expectedCode)) {
                 return action.apply(res);
@@ -74,7 +71,7 @@ class RequestHandler {
                 try {
                     request.getContent().close();
                 } catch (IOException e) {
-                    log.debug("tos: close request body failed, {}", e.toString());
+                    TosUtils.getLogger().debug("tos: close request body failed, {}", e.toString());
                 }
             }
         }
@@ -100,7 +97,7 @@ class RequestHandler {
         if (s.length() > 0) {
             ServerExceptionJson se = null;
             try{
-                se = TosUtils.JSON.readValue(s, new TypeReference<ServerExceptionJson>(){});
+                se = TosUtils.getJsonMapper().readValue(s, new TypeReference<ServerExceptionJson>(){});
             } catch (JsonProcessingException e) {
                 if (res.getStatusCode() == HttpStatus.BAD_REQUEST) {
                     throw new TosClientException("tos: bad request" + s, null);
@@ -109,7 +106,8 @@ class RequestHandler {
             }
             throw new TosServerException(res.getStatusCode(), se.getCode(), se.getMessage(), se.getRequestID(), se.getHostID());
         }
-        // head 不返回 body，此处特殊处理
+        // head请求服务端报错时不返回body，以下特殊处理
+        // 404、403场景给 message 赋值，这两种场景比较常见
         if (res.getStatusCode() == HttpStatus.NOT_FOUND) {
             // 针对 head 404 场景
             throw new TosServerException(res.getStatusCode(), Code.NOT_FOUND, "", res.getRequesID(), "");
@@ -118,6 +116,8 @@ class RequestHandler {
             // 针对 head 403 场景
             throw new TosServerException(res.getStatusCode(), Code.FORBIDDEN, "", res.getRequesID(), "");
         }
+        // 2.5.1 版本后统一抛出TosServerException，之前版本会抛UnexpectedStatusCodeException
+        throw new TosServerException(res.getStatusCode(), "", "", res.getRequesID(), "");
     }
 }
 

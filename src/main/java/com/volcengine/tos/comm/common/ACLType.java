@@ -32,7 +32,11 @@ public enum ACLType {
     /**
      * set object acl to bucket-owner-entrusted
      */
-    ACL_BUCKET_OWNER_ENTRUSTED("bucket-owner-entrusted");
+    ACL_BUCKET_OWNER_ENTRUSTED("bucket-owner-entrusted"),
+    /**
+     * acl default type
+     */
+    ACL_UNKNOWN("unknown");
 
     private String type;
     private ACLType(String type) {

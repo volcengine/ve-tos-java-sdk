@@ -1,9 +1,6 @@
 package com.volcengine.tos.internal.util.dnscache;
 
 import com.volcengine.tos.internal.util.StringUtils;
-import org.jetbrains.annotations.Nullable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.net.InetAddress;
 import java.util.ArrayList;
@@ -14,7 +11,6 @@ import java.util.concurrent.*;
 public class DefaultDnsCacheService implements DnsCacheService {
     private static final ExecutorService executor = new ThreadPoolExecutor(1, 3, 1000,
             TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>(), Executors.defaultThreadFactory(), new ThreadPoolExecutor.AbortPolicy());
-    private static final Logger log = LoggerFactory.getLogger(DefaultDnsCacheService.class);
     private static final String VOLCES_HOST_SUFFIX = "volces.com";
     private static final String HOST_SPLIT_SEP = "\\.";
     private static final String HOST_CONCAT = ".";
@@ -35,10 +31,6 @@ public class DefaultDnsCacheService implements DnsCacheService {
         return executor;
     }
 
-    protected static Logger getLog() {
-        return log;
-    }
-
     @Override
     public List<InetAddress> getIpList(String host) {
         if (StringUtils.isEmpty(host)) {
@@ -57,7 +49,6 @@ public class DefaultDnsCacheService implements DnsCacheService {
         return getIpListFromCache(wrappedHost);
     }
 
-    @Nullable
     private List<InetAddress> getIpListFromCache(String wrappedHost) {
         List<InetAddress> res = ipListMap.get(wrappedHost).getIpList();
         if (res != null && res.size() == 0) {

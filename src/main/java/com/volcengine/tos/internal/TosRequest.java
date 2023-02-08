@@ -1,9 +1,6 @@
 package com.volcengine.tos.internal;
 
 import com.volcengine.tos.comm.event.DataTransferListener;
-import com.volcengine.tos.comm.io.TosRepeatableBoundedFileInputStream;
-import com.volcengine.tos.comm.io.TosRepeatableFileInputStream;
-import com.volcengine.tos.comm.io.TosRepeatableInputStream;
 import com.volcengine.tos.comm.ratelimit.RateLimiter;
 import com.volcengine.tos.internal.util.StringUtils;
 import com.volcengine.tos.internal.util.TosUtils;
@@ -57,16 +54,7 @@ public class TosRequest {
         this.method = method;
         this.host = host;
         this.path = path;
-        if (inputStream != null) {
-            this.content = new TosRepeatableInputStream(inputStream, Consts.DEFAULT_READ_BUFFER_SIZE);
-        } else {
-            this.content = null;
-        }
-        if (inputStream instanceof TosRepeatableInputStream || inputStream instanceof TosRepeatableFileInputStream
-                || inputStream instanceof TosRepeatableBoundedFileInputStream) {
-            // 这几种不用转换
-            this.content = inputStream;
-        }
+        this.content = inputStream;
         this.query = query;
         this.headers = headers;
         // 默认可重试
