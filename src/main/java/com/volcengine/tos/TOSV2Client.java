@@ -56,6 +56,7 @@ public class TOSV2Client implements TOSV2 {
     private void initRequestHandler() {
         if (this.factory == null) {
             if (this.transport == null) {
+                setIsHttpByEndpoint(this.config.getEndpoint());
                 this.transport = new RequestTransport(this.config.getTransportConfig());
             }
             if (this.signer == null && this.config.getCredentials() != null) {
@@ -71,6 +72,14 @@ public class TOSV2Client implements TOSV2 {
         this.fileRequestHandler = new TosFileRequestHandler(objectRequestHandler, this.transport, this.factory)
                 .setEnableCrcCheck(this.config.isEnableCrc());
         this.preSignedRequestHandler = new TosPreSignedRequestHandler(this.factory, this.signer);
+    }
+
+    private void setIsHttpByEndpoint(String endpoint) {
+        if (this.config == null || this.config.getTransportConfig() == null || StringUtils.isEmpty(endpoint)) {
+            return;
+        }
+        boolean isHttp = endpoint.startsWith(Consts.SCHEME_HTTP);
+        config.getTransportConfig().setHttp(isHttp);
     }
 
     private void initV1ClientAdapter() {

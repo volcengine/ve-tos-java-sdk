@@ -11,7 +11,7 @@ public interface Consts {
     String SCHEME_HTTP = "http";
     String SCHEME_HTTPS = "https";
     String SDK_NAME = "ve-tos-java-sdk";
-    String SDK_VERSION = "v2.5.1";
+    String SDK_VERSION = "v2.5.2";
 
     String SDK_LOG_NAMESPACE = "com.volcengine.tos";
 

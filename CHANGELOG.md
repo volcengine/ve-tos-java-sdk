@@ -1,4 +1,8 @@
 ## Release Note
+### 2023.3.1 Version 2.5.2
+- fix verify ssl cert bug.
+- remove 7-days-limit of expire param in preSignedXX methods.
+- add retry while catching InterruptedIOException.
 ### 2023.1.18 Version 2.5.1
 - fix upload null file upload bug.
 - headBucket/headObject methods throw TosServerException while error happens.

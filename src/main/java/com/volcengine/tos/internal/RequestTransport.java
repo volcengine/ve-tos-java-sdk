@@ -80,20 +80,14 @@ public class RequestTransport implements Transport {
         dispatcher.setMaxRequests(maxConnections);
         dispatcher.setMaxRequestsPerHost(maxConnections);
         OkHttpClient.Builder builder = new OkHttpClient.Builder();
-        if (!config.isEnableVerifySSL()) {
+        if (!config.isHttp() && !config.isEnableVerifySSL()) {
+            // verify ssl cert default,
+            // but if you use https and disable verifying ssl,
+            // will ignore it by the following method.
             builder = ignoreCertificate(builder);
         }
         if (StringUtils.isNotEmpty(config.getProxyHost()) && config.getProxyPort() > 0 ) {
-            SocketAddress socketAddress = new InetSocketAddress(config.getProxyHost(), config.getProxyPort());
-            builder.proxy(new Proxy(Proxy.Type.HTTP, socketAddress));
-            if (StringUtils.isNotEmpty(config.getProxyUserName())) {
-                Authenticator proxyAuthenticator = (route, response) -> {
-                    String credential = Credentials.basic(config.getProxyUserName(), config.getProxyPassword());
-                    return response.request().newBuilder()
-                            .header("Proxy-Authorization", credential).build();
-                };
-                builder.proxyAuthenticator(proxyAuthenticator);
-            }
+            addProxyConfig(config, builder);
         }
 
         RequestEventListener.RequestEventListenerFactory eventListener = new RequestEventListener.RequestEventListenerFactory(TosUtils.getLogger());
@@ -114,6 +108,28 @@ public class RequestTransport implements Transport {
                 .followSslRedirects(false)
                 .eventListenerFactory(eventListener)
                 .build();
+    }
+
+    private void addProxyConfig(TransportConfig config, OkHttpClient.Builder builder) {
+        SocketAddress socketAddress = new InetSocketAddress(config.getProxyHost(), config.getProxyPort());
+        builder.proxy(new Proxy(Proxy.Type.HTTP, socketAddress));
+        if (StringUtils.isNotEmpty(config.getProxyUserName())) {
+            Authenticator proxyAuthenticator = (route, response) -> {
+                String credential = Credentials.basic(config.getProxyUserName(), config.getProxyPassword());
+                return response.request().newBuilder()
+                        .header("Proxy-Authorization", credential).build();
+            };
+            builder.proxyAuthenticator(proxyAuthenticator);
+        }
+    }
+
+    private static boolean needVerifySslCert(boolean enableVerifySsl, boolean isHttp) {
+        boolean need = enableVerifySsl;
+        if (isHttp) {
+            // if you use http, then do not verify ssl
+            need = false;
+        }
+        return need;
     }
 
     private Dns createDnsWithCache() {
@@ -178,8 +194,8 @@ public class RequestTransport implements Transport {
                 printAccessLogFailed(e);
                 throw new TosClientException("tos: request interrupted", e);
             } catch (IOException e) {
-                if (e instanceof SocketException || e instanceof SocketTimeoutException
-                        || e instanceof UnknownHostException || e instanceof SSLException) {
+                if (e instanceof SocketException || e instanceof UnknownHostException
+                        || e instanceof SSLException || e instanceof InterruptedIOException) {
                     if (tosRequest.isRetryableOnClientException()) {
                         try{
                             if (i == maxRetries) {
@@ -307,7 +323,7 @@ public class RequestTransport implements Transport {
 
 
     private OkHttpClient.Builder ignoreCertificate(OkHttpClient.Builder builder) throws TosClientException {
-        TosUtils.getLogger().warn("tos: ignore ssl certificate verification");
+        TosUtils.getLogger().info("tos: ignore ssl certificate verification");
         try {
             final TrustManager[] trustAllCerts = new TrustManager[] {
                 new X509TrustManager() {
@@ -328,7 +344,7 @@ public class RequestTransport implements Transport {
             builder.sslSocketFactory(sslSocketFactory, (X509TrustManager)trustAllCerts[0]);
             builder.hostnameVerifier((hostname, session) -> true);
         } catch (NoSuchAlgorithmException | KeyManagementException e) {
-            TosUtils.getLogger().warn("tos: exception occurred while configuring ignoreSslCertificate");
+            TosUtils.getLogger().error("tos: exception occurred while configuring ignoreSslCertificate");
             throw new TosClientException("tos: set ignoreCertificate failed", e);
         }
         return builder;

@@ -2,7 +2,6 @@ package com.volcengine.tos.internal;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.volcengine.tos.Consts;
-import com.volcengine.tos.TosClientException;
 import com.volcengine.tos.TosException;
 import com.volcengine.tos.comm.HttpMethod;
 import com.volcengine.tos.comm.HttpStatus;
@@ -21,7 +20,6 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.*;
-import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 public class TosPreSignedRequestHandlerTest {
@@ -74,9 +72,8 @@ public class TosPreSignedRequestHandlerTest {
             PreSignedURLInput input = new PreSignedURLInput().setHttpMethod(HttpMethod.PUT).setBucket(Consts.bucket)
                     .setKey(key).setExpires(604800 * 10);
             handler.preSignedURL(input);
-            Assert.fail();
         } catch (Exception e) {
-            Assert.assertTrue(e instanceof TosClientException);
+            Assert.fail();
         }
 
         // put object
@@ -222,9 +219,8 @@ public class TosPreSignedRequestHandlerTest {
             PreSignedURLInput input = new PreSignedURLInput().setHttpMethod(HttpMethod.PUT).setBucket(Consts.bucket)
                     .setKey(key).setExpires(604800 * 10).setAlternativeEndpoint(Consts.endpoint2);
             handler.preSignedURL(input);
-            Assert.fail();
         } catch (Exception e) {
-            Assert.assertTrue(e instanceof TosClientException);
+            Assert.fail();
         }
 
         // put object

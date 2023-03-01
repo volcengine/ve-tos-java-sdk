@@ -103,7 +103,9 @@ public class UploadFileTaskHandler {
         long consumed = this.consumedBytes.get();
         DataTransferStatus status = new DataTransferStatus().setTotalBytes(total).setConsumedBytes(consumed);
         if (!readyForComplete()) {
-            throw new TosClientException("tos: some upload tasks failed.", null);
+            String message = "tos: some upload tasks failed. bucket is " + this.input.getBucket() +
+                    ", key is " + this.input.getKey();
+            throw new TosClientException(message, null);
         }
         return completeUploadFileTask(status);
     }
