@@ -377,6 +377,8 @@ public class TosObjectRequestHandler {
 
     public UploadPartCopyV2Output uploadPartCopy(UploadPartCopyV2Input input) throws TosException {
         ParamsChecker.ensureNotNull(input, "UploadPartCopyV2Input");
+        ParamsChecker.ensureNotNull(input.getUploadID(), "UploadID");
+        ParamsChecker.isValidPartNumber(input.getPartNumber());
         ParamsChecker.isValidBucketNameAndKey(input.getBucket(), input.getKey());
         ParamsChecker.isValidBucketNameAndKey(input.getSourceBucket(), input.getSourceKey());
         RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), input.getAllSettedHeaders())
@@ -470,6 +472,7 @@ public class TosObjectRequestHandler {
     public FetchObjectOutput fetchObject(FetchObjectInput input) throws TosException {
         ParamsChecker.ensureNotNull(input, "FetchObjectInput");
         ParamsChecker.isValidBucketNameAndKey(input.getBucket(), input.getKey());
+        ParamsChecker.ensureNotNull(input.getUrl(), "URL");
         TosMarshalResult marshalResult = PayloadConverter.serializePayloadAndComputeMD5(input);
         RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), input.getAllSettedHeaders())
                 .withQuery("fetch", "").withHeader(TosHeader.HEADER_CONTENT_MD5, marshalResult.getContentMD5());
@@ -486,6 +489,7 @@ public class TosObjectRequestHandler {
     public PutFetchTaskOutput putFetchTask(PutFetchTaskInput input) throws TosException {
         ParamsChecker.ensureNotNull(input, "PutFetchTaskInput");
         ParamsChecker.isValidBucketName(input.getBucket());
+        ParamsChecker.ensureNotNull(input.getUrl(), "URL");
         TosMarshalResult marshalResult = PayloadConverter.serializePayloadAndComputeMD5(input);
         RequestBuilder builder = this.factory.init(input.getBucket(), "", input.getAllSettedHeaders())
                 .withQuery("fetchTask", "").withHeader(TosHeader.HEADER_CONTENT_MD5, marshalResult.getContentMD5());

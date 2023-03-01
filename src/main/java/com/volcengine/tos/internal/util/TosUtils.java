@@ -212,8 +212,8 @@ public class TosUtils {
         if (expires == 0) {
             ttl = DEFAULT_PRE_SIGNED_TTL;
         }
-        if (expires > MAX_PRE_SIGNED_TTL || expires < 0) {
-            throw new TosClientException("tos: invalid preSignedUrl expires, should not be in [1, 604800].", null);
+        if (expires < 0) {
+            throw new TosClientException("tos: invalid preSignedUrl expires, should be larger than 0.", null);
         }
         return ttl;
     }
