@@ -44,7 +44,7 @@ public class TransportConfig {
     /**
      * 是否开启 SSL 证书校验，默认为 true
      */
-    private boolean enableVerifySSL;
+    private boolean enableVerifySSL = true;
 
     /**
      * DNS 缓存的有效期，单位：毫秒，小与等于 0 时代表关闭 DNS 缓存，默认为 0
@@ -61,6 +61,8 @@ public class TransportConfig {
      * 最大重试次数，默认为 3 次
      */
     private int maxRetryCount;
+
+    private boolean isHttp;
 
     public int getMaxConnections() {
         return maxConnections;
@@ -181,6 +183,15 @@ public class TransportConfig {
         return this;
     }
 
+    public boolean isHttp() {
+        return isHttp;
+    }
+
+    public TransportConfig setHttp(boolean http) {
+        isHttp = http;
+        return this;
+    }
+
     public static TransportConfigBuilder builder() {
         return new TransportConfigBuilder();
     }
@@ -207,6 +218,7 @@ public class TransportConfig {
             this.connectTimeoutMills = 10000;
             this.readTimeoutMills = 30000;
             this.writeTimeoutMills = 30000;
+            this.enableVerifySSL = true;
         }
 
         public TransportConfigBuilder maxConnections(int maxConnections) {

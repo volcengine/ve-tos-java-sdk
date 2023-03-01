@@ -103,7 +103,9 @@ public class DownloadFileTaskHandler {
         DataTransferStatus status = new DataTransferStatus().setConsumedBytes(this.consumedBytes.get())
                 .setTotalBytes(checkpoint.getDownloadObjectInfo().getObjectSize());
         if (!readyForComplete()) {
-            throw new TosClientException("tos: some download tasks failed.", null);
+            String message = "tos: some download tasks failed. bucket is " + this.input.getBucket() +
+                    ", key is " + this.input.getKey();
+            throw new TosClientException(message, null);
         }
         Util.postDataTransferStatus(this.input.getDataTransferListener(), status.setType(DataTransferType.DATA_TRANSFER_SUCCEED));
 
