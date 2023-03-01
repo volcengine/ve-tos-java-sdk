@@ -760,6 +760,47 @@ public class TosBucketRequestHandlerTest {
         }
     }
 
+    @Test
+    void bucketPolicyTest() {
+        try{
+            getHandler().deleteBucketPolicy(new DeleteBucketPolicyInput().setBucket(Consts.bucket));
+        } catch (TosException e) {
+            testFailed(e);
+        }
+
+        try{
+            getHandler().getBucketPolicy(new GetBucketPolicyInput().setBucket(Consts.bucket));
+            Assert.fail();
+        } catch (TosException e) {
+            Assert.assertEquals(e.getStatusCode(), HttpStatus.NOT_FOUND);
+        }
+
+        String policy = "{\"Statement\":[{\"Action\":[\"*\"],\"Effect\":\"Allow\",\"Principal\":\"*\",\"Resource\":[\"trn:tos:::"
+                + Consts.bucket + "/*\",\"trn:tos:::" + Consts.bucket + "\"],\"Sid\":\"internal public\"}]}";
+        PutBucketPolicyInput input = new PutBucketPolicyInput().setBucket(Consts.bucket).setPolicy(policy);
+        try{
+            // put
+            getHandler().putBucketPolicy(input);
+            // list
+            GetBucketPolicyOutput output = getHandler().getBucketPolicy(new GetBucketPolicyInput().setBucket(Consts.bucket));;
+            Assert.assertNotNull(output.getPolicy());
+        } catch (TosException e) {
+            testFailed(e);
+        } finally {
+            try{
+                getHandler().deleteBucketPolicy(new DeleteBucketPolicyInput().setBucket(Consts.bucket));
+            } catch (Exception e) {
+                testFailed(e);
+            }
+            try{
+                getHandler().getBucketPolicy(new GetBucketPolicyInput().setBucket(Consts.bucket));
+                Assert.fail();
+            } catch (TosException e) {
+                Assert.assertEquals(e.getStatusCode(), HttpStatus.NOT_FOUND);
+            }
+        }
+    }
+
     private void testFailed(Exception e) {
         Consts.LOG.error("bucket test failed, {}", e.toString());
         e.printStackTrace();

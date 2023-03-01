@@ -83,7 +83,9 @@ public class ResumableCopyObjectTaskHandler {
             copiedPartInfos.add(new UploadedPartV2().setPartNumber(tmp.getPartNumber()).setEtag(tmp.getEtag()));
         }
         if (!readyForComplete()) {
-            throw new TosClientException("tos: some copy tasks failed.", null);
+            String message = "tos: some copy tasks failed. bucket is " + this.input.getBucket() +
+                    ", dest key is " + this.input.getKey() + ", source key is " + this.input.getSrcKey();
+            throw new TosClientException(message, null);
         }
         return completeResumableCopyObjectTask();
     }

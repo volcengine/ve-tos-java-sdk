@@ -15,7 +15,6 @@ import com.volcengine.tos.model.bucket.*;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 
 public class TosBucketRequestHandler {
     private RequestHandler bucketHandler;
@@ -309,6 +308,7 @@ public class TosBucketRequestHandler {
     public PutBucketNotificationOutput putBucketNotification(PutBucketNotificationInput input) throws TosException {
         ParamsChecker.ensureNotNull(input, "PutBucketNotificationInput");
         ParamsChecker.isValidBucketName(input.getBucket());
+        ParamsChecker.ensureNotNull(input.getCloudFunctionConfigurations(), "CloudFunctionConfigurations");
         TosMarshalResult marshalResult = PayloadConverter.serializePayloadAndComputeMD5(input);
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("notification", "")
                 .withHeader(TosHeader.HEADER_CONTENT_MD5, marshalResult.getContentMD5());

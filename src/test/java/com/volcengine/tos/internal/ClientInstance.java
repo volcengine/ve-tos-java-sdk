@@ -65,7 +65,7 @@ public class ClientInstance {
 
     private static void init() {
         if (transport == null) {
-            transport = new RequestTransport(config);
+            transport = new RequestTransport(config.setEnableVerifySSL(true).setHttp(true));
         }
         if (signer == null) {
             Credentials credentials = new StaticCredentials(Consts.accessKey, Consts.secretKey);
