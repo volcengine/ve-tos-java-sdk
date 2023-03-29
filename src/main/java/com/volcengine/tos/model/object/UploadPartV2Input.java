@@ -91,6 +91,15 @@ public class UploadPartV2Input {
         return this;
     }
 
+    public int getReadLimit() {
+        return uploadPartBasicInput.getReadLimit();
+    }
+
+    public UploadPartV2Input setReadLimit(int readLimit) {
+        this.uploadPartBasicInput.setReadLimit(readLimit);
+        return this;
+    }
+
     @Override
     public String toString() {
         return "UploadPartV2Input{" +
@@ -165,6 +174,11 @@ public class UploadPartV2Input {
 
         public UploadPartV2InputBuilder rateLimiter(RateLimiter rateLimiter) {
             this.uploadPartBasicInput.setRateLimiter(rateLimiter);
+            return this;
+        }
+
+        public UploadPartV2InputBuilder readLimit(int readLimit) {
+            this.uploadPartBasicInput.setReadLimit(readLimit);
             return this;
         }
 

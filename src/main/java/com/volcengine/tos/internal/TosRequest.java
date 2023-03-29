@@ -28,6 +28,7 @@ public class TosRequest {
      */
     private long crc64InitValue;
     private transient InputStream content;
+    private int readLimit;
     private RateLimiter rateLimiter;
     private DataTransferListener dataTransferListener;
     private Map<String, String> headers = Collections.emptyMap();
@@ -220,6 +221,15 @@ public class TosRequest {
 
     public TosRequest setDataTransferListener(DataTransferListener dataTransferListener) {
         this.dataTransferListener = dataTransferListener;
+        return this;
+    }
+
+    public int getReadLimit() {
+        return readLimit;
+    }
+
+    public TosRequest setReadLimit(int readLimit) {
+        this.readLimit = readLimit;
         return this;
     }
 }

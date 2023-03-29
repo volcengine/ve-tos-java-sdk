@@ -86,6 +86,15 @@ public class PutObjectInput {
         return this;
     }
 
+    public int getReadLimit() {
+        return putObjectBasicInput.getReadLimit();
+    }
+
+    public PutObjectInput setReadLimit(int readLimit) {
+        this.putObjectBasicInput.setReadLimit(readLimit);
+        return this;
+    }
+
     @Override
     public String toString() {
         return "PutObjectInput{" +
@@ -147,6 +156,11 @@ public class PutObjectInput {
 
         public PutObjectInputBuilder rateLimiter(RateLimiter rateLimiter) {
             this.putObjectBasicInput.setRateLimiter(rateLimiter);
+            return this;
+        }
+
+        public PutObjectInputBuilder readLimit(int readLimit) {
+            this.putObjectBasicInput.setReadLimit(readLimit);
             return this;
         }
 
