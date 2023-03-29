@@ -24,10 +24,8 @@ import org.testng.Assert;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -95,30 +93,29 @@ public class TosObjectRequestHandlerBasicTest {
     @Test
     void invalidObjectKeyTest() {
         // invisible char
-        // todo open in next version
-//        char[] invisibleChars = new char[32];
-//        for (int i = 0; i < 32; ++i) {
-//            invisibleChars[i] = (char) i;
-//        }
-//        String invisibleString = Arrays.toString(invisibleChars);
-//        try {
-//            PutObjectBasicInput basicInput = PutObjectBasicInput.builder().bucket(Consts.bucketCopy).key(invisibleString).build();
-//            getHandler().putObject(PutObjectInput.builder().putObjectBasicInput(basicInput).build());
-//        } catch (TosClientException e) {
-//            Assert.assertEquals(e.getMessage(), "object key should not contain invisible unicode characters");
-//        }
-//
-//        invisibleChars = new char[128];
-//        for (int i = 0; i < 128; ++i) {
-//            invisibleChars[i] = (char) (i+128);
-//        }
-//        invisibleString = Arrays.toString(invisibleChars);
-//        try {
-//            PutObjectBasicInput basicInput = PutObjectBasicInput.builder().bucket(Consts.bucket).key(invisibleString).build();
-//            getHandler().putObject(PutObjectInput.builder().putObjectBasicInput(basicInput).build());
-//        } catch (TosClientException e) {
-//            Assert.assertEquals(e.getMessage(), "object key should not contain invisible unicode characters");
-//        }
+        // can not be \x00
+        char[] invisibleChars = new char[32];
+        for (int i = 0; i < 32; ++i) {
+            invisibleChars[i] = (char) (i+1);
+        }
+        String invisibleString = Arrays.toString(invisibleChars);
+        try {
+            getHandler().putObject(PutObjectInput.builder().bucket(Consts.bucketCopy).key(invisibleString).build());
+        } catch (TosClientException e) {
+            Assert.assertEquals(e.getMessage(), "object key should not contain invisible unicode characters");
+        }
+
+        invisibleChars = new char[128];
+        for (int i = 0; i < 128; ++i) {
+            invisibleChars[i] = (char) (i+128+1);
+        }
+        invisibleString = Arrays.toString(invisibleChars);
+        try {
+            PutObjectBasicInput basicInput = PutObjectBasicInput.builder().bucket(Consts.bucket).key(invisibleString).build();
+            getHandler().putObject(PutObjectInput.builder().putObjectBasicInput(basicInput).build());
+        } catch (TosClientException e) {
+            Assert.assertEquals(e.getMessage(), "object key should not contain invisible unicode characters");
+        }
 
 
         // invalid length
@@ -1388,7 +1385,6 @@ public class TosObjectRequestHandlerBasicTest {
                 .contentDisposition("attachment")
                 .contentEncoding("deflate")
                 .contentLanguage("en-US")
-                .contentType("application/json")
                 .expires(dt)
                 .customMetadata(customMeta)
                 // the following settings do not affect to the existed object
@@ -1431,7 +1427,7 @@ public class TosObjectRequestHandlerBasicTest {
             Assert.assertEquals(headRes.getContentDisposition(), "attachment");
             Assert.assertEquals(headRes.getContentEncoding(), "deflate");
             Assert.assertEquals(headRes.getContentLanguage(), "en-US");
-            Assert.assertEquals(headRes.getContentType(), "application/json");
+            Assert.assertEquals(headRes.getContentType(), "binary/octet-stream");
             Assert.assertEquals(headRes.getExpiresInDate().toString(), dt.toString());
             Assert.assertEquals(headRes.getExpires(), DateConverter.dateToRFC1123String(dt));
             Assert.assertEquals(headRes.getCacheControl(), "max-age=600");
@@ -1674,6 +1670,43 @@ public class TosObjectRequestHandlerBasicTest {
                 end = System.currentTimeMillis();
                 LOG.info("getObject cost {} ms", end-start);
                 Assert.assertTrue((end-start) > 10000);
+            } catch (IOException e) {
+                testFailed(e);
+            }
+        } catch (Exception e) {
+            testFailed(e);
+        } finally{
+            clearData(key);
+        }
+    }
+
+    @Test
+    void putObjectWithNetworkStreamTest() {
+        // basic crud
+        String key = getUniqueObjectKey();
+        String dataUrl = "https://www.volcengine.com/docs/6349/79895";
+        try(BufferedInputStream content = new BufferedInputStream(new URL(dataUrl).openStream())){
+            PutObjectOutput putRes = getHandler().putObject(PutObjectInput.builder()
+                    .bucket(Consts.bucket)
+                    .key(key)
+                    .content(content)
+                    .readLimit(1024 * 1024)
+                    .build());
+
+            HeadObjectV2Output headRes = getHandler().headObject(HeadObjectV2Input.builder()
+                    .bucket(Consts.bucket)
+                    .key(key)
+                    .build());
+            Assert.assertEquals(headRes.getEtag(), putRes.getEtag());
+            Assert.assertEquals(headRes.getVersionID(), putRes.getVersionID());
+
+            try(GetObjectV2Output getRes = getHandler().getObject(GetObjectV2Input.builder()
+                    .bucket(Consts.bucket)
+                    .key(key)
+                    .build())){
+                Assert.assertEquals(getRes.getContentLength(), headRes.getContentLength());
+                Assert.assertEquals(getRes.getEtag(), putRes.getEtag());
+                Assert.assertEquals(getRes.getVersionID(), putRes.getVersionID());
             } catch (IOException e) {
                 testFailed(e);
             }

@@ -276,7 +276,7 @@ public class RequestTransport implements Transport {
                 } else if (request.getContent() != null){
                     // only appendObject use, not support chunk
                     // make sure the content length is set
-                    builder.post(new WrappedTransportRequestBody(getMediaType(request), request.getContent(), request.getContentLength()));
+                    builder.post(new WrappedTransportRequestBody(getMediaType(request), request));
                 } else if (request.getData() != null){
                     builder.post(RequestBody.create(getMediaType(request), request.getData()));
                 } else {
@@ -285,7 +285,7 @@ public class RequestTransport implements Transport {
                 break;
             case HttpMethod.PUT: {
                 if (request.getContent() != null) {
-                    builder.put(new WrappedTransportRequestBody(getMediaType(request), request.getContent(), request.getContentLength()));
+                    builder.put(new WrappedTransportRequestBody(getMediaType(request), request));
                 } else if (request.getData() != null){
                     builder.put(RequestBody.create(getMediaType(request), request.getData()));
                 } else {
@@ -381,15 +381,16 @@ class WrappedTransportRequestBody extends RequestBody implements Closeable {
     private long contentLength;
     private volatile long totalBytesRead = 0;
 
-    WrappedTransportRequestBody(MediaType contentType, InputStream inputStream, long contentLength) {
-        ParamsChecker.ensureNotNull(inputStream, "inputStream");
+    WrappedTransportRequestBody(MediaType contentType, TosRequest request) {
+        ParamsChecker.ensureNotNull(request, "TosRequest");
+        ParamsChecker.ensureNotNull(request.getContent(), "inputStream");
         this.contentType = contentType;
-        this.contentLength = contentLength;
+        this.contentLength = request.getContentLength();
         if (this.contentLength < 0) {
             // chunked
             this.contentLength = -1L;
         }
-        this.content = inputStream;
+        this.content = request.getContent();
         if (!this.content.markSupported()) {
             if (this.content instanceof FileInputStream) {
                 this.content = new TosRepeatableFileInputStream((FileInputStream) this.content);
@@ -397,7 +398,11 @@ class WrappedTransportRequestBody extends RequestBody implements Closeable {
                 this.content = new BufferedInputStream(this.content, Consts.DEFAULT_TOS_BUFFER_STREAM_SIZE);
             }
         }
-        this.content.mark(0);
+        int readLimit = Consts.DEFAULT_TOS_BUFFER_STREAM_SIZE;
+        if (request.getReadLimit() > 0) {
+            readLimit = request.getReadLimit();
+        }
+        this.content.mark(readLimit);
     }
 
     @Override
@@ -412,7 +417,7 @@ class WrappedTransportRequestBody extends RequestBody implements Closeable {
 
     @Override
     public void writeTo(BufferedSink sink) throws IOException {
-        if (totalBytesRead > 0) {
+        if (totalBytesRead > 0 && this.content != null && this.content.markSupported()) {
             this.content.reset();
             totalBytesRead = 0;
         }
