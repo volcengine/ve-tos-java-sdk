@@ -12,6 +12,7 @@ import org.testng.annotations.Test;
 import java.io.*;
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
+import java.net.URL;
 
 public class RetryTest {
     @Test
@@ -74,17 +75,17 @@ public class RetryTest {
     @Test
     void retryWithStreamTest() throws IOException, InterruptedException {
         MockWebServer server = new MockWebServer();
-        // 第一个请求
+        // 第1个请求
         server.enqueue(new MockResponse().setResponseCode(500));
         server.enqueue(new MockResponse().setResponseCode(500));
         server.enqueue(new MockResponse().setResponseCode(200).setBody("put succeed"));
 
-        // 第二个请求
+        // 第2个请求
         server.enqueue(new MockResponse().setResponseCode(500));
         server.enqueue(new MockResponse().setResponseCode(500));
         server.enqueue(new MockResponse().setResponseCode(200).setBody("put succeed"));
 
-        // 第三个请求
+        // 第3个请求
         server.enqueue(new MockResponse().setResponseCode(500));
         server.enqueue(new MockResponse().setResponseCode(500));
         server.enqueue(new MockResponse().setResponseCode(200).setBody("put succeed"));
@@ -165,27 +166,53 @@ public class RetryTest {
     }
 
     @Test
+    void retryWithBufferedStreamTest() throws IOException, InterruptedException {
+        MockWebServer server = new MockWebServer();
+        server.enqueue(new MockResponse().setResponseCode(500));
+        server.enqueue(new MockResponse().setResponseCode(500));
+        server.enqueue(new MockResponse().setResponseCode(200).setBody("put succeed"));
+
+        String dataUrl = "https://www.volcengine.com/docs/6349/79895";
+        try (BufferedInputStream bufferedInputStream = new BufferedInputStream(new URL(dataUrl).openStream())){
+            server.start();
+            TransportConfig config = TransportConfig.builder().maxRetryCount(3).readTimeoutMills(1000)
+                    .writeTimeoutMills(1000).build();
+            Transport transport = new RequestTransport(config);
+
+            TosRequest tosRequest = new TosRequest("http", "PUT", server.getHostName(), "/")
+                    .setPort(server.getPort()).setRetryableOnServerException(true).setRetryableOnClientException(true)
+                    .setContent(bufferedInputStream).setReadLimit(1024 * 1024).setContentLength(-1);
+            TosResponse response = transport.roundTrip(tosRequest);
+            Assert.assertEquals(response.getStatusCode(), 200);
+            Assert.assertEquals(StringUtils.toString(response.getInputStream()), "put succeed");
+            Assert.assertEquals(server.getRequestCount(), 3);
+            RecordedRequest request = server.takeRequest();
+            Assert.assertEquals(request.getMethod(), "PUT");
+            String bodyStr = StringUtils.toString(new ByteArrayInputStream(request.getBody().readByteArray()));
+            request = server.takeRequest();
+            Assert.assertEquals(request.getMethod(), "PUT");
+            Assert.assertEquals(StringUtils.toString(new ByteArrayInputStream(request.getBody().readByteArray())), bodyStr);
+            request = server.takeRequest();
+            Assert.assertEquals(request.getMethod(), "PUT");
+            Assert.assertEquals(StringUtils.toString(new ByteArrayInputStream(request.getBody().readByteArray())), bodyStr);
+        } finally {
+            server.shutdown();
+        }
+    }
+
+    @Test
     void markTest() {
-        try(FileInputStream fileInputStream = new FileInputStream("src/test/resources/uploadPartTest.zip")) {
-            System.out.println(fileInputStream.getChannel().size());
-            fileInputStream.skip(10000);
-            System.out.println(fileInputStream.getChannel().size());
+        try(FileInputStream fileInputStream = new FileInputStream("src/test/resources/uploadPartTest.zip");
+        BufferedInputStream bufferedInputStream = new BufferedInputStream(fileInputStream, Consts.DEFAULT_TOS_BUFFER_STREAM_SIZE)) {
+            bufferedInputStream.mark(Consts.DEFAULT_TOS_BUFFER_STREAM_SIZE);
+            byte[] data1 = new byte[Consts.DEFAULT_TOS_BUFFER_STREAM_SIZE];
+            bufferedInputStream.read(data1);
+            byte[] data2 = new byte[Consts.DEFAULT_TOS_BUFFER_STREAM_SIZE];
+            bufferedInputStream.reset();
+            bufferedInputStream.read(data2);
+            Assert.assertEquals(data1, data2);
         } catch (IOException e) {
             e.printStackTrace();
         }
-//        try(BufferedInputStream inputStream = new BufferedInputStream(new URL("https://blog.csdn.net/huanghanqian/article/details/88795560").openStream())) {
-//            byte[] tmp = new byte[4096];
-//            inputStream.mark(0);
-//            int count = 0;
-//            while (inputStream.read(tmp) != -1) {
-//                System.out.println(count);
-//                if (count++ == 5) {
-//                    inputStream.reset();
-//                }
-//            }
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//            Assert.fail();
-//        }
     }
 }

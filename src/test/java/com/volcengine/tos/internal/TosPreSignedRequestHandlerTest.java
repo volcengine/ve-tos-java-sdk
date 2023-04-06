@@ -470,7 +470,8 @@ public class TosPreSignedRequestHandlerTest {
                 break;
             case HttpMethod.PUT: {
                 if (content != null) {
-                    builder.put(new WrappedTransportRequestBody(MediaType.parse(contentType), content, contentLength));
+                    builder.put(new WrappedTransportRequestBody(MediaType.parse(contentType),
+                            new TosRequest().setContent(content).setContentLength(contentLength)));
                 } else {
                     builder.put(RequestBody.create(MediaType.parse(contentType), ""));
                 }

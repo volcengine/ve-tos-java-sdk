@@ -10,6 +10,7 @@ public class UploadPartBasicInput {
     private String key;
     private String uploadID;
     private int partNumber;
+    private int readLimit;
 
     private ObjectMetaRequestOptions options;
 
@@ -78,6 +79,15 @@ public class UploadPartBasicInput {
 
     public UploadPartBasicInput setDataTransferListener(DataTransferListener dataTransferListener) {
         this.dataTransferListener = dataTransferListener;
+        return this;
+    }
+
+    public int getReadLimit() {
+        return readLimit;
+    }
+
+    public UploadPartBasicInput setReadLimit(int readLimit) {
+        this.readLimit = readLimit;
         return this;
     }
 
