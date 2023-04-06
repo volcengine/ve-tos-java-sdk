@@ -1,4 +1,8 @@
 ## Release Note
+### 2023.3.30 Version 2.5.3
+- default set content-type in setObjectMeta method.
+- fix retry bug in BufferedInputStream.
+- add readLimit setting in putObject/uploadPart method for retry in BufferedInputStream.
 ### 2023.3.1 Version 2.5.2
 - fix verify ssl cert bug.
 - remove 7-days-limit of expire param in preSignedXX methods.

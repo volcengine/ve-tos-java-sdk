@@ -175,7 +175,8 @@ public class TosObjectRequestHandler {
         TosRequest req = this.factory.build(builder, HttpMethod.PUT, content)
                 .setEnableCrcCheck(this.enableCrcCheck)
                 .setRateLimiter(input.getRateLimiter())
-                .setDataTransferListener(input.getDataTransferListener());
+                .setDataTransferListener(input.getDataTransferListener())
+                .setReadLimit(input.getReadLimit());
         setRetryStrategy(req, content);
         return objectHandler.doRequest(req, HttpStatus.OK, this::buildPutObjectOutput);
     }
@@ -251,6 +252,7 @@ public class TosObjectRequestHandler {
         ParamsChecker.isValidBucketNameAndKey(input.getBucket(), input.getKey());
         RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(),
                 input.getAllSettedHeaders()).withQuery("metadata", "");
+        addContentType(builder, input.getKey());
         TosRequest req = this.factory.build(builder, HttpMethod.POST, null);
         return objectHandler.doRequest(req, HttpStatus.OK,
                 response -> new SetObjectMetaOutput().setRequestInfo(response.RequestInfo())
@@ -540,7 +542,8 @@ public class TosObjectRequestHandler {
                 .withContentLength(contentLength);
         TosRequest req = this.factory.build(builder, HttpMethod.PUT, content)
                 .setEnableCrcCheck(this.enableCrcCheck).setRateLimiter(input.getRateLimiter())
-                .setDataTransferListener(input.getDataTransferListener());
+                .setDataTransferListener(input.getDataTransferListener())
+                .setReadLimit(input.getReadLimit());
         setRetryStrategy(req, content);
         return objectHandler.doRequest(req, HttpStatus.OK, response -> buildUploadPartV2Output(response, input.getPartNumber()));
     }

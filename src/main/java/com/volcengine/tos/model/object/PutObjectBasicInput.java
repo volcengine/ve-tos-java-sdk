@@ -9,6 +9,7 @@ public class PutObjectBasicInput {
     private String bucket;
     private String key;
     private long contentLength;
+    private int readLimit;
 
     private ObjectMetaRequestOptions options;
 
@@ -72,6 +73,15 @@ public class PutObjectBasicInput {
 
     public PutObjectBasicInput setContentLength(long contentLength) {
         this.contentLength = contentLength;
+        return this;
+    }
+
+    public int getReadLimit() {
+        return readLimit;
+    }
+
+    public PutObjectBasicInput setReadLimit(int readLimit) {
+        this.readLimit = readLimit;
         return this;
     }
 
