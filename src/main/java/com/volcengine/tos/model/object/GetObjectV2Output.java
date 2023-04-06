@@ -2,6 +2,7 @@ package com.volcengine.tos.model.object;
 
 import com.volcengine.tos.comm.common.StorageClassType;
 import com.volcengine.tos.internal.util.ParamsChecker;
+import com.volcengine.tos.internal.util.aborthook.AbortInputStreamHook;
 import com.volcengine.tos.model.RequestInfo;
 
 import java.io.Closeable;
@@ -13,11 +14,17 @@ import java.util.Map;
 public class GetObjectV2Output implements Closeable {
     private GetObjectBasicOutput getObjectBasicOutput;
     private transient InputStream content;
+    private AbortInputStreamHook hook;
 
     public GetObjectV2Output(GetObjectBasicOutput getObjectBasicOutput, InputStream content) {
         ParamsChecker.ensureNotNull(getObjectBasicOutput, "GetObjectBasicOutput");
         this.getObjectBasicOutput = getObjectBasicOutput;
         this.content = content;
+    }
+
+    public GetObjectV2Output setHook(AbortInputStreamHook hook) {
+        this.hook = hook;
+        return this;
     }
 
     @Deprecated
@@ -141,6 +148,13 @@ public class GetObjectV2Output implements Closeable {
     public void close() throws IOException {
         if (this.content != null) {
             this.content.close();
+        }
+    }
+
+    // close the object content immediately
+    public void forceClose() throws IOException {
+        if (this.content != null && this.hook != null) {
+            hook.abort();
         }
     }
 

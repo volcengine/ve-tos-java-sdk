@@ -1,10 +1,11 @@
 package com.volcengine.tos.internal;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.volcengine.tos.comm.TosHeader;
 import com.volcengine.tos.internal.util.StringUtils;
 import com.volcengine.tos.internal.util.TosUtils;
 import com.volcengine.tos.model.RequestInfo;
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import okio.Source;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -19,6 +20,8 @@ public class TosResponse implements AutoCloseable, Serializable {
     private Map<String, String> headers = Collections.emptyMap();
     @JsonIgnore
     private transient InputStream inputStream;
+
+    private transient Source source;
 
     public RequestInfo RequestInfo() {
         return new RequestInfo(this.getRequesID(), this.getID2(), this.getStatusCode(), this.headers);
@@ -76,6 +79,15 @@ public class TosResponse implements AutoCloseable, Serializable {
 
     public TosResponse setHeaders(Map<String, String> headers) {
         this.headers = headers;
+        return this;
+    }
+
+    protected Source getSource() {
+        return source;
+    }
+
+    protected TosResponse setSource(Source source) {
+        this.source = source;
         return this;
     }
 

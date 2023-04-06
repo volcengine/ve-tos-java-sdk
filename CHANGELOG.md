@@ -1,4 +1,6 @@
 ## Release Note
+### 2023.4.6 Version 2.5.4
+- add forceClose method in getObject for closing content immediately.
 ### 2023.3.30 Version 2.5.3
 - default set content-type in setObjectMeta method.
 - fix retry bug in BufferedInputStream.

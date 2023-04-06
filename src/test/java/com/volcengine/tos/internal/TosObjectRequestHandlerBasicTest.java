@@ -1777,6 +1777,43 @@ public class TosObjectRequestHandlerBasicTest {
         }
     }
 
+    @Test
+    void seekLargeObjectTest() {
+        String data = StringUtils.randomString(16 << 20);
+        String key = "object-large-"+System.currentTimeMillis();
+        try {
+            getHandler().putObject(new PutObjectInput().setBucket(bucket).setKey(key).setContentLength(16 << 20)
+                    .setContent(new ByteArrayInputStream(data.getBytes())));
+        } catch (TosException e){
+            Consts.LOG.error(e.toString(), e);
+            Assert.fail();
+        }
+
+        try (GetObjectV2Output object = getHandler().getObject(new GetObjectV2Input().setBucket(bucket).setKey(key))) {
+            Assert.assertNotNull(object.getContent());
+            InputStream inputStream = object.getContent();
+            byte[] tmp = new byte[1024];
+            int n = inputStream.read(tmp);
+            Assert.assertEquals(n, 1024);
+            long start = System.currentTimeMillis();
+            // 只读一点 body 数据，立即 close
+            object.forceClose();
+            long end = System.currentTimeMillis();
+            LOG.info("close stream immediately, {} ms.", end-start);
+            Assert.assertTrue(end - start <= 10);
+        } catch (TosException | IOException e) {
+            Consts.LOG.error(e.toString(), e);
+            Assert.fail();
+        } finally {
+            try{
+                getHandler().deleteObject(new DeleteObjectInput().setBucket(bucket).setKey(key));
+            } catch (TosException e){
+                Consts.LOG.error(e.toString(), e);
+                Assert.fail();
+            }
+        }
+    }
+
     private List<String> generateDataAndGetKeyList(int num, String pre) {
         List<String> keys = new ArrayList<>(num);
         for(int i = 0; i < num; i++) {
