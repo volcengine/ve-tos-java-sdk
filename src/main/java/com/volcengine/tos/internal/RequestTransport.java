@@ -190,6 +190,7 @@ public class RequestTransport implements Transport {
                 }
                 break;
             } catch (InterruptedException e) {
+                response.close();
                 TosUtils.getLogger().debug("tos: request interrupted while sleeping in retry");
                 printAccessLogFailed(e);
                 throw new TosClientException("tos: request interrupted", e);
@@ -209,11 +210,17 @@ public class RequestTransport implements Transport {
                             }
                             continue;
                         } catch (InterruptedException ie) {
+                            if (response != null) {
+                                response.close();
+                            }
                             TosUtils.getLogger().debug("tos: request interrupted while sleeping in retry");
                             printAccessLogFailed(e);
                             throw new TosClientException("tos: request interrupted", e);
                         }
                     }
+                }
+                if (response != null) {
+                    response.close();
                 }
                 printAccessLogFailed(e);
                 throw e;
@@ -227,7 +234,8 @@ public class RequestTransport implements Transport {
         return new TosResponse().setStatusCode(response.code())
                 .setContentLength(getSize(response))
                 .setHeaders(getHeaders(response))
-                .setInputStream(inputStream);
+                .setInputStream(inputStream)
+                .setSource(response.body() == null ? null : response.body().source());
     }
 
     private void printAccessLogSucceed(int code, String reqId, long cost, int reqTimes) {
