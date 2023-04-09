@@ -12,6 +12,7 @@ import com.volcengine.tos.comm.event.DataTransferListener;
 import com.volcengine.tos.comm.ratelimit.RateLimiter;
 import com.volcengine.tos.internal.model.*;
 import com.volcengine.tos.internal.util.*;
+import com.volcengine.tos.internal.util.aborthook.DefaultAbortTosObjectInputStreamHook;
 import com.volcengine.tos.internal.util.ratelimit.RateLimitedInputStream;
 import com.volcengine.tos.model.object.*;
 
@@ -122,7 +123,8 @@ public class TosObjectRequestHandler {
             String serverCrc64ecma = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_CRC64);
             content = new CheckCrc64AutoInputStream(content, new CRC64Checksum(), serverCrc64ecma);
         }
-        return new GetObjectV2Output(basicOutput, new TosObjectInputStream(content));
+        return new GetObjectV2Output(basicOutput, new TosObjectInputStream(content))
+                .setHook(new DefaultAbortTosObjectInputStreamHook(content, response.getSource()));
     }
 
     public HeadObjectV2Output headObject(HeadObjectV2Input input) throws TosException {
