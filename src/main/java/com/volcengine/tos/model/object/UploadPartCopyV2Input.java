@@ -5,7 +5,6 @@ import com.volcengine.tos.comm.TosHeader;
 import com.volcengine.tos.internal.Consts;
 import com.volcengine.tos.internal.model.HttpRange;
 import com.volcengine.tos.internal.util.DateConverter;
-import com.volcengine.tos.internal.util.TosUtils;
 import com.volcengine.tos.internal.util.StringUtils;
 
 import java.util.Date;
@@ -261,7 +260,6 @@ public class UploadPartCopyV2Input {
             this.headers = new HashMap<>();
         }
         if(value != null && value.length() != 0){
-            value = TosUtils.tryEncodeValue(key, value);
             this.headers.put(key, value);
         }
     }

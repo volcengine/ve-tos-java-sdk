@@ -25,6 +25,11 @@ public class TOSClientConfiguration {
      */
     private boolean enableCrc;
 
+    /**
+     * 是否是自定义域名
+     */
+    private boolean isCustomDomain;
+
     public boolean isClientAutoRecognizeContentType() {
         return clientAutoRecognizeContentType;
     }
@@ -78,6 +83,15 @@ public class TOSClientConfiguration {
         return this;
     }
 
+    public boolean isCustomDomain() {
+        return isCustomDomain;
+    }
+
+    public TOSClientConfiguration setCustomDomain(boolean customDomain) {
+        isCustomDomain = customDomain;
+        return this;
+    }
+
     public static TosClientConfigurationBuilder builder() {
         return new TosClientConfigurationBuilder();
     }
@@ -89,6 +103,7 @@ public class TOSClientConfiguration {
         private TransportConfig transportConfig;
         private boolean clientAutoRecognizeContentType;
         private boolean enableCrc;
+        private boolean isCustomDomain;
 
         private TosClientConfigurationBuilder() {
             this.transportConfig = TransportConfig.builder()
@@ -130,6 +145,11 @@ public class TOSClientConfiguration {
             return this;
         }
 
+        public TosClientConfigurationBuilder isCustomDomain(boolean isCustomDomain) {
+            this.isCustomDomain = isCustomDomain;
+            return this;
+        }
+
         public TOSClientConfiguration build() {
             TOSClientConfiguration tosClientConfiguration = new TOSClientConfiguration();
             tosClientConfiguration.enableCrc = this.enableCrc;
@@ -138,6 +158,7 @@ public class TOSClientConfiguration {
             tosClientConfiguration.credentials = this.credentials;
             tosClientConfiguration.region = this.region;
             tosClientConfiguration.clientAutoRecognizeContentType = this.clientAutoRecognizeContentType;
+            tosClientConfiguration.isCustomDomain = this.isCustomDomain;
             return tosClientConfiguration;
         }
     }

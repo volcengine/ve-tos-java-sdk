@@ -346,6 +346,30 @@ public interface TOSV2 extends TOS {
     GetBucketACLOutput getBucketACL(GetBucketACLInput input) throws TosException;
 
     /**
+     * set rename enabled of a bucket
+     * @param input set bucket name and the rename-switch
+     * @return PutBucketRenameOutput
+     * @throws TosException
+     */
+    PutBucketRenameOutput putBucketRename(PutBucketRenameInput input) throws TosException;
+
+    /**
+     * get the rename-enable status of a bucket
+     * @param input set bucket name
+     * @return GetBucketRenameOutput
+     * @throws TosException
+     */
+    GetBucketRenameOutput getBucketRename(GetBucketRenameInput input) throws TosException;
+
+    /**
+     * delete the rename-enable config of a bucket
+     * @param input set bucket name
+     * @return DeleteBucketRenameOutput
+     * @throws TosException
+     */
+    DeleteBucketRenameOutput deleteBucketRename(DeleteBucketRenameInput input) throws TosException;
+
+    /**
      * get data and metadata of an object
      *
      * @param input set get object options
@@ -604,6 +628,24 @@ public interface TOSV2 extends TOS {
      * @throws TosException
      */
     ListMultipartUploadsV2Output listMultipartUploads(ListMultipartUploadsV2Input input) throws TosException;
+
+    /**
+     * rename an object in the bucket
+     *
+     * @param input set the source key to be renamed and the renamed key.
+     * @return {@link RenameObjectOutput}
+     * @throws TosException
+     */
+    RenameObjectOutput renameObject(RenameObjectInput input) throws TosException;
+
+    /**
+     * restore an object in the bucket
+     *
+     * @param input set restoreObject options.
+     * @return {@link RestoreObjectOutput}
+     * @throws TosException
+     */
+    RestoreObjectOutput restoreObject(RestoreObjectInput input) throws TosException;
 
     /**
      * create a pre-signed URL

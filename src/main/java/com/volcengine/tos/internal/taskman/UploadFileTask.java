@@ -28,6 +28,7 @@ class UploadFileTask extends TosTask implements TaskOutput<UploadPartV2Output> {
     private ObjectMetaRequestOptions options;
     private RateLimiter rateLimiter;
     private DataTransferListener dataTransferListener;
+    private long trafficLimit;
     private final AtomicLong consumedBytes;
 
     public UploadFileTask(UploadFileV2Checkpoint checkpoint, int taskIdx, AtomicLong consumedBytes) {
@@ -43,6 +44,12 @@ class UploadFileTask extends TosTask implements TaskOutput<UploadPartV2Output> {
                     this.checkpoint.getFilePath(), this.partInfo.getOffset(), this.partInfo.getPartSize());
             if (dataTransferListener != null) {
                 in = new ConcurrentDataTransferListenInputStream(in, dataTransferListener, checkpoint.getFileSize(), consumedBytes);
+            }
+            if (trafficLimit != 0) {
+                if (options == null) {
+                    options = new ObjectMetaRequestOptions();
+                }
+                options.setTrafficLimit(trafficLimit);
             }
             UploadPartV2Input input = UploadPartV2Input.builder()
                     .bucket(checkpoint.getBucket())
@@ -172,6 +179,15 @@ class UploadFileTask extends TosTask implements TaskOutput<UploadPartV2Output> {
 
     public UploadFileTask setDataTransferListener(DataTransferListener dataTransferListener) {
         this.dataTransferListener = dataTransferListener;
+        return this;
+    }
+
+    public long getTrafficLimit() {
+        return trafficLimit;
+    }
+
+    public UploadFileTask setTrafficLimit(long trafficLimit) {
+        this.trafficLimit = trafficLimit;
         return this;
     }
 }

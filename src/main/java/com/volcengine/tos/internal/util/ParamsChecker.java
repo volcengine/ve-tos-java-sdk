@@ -77,9 +77,10 @@ public class ParamsChecker {
             return 0;
         }
         // parse port
-        int port = Consts.DEFAULT_HTTPS_PORT;
+        int port = 0;
         int idx = host.indexOf(":");
         if (idx == -1) {
+            // if not contains port, do not set it
             return port;
         }
         String portStr;

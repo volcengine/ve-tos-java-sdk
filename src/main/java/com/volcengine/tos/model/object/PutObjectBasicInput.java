@@ -15,6 +15,9 @@ public class PutObjectBasicInput {
 
     private DataTransferListener dataTransferListener;
 
+    private String callback;
+    private String callbackVar;
+
     /** 客户端限速，单位 Byte/s **/
     private RateLimiter rateLimiter;
 
@@ -76,6 +79,24 @@ public class PutObjectBasicInput {
         return this;
     }
 
+    public String getCallback() {
+        return callback;
+    }
+
+    public PutObjectBasicInput setCallback(String callback) {
+        this.callback = callback;
+        return this;
+    }
+
+    public String getCallbackVar() {
+        return callbackVar;
+    }
+
+    public PutObjectBasicInput setCallbackVar(String callbackVar) {
+        this.callbackVar = callbackVar;
+        return this;
+    }
+
     public int getReadLimit() {
         return readLimit;
     }
@@ -93,6 +114,8 @@ public class PutObjectBasicInput {
                 ", contentLength=" + contentLength +
                 ", options=" + options +
                 ", dataTransferListener=" + dataTransferListener +
+                ", callback='" + callback + '\'' +
+                ", callbackVar='" + callbackVar + '\'' +
                 ", rateLimiter=" + rateLimiter +
                 '}';
     }
@@ -108,6 +131,8 @@ public class PutObjectBasicInput {
         private ObjectMetaRequestOptions options;
         private DataTransferListener dataTransferListener;
         private RateLimiter rateLimit;
+        private String callback;
+        private String callbackVar;
 
         private PutObjectBasicInputBuilder() {
         }
@@ -142,6 +167,16 @@ public class PutObjectBasicInput {
             return this;
         }
 
+        public PutObjectBasicInputBuilder callback(String callback) {
+            this.callback = callback;
+            return this;
+        }
+
+        public PutObjectBasicInputBuilder callbackVar(String callbackVar) {
+            this.callbackVar = callbackVar;
+            return this;
+        }
+
         public PutObjectBasicInput build() {
             PutObjectBasicInput putObjectBasicInput = new PutObjectBasicInput();
             putObjectBasicInput.key = this.key;
@@ -150,6 +185,8 @@ public class PutObjectBasicInput {
             putObjectBasicInput.dataTransferListener = this.dataTransferListener;
             putObjectBasicInput.options = this.options;
             putObjectBasicInput.rateLimiter = this.rateLimit;
+            putObjectBasicInput.callback = this.callback;
+            putObjectBasicInput.callbackVar = this.callbackVar;
             return putObjectBasicInput;
         }
     }

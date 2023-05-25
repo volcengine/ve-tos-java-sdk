@@ -59,9 +59,16 @@ public interface TosHeader {
     String HEADER_COPY_SOURCE_SSE_CUSTOMER_ALGORITHM = "x-tos-copy-source-server-side-encryption-customer-algorithm";
     String HEADER_COPY_SOURCE_SSE_CUSTOMER_KEY_MD5 = "x-tos-copy-source-server-side-encryption-customer-key-MD5";
     String HEADER_COPY_SOURCE_SSE_CUSTOMER_KEY = "x-tos-copy-source-server-side-encryption-customer-key";
+    String HEADER_TRAFFIC_LIMIT = "x-tos-traffic-limit";
+    String HEADER_COMPLETE_ALL = "x-tos-complete-all";
+    String HEADER_CALLBACK = "x-tos-callback";
+    String HEADER_CALLBACK_VAR = "x-tos-callback-var";
+    String HEADER_RESTORE_REQUEST_DATERequestDate = "x-tos-restore-request-date";
+    String HEADER_RESTORE_EXPIRY_DATE = "x-tos-restore-expiry-date";
+    String HEADER_RESTORE_TIER = "x-tos-restore-tier";
 
     /**
-     *  only for getObject() method headers
+     *  only for getObject() method queries
      */
     String QUERY_RESPONSE_CONTENT_TYPE = "response-content-type";
     String QUERY_RESPONSE_CONTENT_LANGUAGE = "response-content-language";
@@ -69,6 +76,7 @@ public interface TosHeader {
     String QUERY_RESPONSE_CONTENT_DISPOSITION = "response-content-disposition";
     String QUERY_RESPONSE_CACHE_CONTROL = "response-cache-control";
     String QUERY_RESPONSE_EXPIRES = "response-expires";
+    String QUERY_DATA_PROCESS = "x-tos-process";
 
     String HEADER_WEBSITE_REDIRECT_LOCATION = "X-Tos-Website-Redirect-Location";
     String HEADER_CS_TYPE = "X-Tos-Cs-Type";

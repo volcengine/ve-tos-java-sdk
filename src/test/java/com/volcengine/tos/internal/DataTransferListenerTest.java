@@ -21,7 +21,7 @@ public class DataTransferListenerTest {
         List<DataTransferStatus> statusList = new ArrayList<>();
         DataTransferListener listener = statusList::add;
         DataTransferListenInputStream inputStream = new SimpleDataTransferListenInputStream(in, listener, 514 << 10);
-        StringUtils.toString(inputStream);
+        StringUtils.toString(inputStream, "content");
         Assert.assertEquals(statusList.size(), 4);
         Assert.assertEquals(statusList.get(0).getType(), DataTransferType.DATA_TRANSFER_STARTED);
         Assert.assertEquals(statusList.get(0).getTotalBytes(), 526336);

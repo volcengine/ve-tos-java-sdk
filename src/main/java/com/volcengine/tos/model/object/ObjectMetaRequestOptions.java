@@ -1,15 +1,14 @@
 package com.volcengine.tos.model.object;
 
 import com.volcengine.tos.TosClientException;
+import com.volcengine.tos.comm.TosHeader;
 import com.volcengine.tos.comm.common.ACLType;
 import com.volcengine.tos.comm.common.StorageClassType;
-import com.volcengine.tos.comm.TosHeader;
 import com.volcengine.tos.internal.Consts;
 import com.volcengine.tos.internal.model.HttpRange;
 import com.volcengine.tos.internal.util.DateConverter;
-import com.volcengine.tos.internal.util.TosUtils;
-import com.volcengine.tos.internal.util.TypeConverter;
 import com.volcengine.tos.internal.util.StringUtils;
+import com.volcengine.tos.internal.util.TypeConverter;
 
 import java.util.Date;
 import java.util.HashMap;
@@ -134,6 +133,11 @@ public class ObjectMetaRequestOptions {
      */
     private StorageClassType storageClass;
 
+    /**
+     * for trafficLimit headers: "x-tos-traffic-limit"
+     */
+    private long trafficLimit;
+
     private Map<String, String> headers = new HashMap<>();
 
     public Map<String, String> headers() {
@@ -142,8 +146,7 @@ public class ObjectMetaRequestOptions {
                 String key = entry.getKey();
                 String value = entry.getValue();
                 if (StringUtils.isNotEmpty(value)) {
-                    this.headers.put(TosHeader.HEADER_META_PREFIX + key,
-                            TosUtils.tryEncodeValue(key, value));
+                    this.headers.put(TosHeader.HEADER_META_PREFIX+key, value);
                 }
             }
         }
@@ -189,6 +192,7 @@ public class ObjectMetaRequestOptions {
                 ", serverSideEncryption='" + serverSideEncryption + '\'' +
                 ", websiteRedirectLocation='" + websiteRedirectLocation + '\'' +
                 ", storageClass=" + storageClass +
+                ", trafficLimit=" + trafficLimit +
                 '}';
     }
 
@@ -237,7 +241,11 @@ public class ObjectMetaRequestOptions {
     }
 
     public long getContentLength() {
-        return Long.parseLong(headers.get(TosHeader.HEADER_CONTENT_LENGTH));
+        String clStr = headers.get(TosHeader.HEADER_CONTENT_LENGTH);
+        if (StringUtils.isEmpty(clStr)) {
+            return 0;
+        }
+        return Long.parseLong(clStr);
     }
 
     public String getRange() {
@@ -298,6 +306,14 @@ public class ObjectMetaRequestOptions {
 
     public StorageClassType getStorageClass() {
         return TypeConverter.convertStorageClassType(headers.get(TosHeader.HEADER_STORAGE_CLASS));
+    }
+
+    public long getTrafficLimit() {
+        String tlStr = headers.get(TosHeader.HEADER_TRAFFIC_LIMIT);
+        if (StringUtils.isEmpty(tlStr)) {
+            return 0;
+        }
+        return Long.parseLong(tlStr);
     }
 
     public ObjectMetaRequestOptions setCacheControl(String cacheControl) {
@@ -451,11 +467,16 @@ public class ObjectMetaRequestOptions {
         return this;
     }
 
+    public ObjectMetaRequestOptions setTrafficLimit(long trafficLimit) {
+        withHeader(TosHeader.HEADER_TRAFFIC_LIMIT, String.valueOf(trafficLimit));
+        return this;
+    }
+
     private void withHeader(String key, String value){
-        if(value != null){
-            value = TosUtils.tryEncodeValue(key, value);
-            this.headers.put(key, value);
+        if (StringUtils.isEmpty(key) || StringUtils.isEmpty(value)) {
+            return;
         }
+        this.headers.put(key, value);
     }
 
     public static final class ObjectMetaRequestOptionsBuilder {
@@ -470,10 +491,10 @@ public class ObjectMetaRequestOptions {
         }
 
         private void withHeader(String key, String value){
-            if(value != null){
-                value = TosUtils.tryEncodeValue(key, value);
-                this.headers.put(key, value);
+            if (StringUtils.isEmpty(key) || StringUtils.isEmpty(value)) {
+                return;
             }
+            this.headers.put(key, value);
         }
 
         public ObjectMetaRequestOptionsBuilder cacheControl(String cacheControl) {
@@ -615,6 +636,11 @@ public class ObjectMetaRequestOptions {
 
         public ObjectMetaRequestOptionsBuilder storageClass(StorageClassType storageClass) {
             withHeader(TosHeader.HEADER_STORAGE_CLASS, storageClass == null ? null : storageClass.toString());
+            return this;
+        }
+
+        public ObjectMetaRequestOptionsBuilder trafficLimit(long trafficLimit) {
+            withHeader(TosHeader.HEADER_TRAFFIC_LIMIT, String.valueOf(trafficLimit));
             return this;
         }
 

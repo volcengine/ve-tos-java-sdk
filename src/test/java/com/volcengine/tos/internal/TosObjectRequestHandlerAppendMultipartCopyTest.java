@@ -8,14 +8,13 @@ import com.volcengine.tos.comm.common.ACLType;
 import com.volcengine.tos.comm.common.MetadataDirectiveType;
 import com.volcengine.tos.comm.common.StorageClassType;
 import com.volcengine.tos.comm.io.TosRepeatableBoundedFileInputStream;
-import com.volcengine.tos.internal.util.StringUtils;
 import com.volcengine.tos.internal.util.DateConverter;
+import com.volcengine.tos.internal.util.StringUtils;
 import com.volcengine.tos.model.bucket.CreateBucketV2Input;
 import com.volcengine.tos.model.bucket.HeadBucketV2Input;
 import com.volcengine.tos.model.bucket.HeadBucketV2Output;
 import com.volcengine.tos.model.object.*;
 import org.apache.commons.codec.binary.Hex;
-
 import org.testng.Assert;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
@@ -110,7 +109,7 @@ public class TosObjectRequestHandlerAppendMultipartCopyTest {
                     .build())){
                 Assert.assertEquals(getRes.getContentLength(), data.length());
                 Assert.assertEquals(getRes.getObjectType(), "Appendable");
-                validateDataSame(data, StringUtils.toString(getRes.getContent()));
+                validateDataSame(data, StringUtils.toString(getRes.getContent(), "content"));
             } catch (IOException e) {
                 testFailed(e);
             }
@@ -139,7 +138,7 @@ public class TosObjectRequestHandlerAppendMultipartCopyTest {
                     .build())){
                 Assert.assertEquals(getRes.getContentLength(), data.length() + data2.length());
                 Assert.assertEquals(getRes.getObjectType(), "Appendable");
-                validateDataSame(data + data2, StringUtils.toString(getRes.getContent()));
+                validateDataSame(data + data2, StringUtils.toString(getRes.getContent(), "content"));
             } catch (IOException e) {
                 testFailed(e);
             }
@@ -234,7 +233,7 @@ public class TosObjectRequestHandlerAppendMultipartCopyTest {
                 Assert.assertEquals(getRes.getContentLength(), data.length());
                 Assert.assertEquals(getRes.getEtag(), output1.getEtag());
                 Assert.assertEquals(getRes.getHashCrc64ecma(), output1.getHashCrc64ecma());
-                validateDataSame(data, StringUtils.toString(getRes.getContent()));
+                validateDataSame(data, StringUtils.toString(getRes.getContent(), "content"));
             } catch (IOException e) {
                 testFailed(e);
             }
@@ -286,7 +285,7 @@ public class TosObjectRequestHandlerAppendMultipartCopyTest {
                 Assert.assertEquals(getRes.getContentLength(), data.length());
                 Assert.assertEquals(getRes.getEtag(), output1.getEtag());
                 Assert.assertEquals(getRes.getHashCrc64ecma(), output1.getHashCrc64ecma());
-                validateDataSame(data, StringUtils.toString(getRes.getContent()));
+                validateDataSame(data, StringUtils.toString(getRes.getContent(), "content"));
             } catch (IOException e) {
                 testFailed(e);
             }
@@ -312,7 +311,7 @@ public class TosObjectRequestHandlerAppendMultipartCopyTest {
                 Assert.assertEquals(getRes.getContentLength(), data.length());
                 Assert.assertEquals(getRes.getEtag(), output2.getEtag());
                 Assert.assertEquals(getRes.getHashCrc64ecma(), output2.getHashCrc64ecma());
-                validateDataSame(data, StringUtils.toString(getRes.getContent()));
+                validateDataSame(data, StringUtils.toString(getRes.getContent(), "content"));
             } catch (IOException e) {
                 testFailed(e);
             }
@@ -367,7 +366,7 @@ public class TosObjectRequestHandlerAppendMultipartCopyTest {
                 Assert.assertNotNull(getRes.getCustomMetadata());
                 Assert.assertEquals(getRes.getCustomMetadata().get("custom"), "volc");
                 Assert.assertEquals(getRes.getCustomMetadata().get("custom1"), "volc_test");
-                validateDataSame(data, StringUtils.toString(getRes.getContent()));
+                validateDataSame(data, StringUtils.toString(getRes.getContent(), "content"));
             } catch (IOException e) {
                 testFailed(e);
             }
@@ -399,7 +398,7 @@ public class TosObjectRequestHandlerAppendMultipartCopyTest {
                 Assert.assertNotNull(getRes.getCustomMetadata());
                 Assert.assertEquals(getRes.getCustomMetadata().get("custom"), "volc_replace");
                 Assert.assertEquals(getRes.getCustomMetadata().get("custom1"), "volc_test_replace");
-                validateDataSame(data, StringUtils.toString(getRes.getContent()));
+                validateDataSame(data, StringUtils.toString(getRes.getContent(), "content"));
             } catch (IOException e) {
                 testFailed(e);
             }
@@ -577,12 +576,10 @@ public class TosObjectRequestHandlerAppendMultipartCopyTest {
             uploadID = output.getUploadID();
 
             UploadPartV2Output uploadPartV2Output = getHandler().uploadPart(UploadPartV2Input.builder()
-                    .uploadPartBasicInput(UploadPartBasicInput.builder()
-                            .bucket(Consts.bucket)
-                            .key(uniqueKey)
-                            .uploadID(uploadID)
-                            .partNumber(1)
-                            .build())
+                    .bucket(Consts.bucket)
+                    .key(uniqueKey)
+                    .uploadID(uploadID)
+                    .partNumber(1)
                     .contentLength(getPartSize())
                     .content(getPartData())
                     .build());
@@ -599,6 +596,61 @@ public class TosObjectRequestHandlerAppendMultipartCopyTest {
             Assert.assertEquals(completeOutput.getKey(), uniqueKey);
             Assert.assertNotNull(completeOutput.getLocation());
             Assert.assertNotNull(completeOutput.getEtag());
+            Assert.assertNull(completeOutput.getUploadedPartV2List());
+
+            HeadObjectV2Output head = getHandler().headObject(HeadObjectV2Input.builder()
+                    .bucket(Consts.bucket)
+                    .key(uniqueKey)
+                    .build());
+            Assert.assertEquals(head.getContentLength(), getPartSize());
+        } catch (Exception e) {
+            testFailed(e);
+        } finally{
+            try{
+                getHandler().abortMultipartUpload(AbortMultipartUploadInput.builder()
+                        .bucket(Consts.bucket)
+                        .key(uniqueKey)
+                        .uploadID(uploadID)
+                        .build());
+            } catch (Exception e) {
+                // ignore
+            }
+        }
+    }
+
+    @Test
+    void completeMultipartUploadWithCompleteAllTest() {
+        String uniqueKey = Consts.internalObjectMultiPartPrefix + getUniqueObjectKey();
+        String uploadID = null;
+        try{
+            CreateMultipartUploadInput input = CreateMultipartUploadInput.builder()
+                    .bucket(Consts.bucket)
+                    .key(uniqueKey)
+                    .build();
+            CreateMultipartUploadOutput output = getHandler().createMultipartUpload(input);
+            uploadID = output.getUploadID();
+
+            getHandler().uploadPart(UploadPartV2Input.builder()
+                    .bucket(Consts.bucket)
+                    .key(uniqueKey)
+                    .uploadID(uploadID)
+                    .partNumber(1)
+                    .contentLength(getPartSize())
+                    .content(getPartData())
+                    .build());
+            CompleteMultipartUploadV2Input complete = CompleteMultipartUploadV2Input.builder()
+                    .bucket(Consts.bucket)
+                    .key(uniqueKey)
+                    .uploadID(uploadID)
+                    .completeAll(true)
+                    .build();
+            CompleteMultipartUploadV2Output completeOutput = getHandler().completeMultipartUpload(complete);
+            Assert.assertEquals(completeOutput.getBucket(), Consts.bucket);
+            Assert.assertEquals(completeOutput.getKey(), uniqueKey);
+            Assert.assertNotNull(completeOutput.getLocation());
+            Assert.assertNotNull(completeOutput.getEtag());
+            Assert.assertNotNull(completeOutput.getUploadedPartV2List());
+            Assert.assertEquals(completeOutput.getUploadedPartV2List().size(), 1);
 
             HeadObjectV2Output head = getHandler().headObject(HeadObjectV2Input.builder()
                     .bucket(Consts.bucket)

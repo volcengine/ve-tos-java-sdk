@@ -2,6 +2,7 @@ package com.volcengine.tos.comm;
 
 public interface HttpStatus {
     int OK = 200;
+    int ACCEPTED = 202;
     int NO_CONTENT = 204;
     int PARTIAL_CONTENT = 206;
     int MULTIPLE_CHOICE = 300;
