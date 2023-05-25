@@ -12,11 +12,13 @@ import com.volcengine.tos.model.object.*;
 import org.apache.commons.codec.binary.Base64;
 
 import java.io.ByteArrayInputStream;
-import java.io.IOException;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
-import java.util.*;
+import java.util.AbstractMap;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 public class TosPreSignedRequestHandler {
     private TosRequestFactory factory;
@@ -137,12 +139,7 @@ public class TosPreSignedRequestHandler {
         PostPolicyJson policyJson = new PostPolicyJson().setConditions(conditions).setExpiration(expiration);
         // serialize
         TosMarshalResult marshalResult = PayloadConverter.serializePayloadAndComputeMD5(policyJson);
-        String originPolicy = null;
-        try {
-            originPolicy = StringUtils.toString(new ByteArrayInputStream(marshalResult.getData()));
-        } catch (IOException e) {
-            throw new TosClientException("[preSignedPostSignature] read data toString failed, data is " + Arrays.toString(marshalResult.getData()), e);
-        }
+        String originPolicy = StringUtils.toString(new ByteArrayInputStream(marshalResult.getData()), "policyJson");
 
         // sign key
         byte[] signK = null;
@@ -152,12 +149,7 @@ public class TosPreSignedRequestHandler {
 
         // base64 encode policy
         byte[] policyInByte = Base64.encodeBase64(marshalResult.getData());
-        String policy = null;
-        try {
-            policy = StringUtils.toString(new ByteArrayInputStream(policyInByte));
-        } catch (IOException e) {
-            throw new TosClientException("[preSignedPostSignature] read data toString failed, data is " + Arrays.toString(policyInByte), e);
-        }
+        String policy = StringUtils.toString(new ByteArrayInputStream(policyInByte), "policyInByte");
 
         // signature
         byte[] sign = SigningUtils.hmacSha256(signK, policyInByte);
@@ -211,12 +203,7 @@ public class TosPreSignedRequestHandler {
         TosMarshalResult marshalResult = PayloadConverter.serializePayloadAndComputeMD5(policyJson);
         // base64 encode policy
         byte[] policyInByte = Base64.encodeBase64(marshalResult.getData());
-        String policy = null;
-        try {
-            policy = StringUtils.toString(new ByteArrayInputStream(policyInByte));
-        } catch (IOException e) {
-            throw new TosClientException("[preSignedPostSignature] read data toString failed, data is " + Arrays.toString(policyInByte), e);
-        }
+        String policy = StringUtils.toString(new ByteArrayInputStream(policyInByte), "policyInByte");
         query.add(new AbstractMap.SimpleEntry<>(SigningUtils.v4Policy, policy));
 
         // CanonicalRequest

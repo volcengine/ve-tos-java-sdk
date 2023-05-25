@@ -303,13 +303,16 @@ public class TosBucketRequestHandlerTest {
                 .setPrimary(Collections.singletonList("http://www.volcengine.com/obj/tostest/"))
                 .setFollower(Collections.singletonList("http://www.volcengine.com/obj/tostest/1"));
         PublicSource publicSource = new PublicSource().setSourceEndpoint(sourceEndpoint);
+        Transform transform = new Transform().setReplaceKeyPrefix(new ReplaceKeyPrefix()
+                .setKeyPrefix("aaa").setReplaceWith("bbb"));
         Redirect redirect = new Redirect()
                 .setRedirectType(RedirectType.REDIRECT_MIRROR)
                 .setFetchSourceOnRedirect(true)
                 .setPassQuery(true)
                 .setFollowRedirect(true)
                 .setMirrorHeader(mirrorHeader)
-                .setPublicSource(publicSource);
+                .setPublicSource(publicSource)
+                .setTransform(transform);
         MirrorBackRule rule = new MirrorBackRule().setId("1").setCondition(condition).setRedirect(redirect);
         List<MirrorBackRule> rules = Collections.singletonList(rule);
         try{
@@ -800,6 +803,47 @@ public class TosBucketRequestHandlerTest {
             }
         }
     }
+
+    // todo open in next version
+//    @Test
+//    void bucketRenameTest() {
+//        try{
+//            getHandler().deleteBucketRename(new DeleteBucketRenameInput().setBucket(Consts.bucket));
+//        } catch (TosException e) {
+//            testFailed(e);
+//        }
+//
+//        try{
+//            GetBucketRenameOutput output = getHandler().getBucketRename(new GetBucketRenameInput().setBucket(Consts.bucket));
+//            Assert.assertFalse(output.isRenameEnable());
+//        } catch (TosException e) {
+//            testFailed(e);
+//        }
+//
+//        try{
+//            // put
+//            boolean renameEnable = true;
+//            PutBucketRenameInput input = new PutBucketRenameInput().setBucket(Consts.bucket).setRenameEnable(renameEnable);
+//            getHandler().putBucketRename(input);
+//            // get
+//            GetBucketRenameOutput output = getHandler().getBucketRename(new GetBucketRenameInput().setBucket(Consts.bucket));;
+//            Assert.assertTrue(output.isRenameEnable());
+//        } catch (TosException e) {
+//            testFailed(e);
+//        } finally {
+//            try{
+//                getHandler().deleteBucketRename(new DeleteBucketRenameInput().setBucket(Consts.bucket));
+//            } catch (Exception e) {
+//                testFailed(e);
+//            }
+//            try{
+//                GetBucketRenameOutput output = getHandler().getBucketRename(new GetBucketRenameInput().setBucket(Consts.bucket));
+//                Assert.assertFalse(output.isRenameEnable());
+//            } catch (TosException e) {
+//                testFailed(e);
+//            }
+//        }
+//    }
 
     private void testFailed(Exception e) {
         Consts.LOG.error("bucket test failed, {}", e.toString());

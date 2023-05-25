@@ -5,6 +5,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 public class PublicSource {
     @JsonProperty("SourceEndpoint")
     private SourceEndpoint sourceEndpoint;
+    @JsonProperty("FixedEndpoint")
+    private boolean fixedEndpoint;
 
     public SourceEndpoint getSourceEndpoint() {
         return sourceEndpoint;
@@ -15,10 +17,20 @@ public class PublicSource {
         return this;
     }
 
+    public boolean isFixedEndpoint() {
+        return fixedEndpoint;
+    }
+
+    public PublicSource setFixedEndpoint(boolean fixedEndpoint) {
+        this.fixedEndpoint = fixedEndpoint;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "PublicSource{" +
                 "sourceEndpoint=" + sourceEndpoint +
+                ", fixedEndpoint=" + fixedEndpoint +
                 '}';
     }
 
@@ -28,6 +40,7 @@ public class PublicSource {
 
     public static final class PublicSourceBuilder {
         private SourceEndpoint sourceEndpoint;
+        private boolean fixedEndpoint;
 
         private PublicSourceBuilder() {
         }
@@ -37,9 +50,15 @@ public class PublicSource {
             return this;
         }
 
+        public PublicSourceBuilder fixedEndpoint(boolean fixedEndpoint) {
+            this.fixedEndpoint = fixedEndpoint;
+            return this;
+        }
+
         public PublicSource build() {
             PublicSource publicSource = new PublicSource();
             publicSource.setSourceEndpoint(sourceEndpoint);
+            publicSource.setFixedEndpoint(fixedEndpoint);
             return publicSource;
         }
     }

@@ -248,4 +248,33 @@ public class TosUtilsTest {
         Assert.assertEquals(unknownType.getStorageClassInheritDirectiveType(), StorageClassInheritDirectiveType.STORAGE_CLASS_ID_UNKNOWN);
         Assert.assertEquals(unknownType.getVersioningStatusType(), VersioningStatusType.VERSIONING_STATUS_UNKNOWN);
     }
+
+    @Test
+    void headerEncodeTest() {
+        // 编码含中文
+        Assert.assertEquals(TosUtils.tryEncodeValue("key", "中+"), "%E4%B8%AD%2B");
+        Assert.assertEquals(TosUtils.tryEncodeValue("key", "中*"), "%E4%B8%AD%2A");
+        Assert.assertEquals(TosUtils.tryEncodeValue("key", "中~"), "%E4%B8%AD%7E");
+        Assert.assertEquals(TosUtils.tryEncodeValue("key", "中/"), "%E4%B8%AD%2F");
+        Assert.assertEquals(TosUtils.tryEncodeValue("key", "中\\"), "%E4%B8%AD%5C");
+        Assert.assertEquals(TosUtils.tryEncodeValue("key", "中 "), "%E4%B8%AD%20");
+        Assert.assertEquals(TosUtils.tryEncodeValue("key", "中%20"), "%E4%B8%AD%2520");
+        Assert.assertEquals(TosUtils.tryEncodeValue("key", "中文"), "%E4%B8%AD%E6%96%87");
+        Assert.assertEquals(TosUtils.tryEncodeValue("key", "%中文%"), "%25%E4%B8%AD%E6%96%87%25");
+        // 编码不含中文
+        Assert.assertEquals(TosUtils.tryEncodeValue("key", "%%+ ~//\\%20"), "%%+ ~//\\%20");
+
+        // 解码含中文
+        Assert.assertEquals(TosUtils.tryDecodeValue("key", "%E4%B8%AD+"), "中+");
+        Assert.assertEquals(TosUtils.tryDecodeValue("key", "%E4%B8%AD*"), "中*");
+        Assert.assertEquals(TosUtils.tryDecodeValue("key", "%E4%B8%AD~"), "中~");
+        Assert.assertEquals(TosUtils.tryDecodeValue("key", "%E4%B8%AD/"), "中/");
+        Assert.assertEquals(TosUtils.tryDecodeValue("key", "%E4%B8%AD\\"), "中\\");
+        Assert.assertEquals(TosUtils.tryDecodeValue("key", "%E4%B8%AD "), "中 ");
+        Assert.assertEquals(TosUtils.tryDecodeValue("key", "%E4%B8%AD%20"), "中 ");
+        Assert.assertEquals(TosUtils.tryDecodeValue("key", "%E4%B8%AD%E6%96%87"), "中文");
+
+        // 解码失败返回原值
+        Assert.assertEquals(TosUtils.tryDecodeValue("key", "%%E4%B8%AD%E6%96%87%"), "%%E4%B8%AD%E6%96%87%");
+    }
 }

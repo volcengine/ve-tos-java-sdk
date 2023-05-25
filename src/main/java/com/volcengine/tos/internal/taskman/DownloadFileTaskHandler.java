@@ -79,7 +79,8 @@ public class DownloadFileTaskHandler {
                         .setHeadObjectV2Input(new HeadObjectV2Input().setBucket(input.getBucket())
                                 .setKey(input.getKey()).setOptions(input.getOptions()).setVersionID(input.getVersionID()))
                         .setRateLimiter(input.getRateLimiter())
-                        .setDataTransferListener(input.getDataTransferListener()));
+                        .setDataTransferListener(input.getDataTransferListener())
+                        .setTrafficLimit(input.getTrafficLimit()));
             } else {
                 downloadPartInfos.add(checkpoint.getDownloadPartInfos().get(i));
             }

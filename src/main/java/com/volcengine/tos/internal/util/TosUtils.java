@@ -63,6 +63,18 @@ public class TosUtils {
         }
     }
 
+    public static String encodeHeader(String str) {
+        return tryEncodeValue("", str);
+    }
+
+    public static String decodeHeader(String str) {
+        return tryDecodeValue("", str);
+    }
+
+    /**
+     * tryEncodeValue 如果 value 包含中文，会对 value 进行编码
+     * 对于 URLEncoder 库，编码时 " " 会被编成 "+"，sdk 会强制转成 "%20"
+     */
     public static String tryEncodeValue(String key, String value) {
         if (value == null || value.length() == 0) {
             return value;
@@ -82,6 +94,11 @@ public class TosUtils {
         return encodedValue;
     }
 
+    /**
+     * tryDecodeValue 对 value 尝试解码，如果解码后的值不包含中文，则返回原值，否则返回解码后的值
+     * 对于 URLDecoder 库，解码时 "+" 会被解成 " "，sdk 会强制解成 "+"
+     * 对于解码抛异常的场景，直接返回原值
+     */
     public static String tryDecodeValue(String key, String value) {
         if (key == null || value == null) {
             return null;
@@ -97,8 +114,9 @@ public class TosUtils {
             if (value.contains("+") && decodedValue.contains(" ")) {
                 decodedValue = decodedValue.replace(" ", "+");
             }
-        } catch (UnsupportedEncodingException e) {
-            throw new TosClientException("tos: unsupported http header value in key: "+key, e);
+        } catch (UnsupportedEncodingException | IllegalArgumentException e) {
+            getLogger().debug("tos: unsupported http header value in key: {}", key, e);
+            return value;
         }
         return decodedValue;
     }

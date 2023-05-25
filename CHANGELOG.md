@@ -1,4 +1,7 @@
 ## Release Note
+### 2023.5.21 Version 2.6.0
+- 支持若干新特性，单链接限速、自定义域名、智能分层和冷归档存储类型等
+- 修复若干已知bug
 ### 2023.4.6 Version 2.5.4
 - add forceClose method in getObject for closing content immediately.
 ### 2023.3.30 Version 2.5.3

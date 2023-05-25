@@ -20,6 +20,8 @@ public class DownloadFileInput {
     /** 客户端限速，单位 Byte/s **/
     private RateLimiter rateLimiter;
 
+    private long trafficLimit;
+
     public String getBucket() {
         return headObjectV2Input.getBucket();
     }
@@ -150,6 +152,15 @@ public class DownloadFileInput {
         return this;
     }
 
+    public long getTrafficLimit() {
+        return trafficLimit;
+    }
+
+    public DownloadFileInput setTrafficLimit(long trafficLimit) {
+        this.trafficLimit = trafficLimit;
+        return this;
+    }
+
     @Deprecated
     public HeadObjectV2Input getHeadObjectV2Input() {
         return headObjectV2Input;
@@ -175,6 +186,7 @@ public class DownloadFileInput {
                 ", enableCheckpoint=" + enableCheckpoint +
                 ", checkpointFile='" + checkpointFile + '\'' +
                 ", rateLimiter=" + rateLimiter +
+                ", trafficLimit=" + trafficLimit +
                 '}';
     }
 
@@ -194,6 +206,7 @@ public class DownloadFileInput {
         private DownloadEventListener downloadEventListener;
         private CancelHook cancelHook;
         private RateLimiter rateLimiter;
+        private long trafficLimit;
 
         private DownloadFileInputBuilder() {
         }
@@ -278,6 +291,11 @@ public class DownloadFileInput {
             return this;
         }
 
+        public DownloadFileInputBuilder trafficLimit(long trafficLimit) {
+            this.trafficLimit = trafficLimit;
+            return this;
+        }
+
         public DownloadFileInput build() {
             DownloadFileInput downloadFileInput = new DownloadFileInput();
             downloadFileInput.setHeadObjectV2Input(headObjectV2Input);
@@ -291,6 +309,7 @@ public class DownloadFileInput {
             downloadFileInput.setDownloadEventListener(downloadEventListener);
             downloadFileInput.cancelHook = cancelHook;
             downloadFileInput.setRateLimiter(rateLimiter);
+            downloadFileInput.setTrafficLimit(trafficLimit);
             return downloadFileInput;
         }
     }

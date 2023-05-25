@@ -110,34 +110,34 @@ public class RetryTest {
                     .setContent(new ByteArrayInputStream(bodyStr.getBytes())).setContentLength(bodyStr.length());
             TosResponse response = transport.roundTrip(tosRequest);
             Assert.assertEquals(response.getStatusCode(), 200);
-            Assert.assertEquals(StringUtils.toString(response.getInputStream()), "put succeed");
+            Assert.assertEquals(StringUtils.toString(response.getInputStream(), "content"), "put succeed");
             Assert.assertEquals(server.getRequestCount(), 3);
             RecordedRequest request = server.takeRequest();
             Assert.assertEquals(request.getMethod(), "PUT");
-            Assert.assertEquals(StringUtils.toString(new ByteArrayInputStream(request.getBody().readByteArray())), bodyStr);
+            Assert.assertEquals(StringUtils.toString(new ByteArrayInputStream(request.getBody().readByteArray()), "content"), bodyStr);
             request = server.takeRequest();
             Assert.assertEquals(request.getMethod(), "PUT");
-            Assert.assertEquals(StringUtils.toString(new ByteArrayInputStream(request.getBody().readByteArray())), bodyStr);
+            Assert.assertEquals(StringUtils.toString(new ByteArrayInputStream(request.getBody().readByteArray()), "content"), bodyStr);
             request = server.takeRequest();
             Assert.assertEquals(request.getMethod(), "PUT");
-            Assert.assertEquals(StringUtils.toString(new ByteArrayInputStream(request.getBody().readByteArray())), bodyStr);
+            Assert.assertEquals(StringUtils.toString(new ByteArrayInputStream(request.getBody().readByteArray()), "content"), bodyStr);
 
             tosRequest = new TosRequest("http", "PUT", server.getHostName(), "/")
                     .setPort(server.getPort()).setRetryableOnServerException(true).setRetryableOnClientException(true)
                     .setContent(new FileInputStream(file)).setContentLength(file.length());
             response = transport.roundTrip(tosRequest);
             Assert.assertEquals(response.getStatusCode(), 200);
-            Assert.assertEquals(StringUtils.toString(response.getInputStream()), "put succeed");
+            Assert.assertEquals(StringUtils.toString(response.getInputStream(), "content"), "put succeed");
             Assert.assertEquals(server.getRequestCount(), 6);
             request = server.takeRequest();
             Assert.assertEquals(request.getMethod(), "PUT");
-            Assert.assertEquals(StringUtils.toString(new ByteArrayInputStream(request.getBody().readByteArray())), bodyStr+bodyStr);
+            Assert.assertEquals(StringUtils.toString(new ByteArrayInputStream(request.getBody().readByteArray()), "content"), bodyStr+bodyStr);
             request = server.takeRequest();
             Assert.assertEquals(request.getMethod(), "PUT");
-            Assert.assertEquals(StringUtils.toString(new ByteArrayInputStream(request.getBody().readByteArray())), bodyStr+bodyStr);
+            Assert.assertEquals(StringUtils.toString(new ByteArrayInputStream(request.getBody().readByteArray()), "content"), bodyStr+bodyStr);
             request = server.takeRequest();
             Assert.assertEquals(request.getMethod(), "PUT");
-            Assert.assertEquals(StringUtils.toString(new ByteArrayInputStream(request.getBody().readByteArray())), bodyStr+bodyStr);
+            Assert.assertEquals(StringUtils.toString(new ByteArrayInputStream(request.getBody().readByteArray()), "content"), bodyStr+bodyStr);
 
             // bounded file
             FileInputStream boundedFis = new FileInputStream(file);
@@ -147,18 +147,18 @@ public class RetryTest {
                     .setContent(new TosRepeatableBoundedFileInputStream(boundedFis, 100)).setContentLength(100);
             response = transport.roundTrip(tosRequest);
             Assert.assertEquals(response.getStatusCode(), 200);
-            Assert.assertEquals(StringUtils.toString(response.getInputStream()), "put succeed");
+            Assert.assertEquals(StringUtils.toString(response.getInputStream(), "content"), "put succeed");
             Assert.assertEquals(server.getRequestCount(), 9);
             String targetData = (bodyStr+bodyStr).substring(10, 110);
             request = server.takeRequest();
             Assert.assertEquals(request.getMethod(), "PUT");
-            Assert.assertEquals(StringUtils.toString(new ByteArrayInputStream(request.getBody().readByteArray())), targetData);
+            Assert.assertEquals(StringUtils.toString(new ByteArrayInputStream(request.getBody().readByteArray()), "content"), targetData);
             request = server.takeRequest();
             Assert.assertEquals(request.getMethod(), "PUT");
-            Assert.assertEquals(StringUtils.toString(new ByteArrayInputStream(request.getBody().readByteArray())), targetData);
+            Assert.assertEquals(StringUtils.toString(new ByteArrayInputStream(request.getBody().readByteArray()), "content"), targetData);
             request = server.takeRequest();
             Assert.assertEquals(request.getMethod(), "PUT");
-            Assert.assertEquals(StringUtils.toString(new ByteArrayInputStream(request.getBody().readByteArray())), targetData);
+            Assert.assertEquals(StringUtils.toString(new ByteArrayInputStream(request.getBody().readByteArray()), "content"), targetData);
         } finally {
             server.shutdown();
             file.delete();
@@ -184,17 +184,17 @@ public class RetryTest {
                     .setContent(bufferedInputStream).setReadLimit(1024 * 1024).setContentLength(-1);
             TosResponse response = transport.roundTrip(tosRequest);
             Assert.assertEquals(response.getStatusCode(), 200);
-            Assert.assertEquals(StringUtils.toString(response.getInputStream()), "put succeed");
+            Assert.assertEquals(StringUtils.toString(response.getInputStream(), "content"), "put succeed");
             Assert.assertEquals(server.getRequestCount(), 3);
             RecordedRequest request = server.takeRequest();
             Assert.assertEquals(request.getMethod(), "PUT");
-            String bodyStr = StringUtils.toString(new ByteArrayInputStream(request.getBody().readByteArray()));
+            String bodyStr = StringUtils.toString(new ByteArrayInputStream(request.getBody().readByteArray()), "content");
             request = server.takeRequest();
             Assert.assertEquals(request.getMethod(), "PUT");
-            Assert.assertEquals(StringUtils.toString(new ByteArrayInputStream(request.getBody().readByteArray())), bodyStr);
+            Assert.assertEquals(StringUtils.toString(new ByteArrayInputStream(request.getBody().readByteArray()), "content"), bodyStr);
             request = server.takeRequest();
             Assert.assertEquals(request.getMethod(), "PUT");
-            Assert.assertEquals(StringUtils.toString(new ByteArrayInputStream(request.getBody().readByteArray())), bodyStr);
+            Assert.assertEquals(StringUtils.toString(new ByteArrayInputStream(request.getBody().readByteArray()), "content"), bodyStr);
         } finally {
             server.shutdown();
         }

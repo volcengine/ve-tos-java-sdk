@@ -26,6 +26,7 @@ public class ResumableCopyObjectInput {
 
     private CopyEventListener copyEventListener;
     private CancelHook cancelHook;
+    private long trafficLimit;
 
     @Deprecated
     public CreateMultipartUploadInput getCreateMultipartUploadInput() {
@@ -222,6 +223,15 @@ public class ResumableCopyObjectInput {
         return this;
     }
 
+    public long getTrafficLimit() {
+        return trafficLimit;
+    }
+
+    public ResumableCopyObjectInput setTrafficLimit(long trafficLimit) {
+        this.trafficLimit = trafficLimit;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "ResumableCopyObjectInput{" +
@@ -245,6 +255,7 @@ public class ResumableCopyObjectInput {
                 ", checkpointFile='" + checkpointFile + '\'' +
                 ", copyEventListener=" + copyEventListener +
                 ", cancelHook=" + cancelHook +
+                ", trafficLimit=" + trafficLimit +
                 '}';
     }
 
@@ -270,6 +281,7 @@ public class ResumableCopyObjectInput {
         private String checkpointFile;
         private CopyEventListener copyEventListener;
         private CancelHook cancelHook;
+        private long trafficLimit;
 
         private ResumableCopyObjectInputBuilder() {
         }
@@ -384,6 +396,11 @@ public class ResumableCopyObjectInput {
             return this;
         }
 
+        public ResumableCopyObjectInputBuilder trafficLimit(long trafficLimit) {
+            this.trafficLimit = trafficLimit;
+            return this;
+        }
+
         public ResumableCopyObjectInput build() {
             ResumableCopyObjectInput resumableCopyObjectInput = new ResumableCopyObjectInput();
             resumableCopyObjectInput.setCreateMultipartUploadInput(createMultipartUploadInput);
@@ -403,6 +420,7 @@ public class ResumableCopyObjectInput {
             resumableCopyObjectInput.setCheckpointFile(checkpointFile);
             resumableCopyObjectInput.setCopyEventListener(copyEventListener);
             resumableCopyObjectInput.cancelHook = cancelHook;
+            resumableCopyObjectInput.setTrafficLimit(trafficLimit);
             return resumableCopyObjectInput;
         }
     }

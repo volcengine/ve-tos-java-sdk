@@ -64,7 +64,8 @@ public class ResumableCopyObjectTaskHandler {
                         .setCopyEventListener(input.getCopyEventListener())
                         .setOptions(input.getOptions())
                         .setCopySourceSSECKey(input.getCopySourceSSECKey())
-                        .setHandler(handler));
+                        .setHandler(handler)
+                        .setTrafficLimit(input.getTrafficLimit()));
             } else {
                 CopyPartInfo partInfo = checkpoint.getCopyPartInfoList().get(i);
                 copiedPartInfos.add(new UploadedPartV2().setPartNumber(partInfo.getPartNumber()).setEtag(partInfo.getEtag()));

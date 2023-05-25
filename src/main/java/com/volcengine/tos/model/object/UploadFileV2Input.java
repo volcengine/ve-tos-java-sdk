@@ -16,6 +16,7 @@ public class UploadFileV2Input {
     private CancelHook cancelHook;
     /** 客户端限速，单位 Byte/s **/
     private RateLimiter rateLimiter;
+    private long trafficLimit;
 
     public String getBucket() {
         return createMultipartUploadInput.getBucket();
@@ -138,6 +139,15 @@ public class UploadFileV2Input {
         return this;
     }
 
+    public long getTrafficLimit() {
+        return trafficLimit;
+    }
+
+    public UploadFileV2Input setTrafficLimit(long trafficLimit) {
+        this.trafficLimit = trafficLimit;
+        return this;
+    }
+
     @Deprecated
     public CreateMultipartUploadInput getCreateMultipartUploadInput() {
         return createMultipartUploadInput;
@@ -161,6 +171,7 @@ public class UploadFileV2Input {
                 ", taskNum=" + taskNum +
                 ", enableCheckpoint=" + enableCheckpoint +
                 ", checkpointFile='" + checkpointFile + '\'' +
+                ", trafficLimit=" + trafficLimit +
                 '}';
     }
 
@@ -179,6 +190,7 @@ public class UploadFileV2Input {
         private UploadEventListener uploadEventListener;
         private CancelHook cancelHook;
         private RateLimiter rateLimiter;
+        private long trafficLimit;
 
         private UploadFileV2InputBuilder() {
         }
@@ -258,6 +270,11 @@ public class UploadFileV2Input {
             return this;
         }
 
+        public UploadFileV2InputBuilder trafficLimit(long trafficLimit) {
+            this.trafficLimit = trafficLimit;
+            return this;
+        }
+
         public UploadFileV2Input build() {
             UploadFileV2Input uploadFileV2Input = new UploadFileV2Input();
             uploadFileV2Input.setCreateMultipartUploadInput(createMultipartUploadInput);
@@ -270,6 +287,7 @@ public class UploadFileV2Input {
             uploadFileV2Input.setUploadEventListener(uploadEventListener);
             uploadFileV2Input.cancelHook = cancelHook;
             uploadFileV2Input.setRateLimiter(rateLimiter);
+            uploadFileV2Input.setTrafficLimit(trafficLimit);
             return uploadFileV2Input;
         }
     }

@@ -4,6 +4,7 @@ import com.volcengine.tos.Consts;
 import com.volcengine.tos.*;
 import com.volcengine.tos.comm.Code;
 import com.volcengine.tos.comm.HttpStatus;
+import com.volcengine.tos.comm.TosHeader;
 import com.volcengine.tos.comm.common.CannedType;
 import com.volcengine.tos.comm.common.GranteeType;
 import com.volcengine.tos.comm.common.PermissionType;
@@ -14,12 +15,13 @@ import com.volcengine.tos.internal.util.ratelimit.DefaultRateLimiter;
 import com.volcengine.tos.model.acl.GrantV2;
 import com.volcengine.tos.model.acl.GranteeV2;
 import com.volcengine.tos.model.acl.Owner;
-import com.volcengine.tos.model.bucket.CreateBucketV2Input;
-import com.volcengine.tos.model.bucket.HeadBucketV2Input;
-import com.volcengine.tos.model.bucket.HeadBucketV2Output;
-import com.volcengine.tos.model.bucket.Tag;
+import com.volcengine.tos.model.bucket.*;
 import com.volcengine.tos.model.object.*;
+import okhttp3.mockwebserver.MockResponse;
+import okhttp3.mockwebserver.MockWebServer;
+import okhttp3.mockwebserver.RecordedRequest;
 import org.apache.commons.codec.binary.Base64;
+import org.apache.commons.codec.binary.Hex;
 import org.testng.Assert;
 import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
@@ -38,6 +40,8 @@ import static com.volcengine.tos.Consts.*;
 
 public class TosObjectRequestHandlerBasicTest {
     private static final String sampleData = StringUtils.randomString(128 << 10);
+    private static final String sampleFilePath = "src/test/resources/uploadPartTest.zip";
+    private static String sampleFileMD5 = null;
     private static final String ssecKey = "Y2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2NjY2M=";
     private static final String ssecKeyMD5 = "ACdH+Fu9K3HlXdIUBu8GdA==";
     private static final String ssecAlgorithm = "AES256";
@@ -190,7 +194,7 @@ public class TosObjectRequestHandlerBasicTest {
                         .bucket(Consts.bucket)
                         .key(s)
                         .build())){
-                    validateDataSame(sampleData, StringUtils.toString(got.getContent()));
+                    validateDataSame(sampleData, StringUtils.toString(got.getContent(), "content"));
                 } catch (Exception e) {
                     testFailed(e);
                 }
@@ -230,7 +234,7 @@ public class TosObjectRequestHandlerBasicTest {
                 Assert.assertEquals(getRes.getContentLength(), data.length());
                 Assert.assertEquals(getRes.getEtag(), putRes.getEtag());
                 Assert.assertEquals(getRes.getVersionID(), putRes.getVersionID());
-                validateDataSame(data, StringUtils.toString(getRes.getContent()));
+                validateDataSame(data, StringUtils.toString(getRes.getContent(), "content"));
             } catch (IOException e) {
                 testFailed(e);
             }
@@ -256,7 +260,7 @@ public class TosObjectRequestHandlerBasicTest {
                 Assert.assertEquals(got.getContentLength(), 0);
                 Assert.assertEquals(got.getEtag(), putRes.getEtag());
                 Assert.assertEquals(got.getVersionID(), putRes.getVersionID());
-                Assert.assertEquals(StringUtils.toString(got.getContent()).length(), 0);
+                Assert.assertEquals(StringUtils.toString(got.getContent(), "content").length(), 0);
             } catch (IOException e) {
                 testFailed(e);
             }
@@ -346,7 +350,7 @@ public class TosObjectRequestHandlerBasicTest {
                 Assert.assertEquals(got.getSsecAlgorithm(), ssecAlgorithm);
                 Assert.assertEquals(got.getSsecKeyMD5(), ssecKeyMD5);
                 Assert.assertEquals(got.getStorageClass(), StorageClassType.STORAGE_CLASS_IA);
-                validateDataSame(data, StringUtils.toString(got.getContent()));
+                validateDataSame(data, StringUtils.toString(got.getContent(), "content"));
             } catch (IOException e) {
                 testFailed(e);
             }
@@ -397,7 +401,7 @@ public class TosObjectRequestHandlerBasicTest {
                 Assert.assertEquals(headRes.getCustomMetadata().get("custom2"), "中文 空格");
                 Assert.assertEquals(headRes.getCustomMetadata().get("custom3"), "aabb-cc%20");
                 Assert.assertEquals(headRes.getContentDisposition(), "attachment;filename=中文测试.txt");
-                validateDataSame(data, StringUtils.toString(getRes.getContent()));
+                validateDataSame(data, StringUtils.toString(getRes.getContent(), "content"));
             } catch (IOException e) {
                 testFailed(e);
             }
@@ -427,7 +431,7 @@ public class TosObjectRequestHandlerBasicTest {
                     .options(ObjectMetaRequestOptions.builder().range(1,31).build())
                     .build())){
                 Assert.assertEquals(getRes.getContentLength(), 31);
-                validateDataSame(data.substring(1,32), StringUtils.toString(getRes.getContent()));
+                validateDataSame(data.substring(1,32), StringUtils.toString(getRes.getContent(), "content"));
             } catch (IOException e) {
                 testFailed(e);
             }
@@ -440,7 +444,7 @@ public class TosObjectRequestHandlerBasicTest {
                     .options(ObjectMetaRequestOptions.builder().range(1,32).build())
                     .build())){
                 Assert.assertEquals(getRes.getContentLength(), 31);
-                validateDataSame(data.substring(1,32), StringUtils.toString(getRes.getContent()));
+                validateDataSame(data.substring(1,32), StringUtils.toString(getRes.getContent(), "content"));
             } catch (IOException e) {
                 testFailed(e);
             }
@@ -452,7 +456,7 @@ public class TosObjectRequestHandlerBasicTest {
                     .options(ObjectMetaRequestOptions.builder().range(-1,31).build())
                     .build())){
                 Assert.assertEquals(getRes.getContentLength(), 32);
-                validateDataSame(data.substring(0,32), StringUtils.toString(getRes.getContent()));
+                validateDataSame(data.substring(0,32), StringUtils.toString(getRes.getContent(), "content"));
             } catch (IOException e) {
                 testFailed(e);
             }
@@ -464,7 +468,7 @@ public class TosObjectRequestHandlerBasicTest {
                     .options(ObjectMetaRequestOptions.builder().range(1,-1).build())
                     .build())){
                 Assert.assertEquals(getRes.getContentLength(), data.length()-1);
-                validateDataSame(data.substring(1, data.length()), StringUtils.toString(getRes.getContent()));
+                validateDataSame(data.substring(1, data.length()), StringUtils.toString(getRes.getContent(), "content"));
             } catch (IOException e) {
                 testFailed(e);
             }
@@ -476,7 +480,7 @@ public class TosObjectRequestHandlerBasicTest {
                     .options(ObjectMetaRequestOptions.builder().range(-1,-1).build())
                     .build())){
                 Assert.assertEquals(getRes.getContentLength(), data.length());
-                validateDataSame(data, StringUtils.toString(getRes.getContent()));
+                validateDataSame(data, StringUtils.toString(getRes.getContent(), "content"));
             } catch (IOException e) {
                 testFailed(e);
             }
@@ -1603,7 +1607,7 @@ public class TosObjectRequestHandlerBasicTest {
                 Assert.assertEquals(getRes.getEtag(), putRes.getEtag());
                 Assert.assertEquals(getRes.getVersionID(), putRes.getVersionID());
                 // consume the inputStream, it will calculate crc64 auto.
-                String readData = StringUtils.toString(getRes.getContent());
+                String readData = StringUtils.toString(getRes.getContent(), "content");
                 validateDataSame(data, readData);
             } catch (IOException e) {
                 testFailed(e);
@@ -1626,7 +1630,7 @@ public class TosObjectRequestHandlerBasicTest {
     }
 
     @Test
-    void putObjectWithRateLimitTest() {
+    void putObjectWithRateLimiterTest() {
         String key = getUniqueObjectKey();
         String data = sampleData + StringUtils.randomString(new Random().nextInt(128));
         InputStream content = new ByteArrayInputStream(data.getBytes(StandardCharsets.UTF_8));
@@ -1670,6 +1674,60 @@ public class TosObjectRequestHandlerBasicTest {
                 end = System.currentTimeMillis();
                 LOG.info("getObject cost {} ms", end-start);
                 Assert.assertTrue((end-start) > 10000);
+            } catch (IOException e) {
+                testFailed(e);
+            }
+        } catch (Exception e) {
+            testFailed(e);
+        } finally{
+            clearData(key);
+        }
+    }
+
+    @Test
+    void putObjectWithTrafficLimitTest() {
+        String key = getUniqueObjectKey();
+        try(InputStream content = new FileInputStream(sampleFilePath)){
+            long start = System.currentTimeMillis();
+            PutObjectOutput putRes = getHandler().putObject(PutObjectInput.builder()
+                    .bucket(Consts.bucket)
+                    .key(key)
+                    .options(new ObjectMetaRequestOptions().setTrafficLimit(800 * 1024))
+                    .content(content)
+                    .build());
+            long end = System.currentTimeMillis();
+            LOG.info("putObject cost {} ms", end-start);
+            Assert.assertTrue((end-start) > 12000);
+
+            HeadObjectV2Output headRes = getHandler().headObject(HeadObjectV2Input.builder()
+                    .bucket(Consts.bucket)
+                    .key(key)
+                    .build());
+            Assert.assertEquals(headRes.getContentLength(), new File(sampleFilePath).length());
+            Assert.assertEquals(headRes.getEtag(), putRes.getEtag());
+            Assert.assertEquals(headRes.getVersionID(), putRes.getVersionID());
+
+            start = System.currentTimeMillis();
+            try(GetObjectV2Output getRes = getHandler().getObject(GetObjectV2Input.builder()
+                    .bucket(Consts.bucket)
+                    .key(key)
+                    .options(new ObjectMetaRequestOptions().setTrafficLimit(800 * 1024))
+                    .build());
+                InputStream stream = getRes.getContent()){
+                Assert.assertEquals(getRes.getContentLength(), new File(sampleFilePath).length());
+                Assert.assertEquals(getRes.getEtag(), putRes.getEtag());
+                Assert.assertEquals(getRes.getVersionID(), putRes.getVersionID());
+
+                MessageDigest md5 = MessageDigest.getInstance("MD5");
+                byte[] buffer = new byte[8192];
+                int length;
+                while ((length = stream.read(buffer)) != -1) {
+                    md5.update(buffer, 0, length);
+                }
+                Assert.assertEquals(new String(Hex.encodeHex(md5.digest())), getMD5());
+                end = System.currentTimeMillis();
+                LOG.info("getObject cost {} ms", end-start);
+                Assert.assertTrue((end-start) > 12000);
             } catch (IOException e) {
                 testFailed(e);
             }
@@ -1778,6 +1836,71 @@ public class TosObjectRequestHandlerBasicTest {
     }
 
     @Test
+    void callbackMockTest() {
+        // putObject
+        MockWebServer server = new MockWebServer();
+        String callbackResult = "call success";
+        server.enqueue(new MockResponse().setResponseCode(200).setBody(callbackResult)
+                .setHeader(TosHeader.HEADER_CRC64, "0"));
+
+        try{
+            server.start();
+            String endpoint = server.getHostName() + ":" + server.getPort();
+            TosObjectRequestHandler handler = ClientInstance.getObjectRequestHandlerWithPathStyleInstance(
+                    new TosRequestFactory(null, endpoint).setScheme("http"));
+            PutObjectOutput output = handler.putObject(new PutObjectInput()
+                    .setBucket("aaa").setKey("bb").setCallback("cc").setCallbackVar("dd"));
+            RecordedRequest request = server.takeRequest();
+            Assert.assertEquals(request.getHeader(TosHeader.HEADER_CALLBACK), "cc");
+            Assert.assertEquals(request.getHeader(TosHeader.HEADER_CALLBACK_VAR), "dd");
+            Assert.assertEquals(output.getCallbackResult(), callbackResult);
+            server.shutdown();
+        } catch (TosException | IOException | InterruptedException e) {
+            testFailed(e);
+        }
+
+        // completeUpload
+        server = new MockWebServer();
+        String etag = "etag1";
+        String location = "location1";
+        server.enqueue(new MockResponse().setResponseCode(200).setBody(callbackResult)
+                .setHeader(TosHeader.HEADER_ETAG, etag)
+                .setHeader(TosHeader.HEADER_LOCATION, location));
+        String callbackResultInJson = "{\"test-key\": \"test-value\"}";
+        server.enqueue(new MockResponse().setResponseCode(200).setBody(callbackResultInJson)
+                .setHeader(TosHeader.HEADER_ETAG, etag)
+                .setHeader(TosHeader.HEADER_LOCATION, location));
+
+        try{
+            server.start();
+            String endpoint = server.getHostName() + ":" + server.getPort();
+            TosObjectRequestHandler handler = ClientInstance.getObjectRequestHandlerWithPathStyleInstance(
+                    new TosRequestFactory(null, endpoint).setScheme("http"));
+            CompleteMultipartUploadV2Output output = handler.completeMultipartUpload(new
+                    CompleteMultipartUploadV2Input().setBucket("aaa").setKey("bb").setCompleteAll(true)
+                    .setUploadID("ccc").setCallback("ddd").setCallbackVar("eee"));
+            RecordedRequest request = server.takeRequest();
+            Assert.assertEquals(request.getHeader(TosHeader.HEADER_CALLBACK), "ddd");
+            Assert.assertEquals(request.getHeader(TosHeader.HEADER_CALLBACK_VAR), "eee");
+            Assert.assertEquals(output.getCallbackResult(), callbackResult);
+            Assert.assertEquals(output.getEtag(), etag);
+            Assert.assertEquals(output.getLocation(), location);
+
+            output = handler.completeMultipartUpload(new CompleteMultipartUploadV2Input().setBucket("aaa")
+                    .setKey("bb").setCompleteAll(true).setUploadID("ccc").setCallback("ddd").setCallbackVar("eee"));
+            request = server.takeRequest();
+            Assert.assertEquals(request.getHeader(TosHeader.HEADER_CALLBACK), "ddd");
+            Assert.assertEquals(request.getHeader(TosHeader.HEADER_CALLBACK_VAR), "eee");
+            Assert.assertEquals(output.getCallbackResult(), callbackResultInJson);
+            Assert.assertEquals(output.getEtag(), etag);
+            Assert.assertEquals(output.getLocation(), location);
+            server.shutdown();
+        } catch (TosException | IOException | InterruptedException e) {
+            testFailed(e);
+        }
+    }
+
+    @Test
     void seekLargeObjectTest() {
         String data = StringUtils.randomString(16 << 20);
         String key = "object-large-"+System.currentTimeMillis();
@@ -1811,6 +1934,104 @@ public class TosObjectRequestHandlerBasicTest {
                 Consts.LOG.error(e.toString(), e);
                 Assert.fail();
             }
+        }
+    }
+
+    // todo open in next version
+//    @Test
+//    void renameObjectTest() {
+//        String key = getUniqueObjectKey();
+//        String data = sampleData + StringUtils.randomString(new Random().nextInt(128));
+//        InputStream content = new ByteArrayInputStream(data.getBytes(StandardCharsets.UTF_8));
+//        try{
+//            // 需要先开启 rename 特性，才能 rename object
+//            boolean renameEnable = true;
+//            PutBucketRenameInput input = new PutBucketRenameInput().setBucket(Consts.bucket).setRenameEnable(renameEnable);
+//            ClientInstance.getBucketRequestHandlerInstance().putBucketRename(input);
+//            GetBucketRenameOutput output = ClientInstance.getBucketRequestHandlerInstance()
+//                    .getBucketRename(new GetBucketRenameInput().setBucket(Consts.bucket));;
+//            Assert.assertTrue(output.isRenameEnable());
+//
+//            PutObjectOutput putRes = getHandler().putObject(PutObjectInput.builder()
+//                    .bucket(Consts.bucket)
+//                    .key(key)
+//                    .content(content)
+//                    .build());
+//
+//            HeadObjectV2Output headRes = getHandler().headObject(HeadObjectV2Input.builder()
+//                    .bucket(Consts.bucket)
+//                    .key(key)
+//                    .build());
+//            Assert.assertEquals(headRes.getContentLength(), data.length());
+//            Assert.assertEquals(headRes.getEtag(), putRes.getEtag());
+//            Assert.assertEquals(headRes.getVersionID(), putRes.getVersionID());
+//
+//            String renamedKey = key + "-rename";
+//            getHandler().renameObject(new RenameObjectInput().setBucket(bucket).setKey(key).setNewKey(renamedKey));
+//
+//            try(GetObjectV2Output getRes = getHandler().getObject(GetObjectV2Input.builder()
+//                    .bucket(Consts.bucket)
+//                    .key(renamedKey)
+//                    .build())){
+//                Assert.assertEquals(getRes.getContentLength(), data.length());
+//                Assert.assertEquals(getRes.getEtag(), putRes.getEtag());
+//                Assert.assertEquals(getRes.getVersionID(), putRes.getVersionID());
+//                validateDataSame(data, StringUtils.toString(getRes.getContent(), "content"));
+//            } catch (IOException e) {
+//                testFailed(e);
+//            }
+//        } catch (Exception e) {
+//            testFailed(e);
+//        } finally{
+//            clearData(key);
+//            ClientInstance.getBucketRequestHandlerInstance().deleteBucketRename(new DeleteBucketRenameInput().setBucket(bucket));
+//        }
+//    }
+
+    @Test
+    void restoreObjectTest() {
+        // basic crud
+        String key = getUniqueObjectKey();
+        String data = sampleData + StringUtils.randomString(new Random().nextInt(128));
+        InputStream content = new ByteArrayInputStream(data.getBytes(StandardCharsets.UTF_8));
+        try{
+            getHandler().putObject(PutObjectInput.builder()
+                    .bucket(Consts.bucket)
+                    .key(key)
+                    .content(content)
+                    .options(ObjectMetaRequestOptions.builder()
+                            // 冷归档对象
+                            .storageClass(StorageClassType.STORAGE_CLASS_COLD_ARCHIVE)
+                            .build())
+                    .build());
+
+            try{
+                getHandler().headObject(HeadObjectV2Input.builder()
+                        .bucket(Consts.bucket)
+                        .key(key)
+                        .build());
+            } catch (TosServerException e) {
+                Assert.assertEquals(e.getStatusCode(), HttpStatus.FORBIDDEN);
+                Assert.assertEquals(e.getCode(), Code.INVALID_OBJECT_STATE);
+            }
+
+            // 归档解冻
+            try{
+                // invalid days
+                getHandler().restoreObject(new RestoreObjectInput().setBucket(bucket).setKey(key).setDays(366));
+            } catch (TosServerException e) {
+                e.printStackTrace();
+                Assert.assertEquals(e.getStatusCode(), HttpStatus.BAD_REQUEST);
+                Assert.assertEquals(e.getCode(), Code.INVALID_ARGUMENT);
+            }
+            RestoreObjectOutput output = getHandler().restoreObject(
+                    new RestoreObjectInput().setBucket(bucket).setKey(key).setDays(1)
+                            .setRestoreJobParameters(new RestoreJobParameters().setTier("Expedited")));
+            Assert.assertEquals(output.getRequestInfo().getStatusCode(), HttpStatus.ACCEPTED);
+        } catch (Exception e) {
+            testFailed(e);
+        } finally{
+            clearData(key);
         }
     }
 
@@ -1878,6 +2099,26 @@ public class TosObjectRequestHandlerBasicTest {
         if (!StringUtils.equals(src, dst)) {
             Consts.LOG.error("data not same, src is {}, dst is {}", src, dst);
             Assert.fail();
+        }
+    }
+
+    private String getMD5() {
+        if (sampleFileMD5 != null) {
+            return sampleFileMD5;
+        }
+        synchronized (this) {
+            try(FileInputStream fileInputStream = new FileInputStream(sampleFilePath)) {
+                MessageDigest MD5 = MessageDigest.getInstance("MD5");
+                byte[] buffer = new byte[8192];
+                int length;
+                while ((length = fileInputStream.read(buffer)) != -1) {
+                    MD5.update(buffer, 0, length);
+                }
+                sampleFileMD5 = new String(Hex.encodeHex(MD5.digest()));
+            } catch (Exception e) {
+                testFailed(e);
+            }
+            return sampleFileMD5;
         }
     }
 
