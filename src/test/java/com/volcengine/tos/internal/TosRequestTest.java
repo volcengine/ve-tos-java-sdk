@@ -90,6 +90,19 @@ public class TosRequestTest {
         Assert.assertEquals(url.host(), "fe80::1551:1234:fbb:fcc3");
         Assert.assertEquals(url.port(), 1234);
         Assert.assertEquals(url.encodedPath(), "/aaa%2Fbbb");
+
+        // 自定义域名
+        endpoint = "custom.domain.test";
+        factory = new TosRequestFactory(signer, endpoint);
+        request = factory.setIsCustomDomain(true).init("aaa", "bbb", null)
+                .buildRequest(HttpMethod.PUT, null);
+        url = request.toURL();
+        Assert.assertNotNull(url);
+        Assert.assertEquals(url.host(), "custom.domain.test");
+        Assert.assertEquals(url.port(), 443);
+        Assert.assertEquals(url.encodedPath(), "/aaa%2Fbbb");
+        Consts.LOG.info(url.toString());
+        Assert.assertEquals(url.toString(), "https://custom.domain.test/aaa%2Fbbb");
     }
 
     @Test

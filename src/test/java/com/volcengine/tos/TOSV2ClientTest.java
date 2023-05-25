@@ -109,14 +109,6 @@ public class TOSV2ClientTest {
             Consts.LOG.info("list {} buckets.", output.getBuckets().length);
             for (int i = 0; i < output.getBuckets().length; i++) {
                 Consts.LOG.info("No.{} bucket: {}", i, output.getBuckets()[i].getName());
-//                if (!Objects.equals(output.getBuckets()[i].getName(), "cyj-sdk-test")) {
-//                    try{
-//                        client.deleteBucket(output.getBuckets()[i].getName());
-//                    } catch (TosServerException e) {
-//                        if (Objects.equals(e.getCode(), "BucketNotEmpty")) {
-//                        }
-//                    }
-//                }
             }
         } catch (TosException e){
             Consts.LOG.error(e.toString(), e);
@@ -365,7 +357,7 @@ public class TOSV2ClientTest {
 
             try(GetObjectOutput got = client.getObject(Consts.bucketCopy, dstKey)){
                 Assert.assertEquals(srcData.length(), got.getObjectMeta().getContentLength());
-                Assert.assertEquals(srcData, StringUtils.toString(got.getContent()));
+                Assert.assertEquals(srcData, StringUtils.toString(got.getContent(), "content"));
             }
         } catch (TosException | IOException e){
             Consts.LOG.error(e.toString(), e);
@@ -388,9 +380,9 @@ public class TOSV2ClientTest {
             Assert.assertEquals(data.length(), head.getObjectMeta().getContentLength());
 
             GetObjectOutput got = client.getObject(bucket, object);
-            String content = StringUtils.toString(got.getContent());
+            String content = StringUtils.toString(got.getContent(), "content");
             Assert.assertEquals(data, content);
-        } catch (TosException | IOException e){
+        } catch (TosException e){
             Consts.LOG.error(e.toString(), e);
             Assert.fail();
         }
@@ -500,7 +492,7 @@ public class TOSV2ClientTest {
             head = client.headObject(Consts.bucket, key);
             Assert.assertEquals("video", head.getObjectMeta().getContentType());
             got = client.getObject(Consts.bucket, key);
-            Assert.assertEquals(data, StringUtils.toString(got.getContent()));
+            Assert.assertEquals(data, StringUtils.toString(got.getContent(), "content"));
             Assert.assertEquals(put.getEtag(), got.getObjectMeta().getEtags());
             Assert.assertEquals("video", got.getObjectMeta().getContentType());
 
@@ -508,7 +500,7 @@ public class TOSV2ClientTest {
             head = client.headObject(Consts.bucket, key);
             Assert.assertEquals("image/png", head.getObjectMeta().getContentType());
             got = client.getObject(Consts.bucket, key);
-            Assert.assertEquals(data, StringUtils.toString(got.getContent()));
+            Assert.assertEquals(data, StringUtils.toString(got.getContent(), "content"));
             Assert.assertEquals(put.getEtag(), got.getObjectMeta().getEtags());
             Assert.assertEquals("image/png", got.getObjectMeta().getContentType());
         } catch (TosException | IOException e){
@@ -645,7 +637,7 @@ public class TOSV2ClientTest {
             for (int i = 0; i < number; i++) {
                 PutObjectOutput put = client.putObject(Consts.bucket, objectPrefix+i, new ByteArrayInputStream(data.getBytes()));
                 GetObjectOutput got = client.getObject(Consts.bucket, objectPrefix+i);
-                Assert.assertEquals(data, StringUtils.toString(got.getContent()));
+                Assert.assertEquals(data, StringUtils.toString(got.getContent(), "content"));
                 Assert.assertEquals(put.getEtag(), got.getObjectMeta().getEtags());
                 objectTobeDeleteds[i] = new ObjectTobeDeleted().setKey(objectPrefix+i);
             }
@@ -653,7 +645,7 @@ public class TOSV2ClientTest {
             Assert.assertNotNull(multiGot);
             Assert.assertNull(multiGot.getErrors());
             Assert.assertEquals(number, multiGot.getDeleteds().length);
-        } catch (TosException | IOException e){
+        } catch (TosException e){
             Consts.LOG.error(e.toString(), e);
             Assert.fail();
         } finally {
@@ -748,7 +740,7 @@ public class TOSV2ClientTest {
             String data = StringUtils.randomString(1024);
             PutObjectOutput put = client.putObject(Consts.bucket, key, new ByteArrayInputStream(data.getBytes()));
             GetObjectOutput got = client.getObject(Consts.bucket, key);
-            Assert.assertEquals(data, StringUtils.toString(got.getContent()));
+            Assert.assertEquals(data, StringUtils.toString(got.getContent(), "content"));
             Assert.assertEquals(put.getEtag(), got.getObjectMeta().getEtags());
 
             GetObjectAclOutput gotAcl = client.getObjectAcl(Consts.bucket, key);
@@ -766,7 +758,7 @@ public class TOSV2ClientTest {
             gotAcl = client.getObjectAcl(Consts.bucket, key);
             Assert.assertEquals(1, gotAcl.getGrants().length);
             Assert.assertEquals(ACLConst.PERMISSION_TYPE_WRITE_ACP, gotAcl.getGrants()[0].getPermission());
-        } catch (TosException | IOException e){
+        } catch (TosException e){
             Consts.LOG.error(e.toString(), e);
             Assert.fail();
         } finally {

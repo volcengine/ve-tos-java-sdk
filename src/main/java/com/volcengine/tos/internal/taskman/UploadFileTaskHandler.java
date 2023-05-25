@@ -77,7 +77,8 @@ public class UploadFileTaskHandler {
                         .setOptions(input.getOptions())
                         .setRateLimiter(input.getRateLimiter())
                         .setDataTransferListener(input.getDataTransferListener())
-                        .setHandler(handler));
+                        .setHandler(handler)
+                        .setTrafficLimit(input.getTrafficLimit()));
             } else {
                 UploadPartInfo partInfo = checkpoint.getUploadPartInfos().get(i);
                 uploadedParts.add(new UploadedPartV2().setEtag(partInfo.getEtag())

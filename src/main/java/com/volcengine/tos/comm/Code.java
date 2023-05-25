@@ -71,4 +71,5 @@ public interface Code {
     String COMPLETING_STATUS_NO_EXPIRATION = "CompletingStatusNoExpiration";
     String FOUND = "Found";
     String INVALID_REDIRECT_LOCATION = "InvalidRedirectLocation";
+    String INVALID_OBJECT_STATE = "InvalidObjectState";
 }

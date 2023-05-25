@@ -3,7 +3,6 @@ package com.volcengine.tos.internal;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.volcengine.tos.comm.TosHeader;
 import com.volcengine.tos.internal.util.StringUtils;
-import com.volcengine.tos.internal.util.TosUtils;
 import com.volcengine.tos.model.RequestInfo;
 import okio.Source;
 
@@ -74,7 +73,7 @@ public class TosResponse implements AutoCloseable, Serializable {
         if (StringUtils.isEmpty(key) || this.headers.size() == 0) {
             return null;
         }
-        return TosUtils.tryDecodeValue(key, this.headers.get(key.toLowerCase()));
+        return this.headers.get(key.toLowerCase());
     }
 
     public TosResponse setHeaders(Map<String, String> headers) {

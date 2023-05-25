@@ -86,6 +86,24 @@ public class PutObjectInput {
         return this;
     }
 
+    public String getCallback() {
+        return putObjectBasicInput.getCallback();
+    }
+
+    public PutObjectInput setCallback(String callback) {
+        this.putObjectBasicInput.setCallback(callback);
+        return this;
+    }
+
+    public String getCallbackVar() {
+        return putObjectBasicInput.getCallbackVar();
+    }
+
+    public PutObjectInput setCallbackVar(String callbackVar) {
+        this.putObjectBasicInput.setCallbackVar(callbackVar);
+        return this;
+    }
+
     public int getReadLimit() {
         return putObjectBasicInput.getReadLimit();
     }
@@ -104,6 +122,8 @@ public class PutObjectInput {
                 ", options=" + getOptions() +
                 ", dataTransferListener=" + getDataTransferListener() +
                 ", rateLimit=" + getRateLimiter() +
+                ", callback='" + getCallback() + '\'' +
+                ", callbackVar='" + getCallbackVar() + '\'' +
                 '}';
     }
 
@@ -156,6 +176,16 @@ public class PutObjectInput {
 
         public PutObjectInputBuilder rateLimiter(RateLimiter rateLimiter) {
             this.putObjectBasicInput.setRateLimiter(rateLimiter);
+            return this;
+        }
+
+        public PutObjectInputBuilder callback(String callback) {
+            this.putObjectBasicInput.setCallback(callback);
+            return this;
+        }
+
+        public PutObjectInputBuilder callbackVar(String callbackVar) {
+            this.putObjectBasicInput.setCallbackVar(callbackVar);
             return this;
         }
 

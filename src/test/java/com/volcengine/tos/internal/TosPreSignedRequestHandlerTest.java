@@ -128,7 +128,7 @@ public class TosPreSignedRequestHandlerTest {
             url = handler.preSignedURL(input);
             resp = doReq(HttpMethod.GET, url.getSignedUrl(), null, -1, "");
             Assert.assertEquals(resp.code(), HttpStatus.OK);
-            String data1 = StringUtils.toString(resp.body().byteStream());
+            String data1 = StringUtils.toString(resp.body().byteStream(), "content");
             resp.body().close();
             Assert.assertTrue(StringUtils.equals(data1, data));
             Thread.sleep(2500);
@@ -247,7 +247,7 @@ public class TosPreSignedRequestHandlerTest {
             PreSignedPostSignatureOutput output = handler.preSignedPostSignature(input);
             Response response = doPostReq(key, null, output, sampleData);
             if (response.body() != null) {
-                Consts.LOG.debug(StringUtils.toString(response.body().byteStream()));
+                Consts.LOG.debug(StringUtils.toString(response.body().byteStream(), "content"));
             }
             Assert.assertEquals(response.code(), HttpStatus.NO_CONTENT);
             response.close();
@@ -269,7 +269,7 @@ public class TosPreSignedRequestHandlerTest {
             output = handler.preSignedPostSignature(input);
             response = doPostReq(key, null, output, sampleData);
             if (response.body() != null) {
-                Consts.LOG.debug(StringUtils.toString(response.body().byteStream()));
+                Consts.LOG.debug(StringUtils.toString(response.body().byteStream(), "content"));
             }
             Assert.assertEquals(response.code(), HttpStatus.NO_CONTENT);
             response.close();
@@ -282,13 +282,13 @@ public class TosPreSignedRequestHandlerTest {
             output = handler.preSignedPostSignature(input);
             response = doPostReq(key, null, output, sampleData);
             if (response.body() != null) {
-                Consts.LOG.debug(StringUtils.toString(response.body().byteStream()));
+                Consts.LOG.debug(StringUtils.toString(response.body().byteStream(), "content"));
             }
             Assert.assertEquals(response.code(), HttpStatus.BAD_REQUEST);
             response.close();
             GetObjectV2Input get = new GetObjectV2Input().setBucket(Consts.bucket).setKey(key);
             try(GetObjectV2Output got = ClientInstance.getObjectRequestHandlerInstance().getObject(get)) {
-                String gotData = StringUtils.toString(got.getContent());
+                String gotData = StringUtils.toString(got.getContent(), "content");
                 Consts.LOG.debug(gotData);
             } catch (TosException e) {
                 Assert.assertEquals(e.getStatusCode(), HttpStatus.NOT_FOUND);
@@ -312,7 +312,7 @@ public class TosPreSignedRequestHandlerTest {
             PreSignedPostSignatureOutput output = handler.preSignedPostSignature(input);
             Response response = doPostReq(key, ACLType.ACL_PUBLIC_READ, output, sampleData);
             if (response.body() != null) {
-                Consts.LOG.debug(StringUtils.toString(response.body().byteStream()));
+                Consts.LOG.debug(StringUtils.toString(response.body().byteStream(), "content"));
             }
             Assert.assertEquals(response.code(), HttpStatus.NO_CONTENT);
             response.close();
@@ -367,7 +367,7 @@ public class TosPreSignedRequestHandlerTest {
             Response response = doReq(HttpMethod.GET, getUrl, null, -1, "");
             String body = null;
             if (response.body() != null) {
-                body = StringUtils.toString(response.body().byteStream());
+                body = StringUtils.toString(response.body().byteStream(), "content");
 //                Consts.LOG.debug(body);
                 response.close();
             }
@@ -444,7 +444,7 @@ public class TosPreSignedRequestHandlerTest {
     private void checkData(String key) throws IOException {
         GetObjectV2Input get = new GetObjectV2Input().setBucket(Consts.bucket).setKey(key);
         try(GetObjectV2Output got = ClientInstance.getObjectRequestHandlerInstance().getObject(get)) {
-            String gotData = StringUtils.toString(got.getContent());
+            String gotData = StringUtils.toString(got.getContent(), "content");
             Assert.assertEquals(TosObjectRequestHandlerBasicTest.getContentMD5(gotData),
                     TosObjectRequestHandlerBasicTest.getContentMD5(sampleData));
         }

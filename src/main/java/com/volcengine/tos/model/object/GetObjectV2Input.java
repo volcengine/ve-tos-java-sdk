@@ -35,6 +35,8 @@ public class GetObjectV2Input {
      */
     private RateLimiter rateLimiter;
 
+    private String process;
+
     public String getBucket() {
         return bucket;
     }
@@ -152,6 +154,15 @@ public class GetObjectV2Input {
         return this;
     }
 
+    public String getProcess() {
+        return process;
+    }
+
+    public GetObjectV2Input setProcess(String process) {
+        this.process = process;
+        return this;
+    }
+
     public Map<String, String> getAllSettedHeaders() {
         Map<String, String> allHeaders = new HashMap<>(options == null ? Collections.emptyMap() : options.headers());
         if (StringUtils.isNotEmpty(range)) {
@@ -161,33 +172,13 @@ public class GetObjectV2Input {
         return allHeaders;
     }
 
-//    private void addRespHeaders(Map<String, String> allHeaders) {
-//        if (this.responseCacheControl != null) {
-//            allHeaders.put(TosHeader.HEADER_RESPONSE_CACHE_CONTROL, responseCacheControl);
-//        }
-//        if (this.responseContentLanguage != null) {
-//            allHeaders.put(TosHeader.HEADER_RESPONSE_CONTENT_LANGUAGE, responseContentLanguage);
-//        }
-//        if (this.responseContentDisposition != null) {
-//            allHeaders.put(TosHeader.HEADER_RESPONSE_CONTENT_DISPOSITION, responseContentDisposition);
-//        }
-//        if (this.responseContentType != null) {
-//            allHeaders.put(TosHeader.HEADER_RESPONSE_CONTENT_TYPE, responseContentType);
-//        }
-//        if (this.responseContentEncoding != null) {
-//            allHeaders.put(TosHeader.HEADER_RESPONSE_CONTENT_ENCODING, responseContentEncoding);
-//        }
-//        if (this.responseExpires != null) {
-//            allHeaders.put(TosHeader.HEADER_RESPONSE_EXPIRES, DateConverter.dateToRFC1123String(responseExpires));
-//        }
-//    }
-
     @Override
     public String toString() {
         return "GetObjectV2Input{" +
                 "bucket='" + bucket + '\'' +
                 ", key='" + key + '\'' +
                 ", versionID='" + versionID + '\'' +
+                ", range='" + range + '\'' +
                 ", options=" + options +
                 ", responseCacheControl='" + responseCacheControl + '\'' +
                 ", responseContentDisposition='" + responseContentDisposition + '\'' +
@@ -196,7 +187,8 @@ public class GetObjectV2Input {
                 ", responseContentType='" + responseContentType + '\'' +
                 ", responseExpires=" + responseExpires +
                 ", dataTransferListener=" + dataTransferListener +
-                ", rateLimit=" + rateLimiter +
+                ", rateLimiter=" + rateLimiter +
+                ", process='" + process + '\'' +
                 '}';
     }
 
@@ -218,6 +210,7 @@ public class GetObjectV2Input {
         private Date responseExpires;
         private DataTransferListener dataTransferListener;
         private RateLimiter rateLimiter;
+        private String process;
 
         private GetObjectV2InputBuilder() {
         }
@@ -287,6 +280,11 @@ public class GetObjectV2Input {
             return this;
         }
 
+        public GetObjectV2InputBuilder process(String process) {
+            this.process = process;
+            return this;
+        }
+
         public GetObjectV2Input build() {
             GetObjectV2Input getObjectV2Input = new GetObjectV2Input();
             getObjectV2Input.bucket = this.bucket;
@@ -302,6 +300,7 @@ public class GetObjectV2Input {
             getObjectV2Input.responseContentLanguage = this.responseContentLanguage;
             getObjectV2Input.responseExpires = this.responseExpires;
             getObjectV2Input.rateLimiter = this.rateLimiter;
+            getObjectV2Input.process = this.process;
             return getObjectV2Input;
         }
     }

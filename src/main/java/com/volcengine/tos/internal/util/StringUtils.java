@@ -36,6 +36,25 @@ public class StringUtils {
         }
     }
 
+    // 不区分大小写比较是否相等
+    public static boolean equalsIgnoreCase(String src, String dst) {
+        if (src == null) {
+            return dst == null;
+        } else {
+            return src.equalsIgnoreCase(dst);
+        }
+    }
+
+    // 不区分大小写比较是否 startsWith
+    public static boolean startWithIgnoreCase(String src, String dst) {
+        if (src == null) {
+            return false;
+        } else {
+            return dst != null &&
+                    src.toLowerCase().startsWith(dst.toLowerCase());
+        }
+    }
+
     public static boolean equals(byte[] src, byte[] dst) {
         if (src == null) {
             return dst == null;
@@ -55,8 +74,12 @@ public class StringUtils {
         return sb.toString();
     }
 
-    public static String toString(InputStream stream) throws IOException {
-        return readStream(stream).toString("UTF-8");
+    public static String toString(InputStream stream, String content) {
+        try {
+            return readStream(stream).toString("UTF-8");
+        } catch (IOException e) {
+            throw new TosClientException("tos: read " + content + " from body failed", e);
+        }
     }
 
     public static byte[] toByteArray(InputStream stream) throws IOException {

@@ -398,7 +398,7 @@ public class TOSClientTest {
 
             try(GetObjectOutput got = client.getObject(Consts.bucketCopy, dstKey)){
                 Assert.assertEquals(srcData.length(), got.getObjectMeta().getContentLength());
-                Assert.assertEquals(srcData, StringUtils.toString(got.getContent()));
+                Assert.assertEquals(srcData, StringUtils.toString(got.getContent(), "content"));
             }
         } catch (TosException | IOException e){
             Consts.LOG.error(e.toString(), e);
@@ -421,9 +421,9 @@ public class TOSClientTest {
             Assert.assertEquals(data.length(), head.getObjectMeta().getContentLength());
 
             GetObjectOutput got = client.getObject(bucket, object);
-            String content = StringUtils.toString(got.getContent());
+            String content = StringUtils.toString(got.getContent(), "content");
             Assert.assertEquals(data, content);
-        } catch (TosException | IOException e){
+        } catch (TosException e){
             Consts.LOG.error(e.toString(), e);
             Assert.fail();
         }
@@ -533,7 +533,7 @@ public class TOSClientTest {
             head = client.headObject(Consts.bucket, key);
             Assert.assertEquals("video", head.getObjectMeta().getContentType());
             got = client.getObject(Consts.bucket, key);
-            Assert.assertEquals(data, StringUtils.toString(got.getContent()));
+            Assert.assertEquals(data, StringUtils.toString(got.getContent(), "content"));
             Assert.assertEquals(put.getEtag(), got.getObjectMeta().getEtags());
             Assert.assertEquals("video", got.getObjectMeta().getContentType());
 
@@ -541,7 +541,7 @@ public class TOSClientTest {
             head = client.headObject(Consts.bucket, key);
             Assert.assertEquals("image/png", head.getObjectMeta().getContentType());
             got = client.getObject(Consts.bucket, key);
-            Assert.assertEquals(data, StringUtils.toString(got.getContent()));
+            Assert.assertEquals(data, StringUtils.toString(got.getContent(), "content"));
             Assert.assertEquals(put.getEtag(), got.getObjectMeta().getEtags());
             Assert.assertEquals("image/png", got.getObjectMeta().getContentType());
         } catch (TosException | IOException e){
@@ -616,7 +616,7 @@ public class TOSClientTest {
                 versionID[i] = put.getVersionID();
 
                 GetObjectOutput got = client.getObject(bucketName, key, RequestOptions.withVersionID(put.getVersionID()));
-                Assert.assertEquals(buf, StringUtils.toString(got.getContent()));
+                Assert.assertEquals(buf, StringUtils.toString(got.getContent(), "content"));
                 Assert.assertEquals(put.getEtag(), got.getObjectMeta().getEtags());
                 Assert.assertEquals(put.getVersionID(), got.getObjectMeta().getVersionID());
             }
@@ -634,7 +634,7 @@ public class TOSClientTest {
                 hasMore = resp.isTruncated();
                 versionIDMarker = resp.getVersionIDMarker();
             }
-        } catch (TosException | IOException e){
+        } catch (TosException e){
             Consts.LOG.error(e.toString(), e);
             Assert.fail();
         }finally {
@@ -688,7 +688,7 @@ public class TOSClientTest {
             for (int i = 0; i < number; i++) {
                 PutObjectOutput put = client.putObject(Consts.bucket, objectPrefix+i, new ByteArrayInputStream(data.getBytes()));
                 GetObjectOutput got = client.getObject(Consts.bucket, objectPrefix+i);
-                Assert.assertEquals(data, StringUtils.toString(got.getContent()));
+                Assert.assertEquals(data, StringUtils.toString(got.getContent(), "content"));
                 Assert.assertEquals(put.getEtag(), got.getObjectMeta().getEtags());
                 objectTobeDeleteds[i] = new ObjectTobeDeleted().setKey(objectPrefix+i);
             }
@@ -696,7 +696,7 @@ public class TOSClientTest {
             Assert.assertNotNull(multiGot);
             Assert.assertNull(multiGot.getErrors());
             Assert.assertEquals(number, multiGot.getDeleteds().length);
-        } catch (TosException | IOException e){
+        } catch (TosException e){
             Consts.LOG.error(e.toString(), e);
             Assert.fail();
         } finally {
@@ -791,7 +791,7 @@ public class TOSClientTest {
             String data = StringUtils.randomString(1024);
             PutObjectOutput put = client.putObject(Consts.bucket, key, new ByteArrayInputStream(data.getBytes()));
             GetObjectOutput got = client.getObject(Consts.bucket, key);
-            Assert.assertEquals(data, StringUtils.toString(got.getContent()));
+            Assert.assertEquals(data, StringUtils.toString(got.getContent(), "content"));
             Assert.assertEquals(put.getEtag(), got.getObjectMeta().getEtags());
 
             GetObjectAclOutput gotAcl = client.getObjectAcl(Consts.bucket, key);
@@ -809,7 +809,7 @@ public class TOSClientTest {
             gotAcl = client.getObjectAcl(Consts.bucket, key);
             Assert.assertEquals(1, gotAcl.getGrants().length);
             Assert.assertEquals(ACLConst.PERMISSION_TYPE_WRITE_ACP, gotAcl.getGrants()[0].getPermission());
-        } catch (TosException | IOException e){
+        } catch (TosException e){
             Consts.LOG.error(e.toString(), e);
             Assert.fail();
         } finally {

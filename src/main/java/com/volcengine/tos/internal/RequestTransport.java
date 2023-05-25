@@ -26,10 +26,7 @@ import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.zip.CheckedInputStream;
 
@@ -263,9 +260,7 @@ public class RequestTransport implements Transport {
     private Request buildRequest(TosRequest request) throws IOException {
         HttpUrl url = request.toURL();
         Request.Builder builder = new Request.Builder().url(url);
-        if (request.getHeaders() != null) {
-            request.getHeaders().forEach(builder::header);
-        }
+        addHeader(request, builder);
         wrapInputStream(request);
 
         switch (request.getMethod() == null ? "" : request.getMethod().toUpperCase()) {
@@ -277,7 +272,7 @@ public class RequestTransport implements Transport {
                     // 兼容 ClientV1 旧接口，有bug，ClientV2 新接口不会走到这里
                     byte[] data = new byte[request.getContent().available()];
                     int exact = request.getContent().read(data);
-                    if (exact != data.length) {
+                    if (exact != -1 && exact != data.length) {
                         throw new IOException("expected "+data.length+" bytes, but got "+exact+" bytes.");
                     }
                     builder.post(RequestBody.create(getMediaType(request), data));
@@ -311,6 +306,17 @@ public class RequestTransport implements Transport {
                 throw new TosClientException("Method is not supported: " + request.getMethod(), null);
         }
         return builder.build();
+    }
+
+    private void addHeader(TosRequest request, Request.Builder builder) {
+        if (request == null || builder == null || request.getHeaders() == null) {
+            return;
+        }
+        for (Map.Entry<String, String> entry : request.getHeaders().entrySet()) {
+            String key = entry.getKey();
+            String value = entry.getValue();
+            builder.header(key, value);
+        }
     }
 
     private void wrapInputStream(TosRequest request) {
@@ -377,9 +383,26 @@ public class RequestTransport implements Transport {
     private Map<String, String> getHeaders(Response response) {
         Map<String, String> headers = new HashMap<>(response.headers().size());
         for (String name : response.headers().names()) {
-            headers.put(name.toLowerCase(), response.header(name));
+            parseHeader(response, headers, name);
         }
         return headers;
+    }
+
+    private void parseHeader(Response response, Map<String, String> headers, String name) {
+        // 原始的 key/value 值
+        String key = name;
+        String value = response.header(name);
+        // 在此统一处理 header 的解码
+        if (StringUtils.startWithIgnoreCase(key, TosHeader.HEADER_META_PREFIX)) {
+            // 对于自定义元数据，对 key/value 包含的中文汉字进行 URL 解码
+            key = TosUtils.decodeHeader(key);
+            value = TosUtils.decodeHeader(value);
+        }
+        if (StringUtils.equalsIgnoreCase(key, TosHeader.HEADER_CONTENT_DISPOSITION)) {
+            // 对于 Content-Disposition 头，对 value 包含的中文汉字进行 URL 解码
+            value = TosUtils.decodeHeader(value);
+        }
+        headers.put(key.toLowerCase(), value);
     }
 }
 

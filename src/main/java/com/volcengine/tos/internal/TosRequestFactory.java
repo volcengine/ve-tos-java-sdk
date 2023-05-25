@@ -18,6 +18,7 @@ public class TosRequestFactory {
     private String host;
     private int port;
     private int urlMode = URL_MODE_DEFAULT;
+    private boolean isCustomDomain;
 
     public TosRequestFactory(Signer signer, String endpoint) {
         this.signer = signer;
@@ -32,8 +33,11 @@ public class TosRequestFactory {
             this.urlMode = URL_MODE_PATH;
             // get port from ip
             this.port = ParamsChecker.parsePort(this.host);
-            int lastIdx = this.host.length() - String.valueOf(port).length() - 1;
-            this.host = host.substring(0, lastIdx);
+            if (port != 0) {
+                int lastIdx = this.host.length() - String.valueOf(port).length() - 1;
+                this.host = host.substring(0, lastIdx);
+            }
+            // if port == 0, use the whole host
         }
     }
 
@@ -75,6 +79,18 @@ public class TosRequestFactory {
 
     public TosRequestFactory setHost(String host) {
         this.host = host;
+        return this;
+    }
+
+    public boolean isCustomDomain() {
+        return isCustomDomain;
+    }
+
+    public TosRequestFactory setIsCustomDomain(boolean isCustomDomain) {
+        this.isCustomDomain = isCustomDomain;
+        if (this.isCustomDomain) {
+            this.urlMode = URL_MODE_PATH;
+        }
         return this;
     }
 

@@ -40,6 +40,10 @@ public class TypeConverter {
             return StorageClassType.STORAGE_CLASS_IA;
         } else if (StringUtils.equals(storageClass, STORAGE_CLASS_ARCHIVE_FR)) {
             return StorageClassType.STORAGE_CLASS_ARCHIVE_FR;
+        } else if (StringUtils.equals(storageClass, STORAGE_CLASS_INTELLIGENT_TIERING)) {
+            return StorageClassType.STORAGE_CLASS_INTELLIGENT_TIERING;
+        } else if (StringUtils.equals(storageClass, STORAGE_CLASS_COLD_ARCHIVE)) {
+            return StorageClassType.STORAGE_CLASS_COLD_ARCHIVE;
         } else {
             return StorageClassType.STORAGE_CLASS_UNKNOWN;
         }

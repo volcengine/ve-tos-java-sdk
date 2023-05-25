@@ -88,12 +88,7 @@ class RequestHandler {
             return;
         }
         // other cases, throw exception
-        String s = null;
-        try{
-            s = StringUtils.toString(res.getInputStream());
-        } catch (IOException e) {
-            throw new TosClientException("tos: read response body failed", e);
-        }
+        String s = StringUtils.toString(res.getInputStream(), "response body");
         if (s.length() > 0) {
             ServerExceptionJson se = null;
             try{

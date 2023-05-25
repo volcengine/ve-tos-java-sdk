@@ -63,7 +63,7 @@ public class TOSV2Client implements TOSV2 {
                 // 允许 signer 为空，匿名访问
                 this.signer = new SignV4(this.config.getCredentials(), this.config.getRegion());
             }
-            this.factory = new TosRequestFactory(this.signer, this.config.getEndpoint());
+            this.factory = new TosRequestFactory(this.signer, this.config.getEndpoint()).setIsCustomDomain(config.isCustomDomain());
         }
         this.bucketRequestHandler = new TosBucketRequestHandler(this.transport, this.factory);
         this.objectRequestHandler = new TosObjectRequestHandler(this.transport, this.factory)
@@ -114,6 +114,14 @@ public class TOSV2Client implements TOSV2 {
         this.objectRequestHandler.setTransport(this.transport);
         this.fileRequestHandler.setObjectHandler(this.objectRequestHandler);
         this.fileRequestHandler.setTransport(this.transport);
+    }
+
+    protected TOSClientConfiguration getConfig() {
+        return config;
+    }
+
+    protected TosRequestFactory getFactory() {
+        return factory;
     }
 
     @Override
@@ -338,6 +346,21 @@ public class TOSV2Client implements TOSV2 {
     }
 
     @Override
+    public PutBucketRenameOutput putBucketRename(PutBucketRenameInput input) throws TosException {
+        return bucketRequestHandler.putBucketRename(input);
+    }
+
+    @Override
+    public GetBucketRenameOutput getBucketRename(GetBucketRenameInput input) throws TosException {
+        return bucketRequestHandler.getBucketRename(input);
+    }
+
+    @Override
+    public DeleteBucketRenameOutput deleteBucketRename(DeleteBucketRenameInput input) throws TosException {
+        return bucketRequestHandler.deleteBucketRename(input);
+    }
+
+    @Override
     public GetObjectV2Output getObject(GetObjectV2Input input) throws TosException {
         return objectRequestHandler.getObject(input);
     }
@@ -494,6 +517,16 @@ public class TOSV2Client implements TOSV2 {
     @Override
     public ListMultipartUploadsV2Output listMultipartUploads(ListMultipartUploadsV2Input input) throws TosException {
         return objectRequestHandler.listMultipartUploads(input);
+    }
+
+    @Override
+    public RenameObjectOutput renameObject(RenameObjectInput input) throws TosException {
+        return objectRequestHandler.renameObject(input);
+    }
+
+    @Override
+    public RestoreObjectOutput restoreObject(RestoreObjectInput input) throws TosException {
+        return objectRequestHandler.restoreObject(input);
     }
 
     @Override

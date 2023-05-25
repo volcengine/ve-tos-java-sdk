@@ -19,6 +19,16 @@ public enum StorageClassType {
      */
     STORAGE_CLASS_ARCHIVE_FR("ARCHIVE_FR"),
 
+    /**
+     * 智能分层
+     */
+    STORAGE_CLASS_INTELLIGENT_TIERING("INTELLIGENT_TIERING"),
+
+    /**
+     * 冷归档
+     */
+    STORAGE_CLASS_COLD_ARCHIVE("COLD_ARCHIVE"),
+
     @JsonEnumDefaultValue
     STORAGE_CLASS_UNKNOWN("UNKNOWN");
 

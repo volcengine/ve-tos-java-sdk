@@ -5,6 +5,7 @@ import com.volcengine.tos.auth.Signer;
 import com.volcengine.tos.comm.TosHeader;
 import com.volcengine.tos.internal.model.HttpRange;
 import com.volcengine.tos.internal.util.StringUtils;
+import com.volcengine.tos.internal.util.TosUtils;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -12,6 +13,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.time.Duration;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
 
@@ -171,7 +173,32 @@ public class RequestBuilder {
                 request.setContentLength(-1L);
             }
         }
+        Map<String, String> headers = request.getHeaders();
+        if (headers != null && headers.size() > 0) {
+            tryEncodeHeaders(headers);
+        }
         return request;
+    }
+
+    private void tryEncodeHeaders(Map<String, String> headers) {
+        Map<String, String> encodedHeaders = new HashMap<>();
+        Iterator<Map.Entry<String, String>> iterator = headers.entrySet().iterator();
+        while (iterator.hasNext()) {
+            Map.Entry<String, String> entry = iterator.next();
+            String key = entry.getKey();
+            String value = entry.getValue();
+            // 在此统一处理 header 的编码
+            if (StringUtils.isNotEmpty(key) && key.startsWith(TosHeader.HEADER_META_PREFIX)) {
+                // 对于自定义元数据，对 key/value 包含的中文汉字进行 URL 编码
+                encodedHeaders.put(TosUtils.encodeHeader(key), TosUtils.encodeHeader(value));
+                iterator.remove();
+            } else if (StringUtils.equals(key, TosHeader.HEADER_CONTENT_DISPOSITION)) {
+                // 对于 Content-Disposition 头，对 value 包含的中文汉字进行 URL 编码
+                encodedHeaders.put(key, TosUtils.encodeHeader(value));
+                iterator.remove();
+            }
+        }
+        headers.putAll(encodedHeaders);
     }
 
     private TosRequest genTosRequest(String method, InputStream stream) {
@@ -217,7 +244,7 @@ public class RequestBuilder {
     public TosRequest buildPreSignedUrlRequest(String method, long ttl) throws TosClientException {
         TosRequest request = genTosRequest(method, null);
         if (this.signer != null){
-            Map<String, String> query = this.signer.signQuery(request, Duration.ofSeconds(ttl));
+            Map<String, String> query = this.signer.signQuery(request, ttl);
             if (request.getQuery() == null) {
                 request.setQuery(new HashMap<>());
             }
@@ -274,7 +301,7 @@ public class RequestBuilder {
         }
 
         if (this.signer != null){
-            Map<String, String> query = this.signer.signQuery(request, ttl);
+            Map<String, String> query = this.signer.signQuery(request, ttl.toMillis()/1000);
             for (String key : query.keySet()){
                 request.getQuery().put(key, query.get(key));
             }

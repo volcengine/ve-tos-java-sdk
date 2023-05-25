@@ -11,7 +11,7 @@ public interface Consts {
     String SCHEME_HTTP = "http";
     String SCHEME_HTTPS = "https";
     String SDK_NAME = "ve-tos-java-sdk";
-    String SDK_VERSION = "v2.5.4";
+    String SDK_VERSION = "v2.6.0";
 
     String SDK_LOG_NAMESPACE = "com.volcengine.tos";
 
@@ -50,4 +50,6 @@ public interface Consts {
     int DEFAULT_HTTPS_PORT = 443;
 
     Set<String> CUSTOM_SERVER_SIDE_ENCRYPTION_ALGORITHM_LIST = new HashSet<>(Collections.singletonList("AES256"));
+
+    String USE_COMPLETE_ALL = "yes";
 }

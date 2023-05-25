@@ -172,7 +172,7 @@ public class GetObjectBasicOutput {
                     meta = new HashMap<>();
                 }
                 String kk = key.substring(TosHeader.HEADER_META_PREFIX.length());
-                meta.put(kk, TosUtils.tryDecodeValue(key, headers.get(key)));
+                meta.put(kk, headers.get(key));
             }
         }
         return meta;
