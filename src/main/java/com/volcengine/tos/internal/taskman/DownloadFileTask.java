@@ -32,6 +32,7 @@ class DownloadFileTask extends TosTask implements TaskOutput<DownloadPartInfo> {
     private TosObjectRequestHandler handler;
     private RateLimiter rateLimiter;
     private DataTransferListener dataTransferListener;
+    private long trafficLimit;
     private final AtomicLong consumedBytes;
 
     public DownloadFileTask(DownloadFileCheckpoint checkpoint, int taskIdx, AtomicLong consumedBytes) {
@@ -59,6 +60,9 @@ class DownloadFileTask extends TosTask implements TaskOutput<DownloadPartInfo> {
                     options = new ObjectMetaRequestOptions();
                 }
                 options.setRange(partInfo.getRangeStart(), partInfo.getRangeEnd());
+                if (trafficLimit != 0) {
+                    options.setTrafficLimit(trafficLimit);
+                }
 
                 GetObjectV2Input get = new GetObjectV2Input()
                         .setBucket(headObjectV2Input.getBucket())
@@ -226,6 +230,15 @@ class DownloadFileTask extends TosTask implements TaskOutput<DownloadPartInfo> {
 
     public DownloadFileTask setDataTransferListener(DataTransferListener dataTransferListener) {
         this.dataTransferListener = dataTransferListener;
+        return this;
+    }
+
+    public long getTrafficLimit() {
+        return trafficLimit;
+    }
+
+    public DownloadFileTask setTrafficLimit(long trafficLimit) {
+        this.trafficLimit = trafficLimit;
         return this;
     }
 }

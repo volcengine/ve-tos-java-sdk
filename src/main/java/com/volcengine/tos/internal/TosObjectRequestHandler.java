@@ -87,7 +87,8 @@ public class TosObjectRequestHandler {
                 .withQuery(TosHeader.QUERY_RESPONSE_CONTENT_ENCODING, input.getResponseContentEncoding())
                 .withQuery(TosHeader.QUERY_RESPONSE_CONTENT_TYPE, input.getResponseContentType())
                 .withQuery(TosHeader.QUERY_RESPONSE_CONTENT_LANGUAGE, input.getResponseContentLanguage())
-                .withQuery(TosHeader.QUERY_RESPONSE_EXPIRES, DateConverter.dateToRFC1123String(input.getResponseExpires()));
+                .withQuery(TosHeader.QUERY_RESPONSE_EXPIRES, DateConverter.dateToRFC1123String(input.getResponseExpires()))
+                .withQuery(TosHeader.QUERY_DATA_PROCESS, input.getProcess());
         TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
         TosResponse response = objectHandler.doRequest(req, getExpectedCodes(input.getAllSettedHeaders()));
         return buildGetObjectV2Output(response, input.getRateLimiter(), input.getDataTransferListener());
@@ -172,7 +173,9 @@ public class TosObjectRequestHandler {
         ParamsChecker.isValidBucketNameAndKey(input.getBucket(), input.getKey());
         content = ensureNotNullContent(content);
         RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), input.getAllSettedHeaders())
-                .withContentLength(input.getContentLength());
+                .withContentLength(input.getContentLength())
+                .withHeader(TosHeader.HEADER_CALLBACK, input.getCallback())
+                .withHeader(TosHeader.HEADER_CALLBACK_VAR, input.getCallbackVar());
         addContentType(builder, input.getKey());
         TosRequest req = this.factory.build(builder, HttpMethod.PUT, content)
                 .setEnableCrcCheck(this.enableCrcCheck)
@@ -197,13 +200,15 @@ public class TosObjectRequestHandler {
     }
 
     private PutObjectOutput buildPutObjectOutput(TosResponse res) {
+        String callbackResult = StringUtils.toString(res.getInputStream(), "callbackResult");
         return new PutObjectOutput().setRequestInfo(res.RequestInfo())
                 .setEtag(res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_ETAG))
                 .setVersionID(res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_VERSIONID))
                 .setHashCrc64ecma(res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_CRC64))
                 .setSseCustomerAlgorithm(res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_SSE_CUSTOMER_ALGORITHM))
                 .setSseCustomerKeyMD5(res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_SSE_CUSTOMER_KEY_MD5))
-                .setSseCustomerKey(res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_SSE_CUSTOMER_KEY));
+                .setSseCustomerKey(res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_SSE_CUSTOMER_KEY))
+                .setCallbackResult(callbackResult);
     }
 
     public PutObjectOutput putObject(PutObjectInput input) throws TosException {
@@ -559,18 +564,60 @@ public class TosObjectRequestHandler {
         ParamsChecker.ensureNotNull(input, "CompleteMultipartUploadV2Input");
         ParamsChecker.ensureNotNull(input.getUploadID(), "uploadID");
         ParamsChecker.isValidBucketNameAndKey(input.getBucket(), input.getKey());
-        TosMarshalResult marshalResult = PayloadConverter.serializePayloadAndComputeMD5(input);
         RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), null)
-                .withQuery("uploadId", input.getUploadID()).withHeader(TosHeader.HEADER_CONTENT_MD5, marshalResult.getContentMD5());
-        TosRequest req = this.factory.build(builder, HttpMethod.POST, new ByteArrayInputStream(marshalResult.getData()))
-                .setContentLength(marshalResult.getData().length)
-                .setRetryableOnClientException(false);
+                .withQuery("uploadId", input.getUploadID())
+                .withHeader(TosHeader.HEADER_CALLBACK, input.getCallback())
+                .withHeader(TosHeader.HEADER_CALLBACK_VAR, input.getCallbackVar());;
+        String contentMd5 = null;
+        byte[] data = new byte[0];
+        if (!input.isCompleteAll()) {
+            ensureUploadedPartsNotNull(input);
+            TosMarshalResult marshalResult = PayloadConverter.serializePayloadAndComputeMD5(input);
+            contentMd5 = marshalResult.getContentMD5();
+            data = marshalResult.getData();
+        } else {
+            ensureUploadedPartsNull(input);
+            builder.withHeader(TosHeader.HEADER_COMPLETE_ALL, Consts.USE_COMPLETE_ALL);
+        }
+        builder.withHeader(TosHeader.HEADER_CONTENT_MD5, contentMd5);
+        TosRequest req = this.factory.build(builder, HttpMethod.POST, new ByteArrayInputStream(data))
+                .setContentLength(data.length).setRetryableOnClientException(false);
         return objectHandler.doRequest(req, HttpStatus.OK, this::buildCompleteMultipartUploadOutput);
     }
 
+    private void ensureUploadedPartsNull(CompleteMultipartUploadV2Input input) {
+        if (input != null && input.getUploadedParts() != null && input.getUploadedParts().size() != 0) {
+            throw new TosClientException("tos: you should not set uploadedParts while using completeAll.", null);
+        }
+    }
+
+    private void ensureUploadedPartsNotNull(CompleteMultipartUploadV2Input input) {
+        if (input == null || input.getUploadedParts() == null || input.getUploadedParts().size() == 0) {
+            throw new TosClientException("tos: you must specify at least one part.", null);
+        }
+    }
+
     private CompleteMultipartUploadV2Output buildCompleteMultipartUploadOutput(TosResponse response) {
-        CompleteMultipartUploadV2Output output = PayloadConverter.parsePayload(response.getInputStream(),
-                new TypeReference<CompleteMultipartUploadV2Output>(){});
+        String respBody = StringUtils.toString(response.getInputStream(), "response body");
+        CompleteMultipartUploadV2Output output = new CompleteMultipartUploadV2Output();
+        boolean hasCallbackResult = false;
+        try{
+            output = PayloadConverter.parsePayload(respBody, new TypeReference<CompleteMultipartUploadV2Output>(){});
+            if (StringUtils.isEmpty(output.getEtag())) {
+                // callback result may be in json format
+                hasCallbackResult = true;
+            }
+        } catch (TosClientException e) {
+            // call result may all not be in json format, which will throw exception,
+            // so we catch it here.
+            hasCallbackResult = true;
+        }
+        if (hasCallbackResult) {
+            // if response body return callback result, then set etag and location from header.
+            output.setCallbackResult(respBody);
+            output.setEtag(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_ETAG));
+            output.setLocation(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_LOCATION));
+        }
         return output.setRequestInfo(response.RequestInfo())
                 .setVersionID(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_VERSIONID))
                 .setHashCrc64ecma(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_CRC64));
@@ -626,6 +673,40 @@ public class TosObjectRequestHandler {
                 response -> PayloadConverter.parsePayload(response.getInputStream(),
                         new TypeReference<ListMultipartUploadsV2Output>(){}).setRequestInfo(response.RequestInfo())
         );
+    }
+
+    public RenameObjectOutput renameObject(RenameObjectInput input) throws TosException {
+        ParamsChecker.ensureNotNull(input, "RenameObjectInput");
+        ParamsChecker.isValidBucketName(input.getBucket());
+        ParamsChecker.isValidKey(input.getKey());
+        ParamsChecker.isValidKey(input.getNewKey());
+        RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), null)
+                .withQuery("name", input.getNewKey()).withQuery("rename", "");
+        TosRequest req = this.factory.build(builder, HttpMethod.PUT, null);
+        return objectHandler.doRequest(req, HttpStatus.NO_CONTENT, response -> new RenameObjectOutput()
+                .setRequestInfo(response.RequestInfo()));
+    }
+
+    public RestoreObjectOutput restoreObject(RestoreObjectInput input) throws TosException {
+        ParamsChecker.ensureNotNull(input, "RestoreObjectInput");
+        ParamsChecker.isValidBucketName(input.getBucket());
+        ParamsChecker.isValidKey(input.getKey());
+        TosMarshalResult marshalResult = PayloadConverter.serializePayloadAndComputeMD5(input);
+        RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), null)
+                .withHeader(TosHeader.HEADER_CONTENT_MD5, marshalResult.getContentMD5())
+                .withQuery("restore", "")
+                .withQuery("versionId", input.getVersionID());
+        TosRequest req = this.factory.build(builder, HttpMethod.POST, new ByteArrayInputStream(marshalResult.getData()))
+                .setContentLength(marshalResult.getData().length);
+        return objectHandler.doRequest(req, restoreObjectExceptedCodes(), response -> new RestoreObjectOutput()
+                .setRequestInfo(response.RequestInfo()));
+    }
+
+    private List<Integer> restoreObjectExceptedCodes() {
+        List<Integer> expectedCodes = new ArrayList<>();
+        expectedCodes.add(HttpStatus.OK);
+        expectedCodes.add(HttpStatus.ACCEPTED);
+        return expectedCodes;
     }
 
     private void addContentType(RequestBuilder rb, String objectKey) throws TosClientException {

@@ -3,6 +3,8 @@ package com.volcengine.tos.model.object;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.volcengine.tos.model.RequestInfo;
 
+import java.util.List;
+
 public class CompleteMultipartUploadV2Output {
     private RequestInfo requestInfo;
     @JsonProperty("Bucket")
@@ -13,8 +15,11 @@ public class CompleteMultipartUploadV2Output {
     private String etag;
     @JsonProperty("Location")
     private String location;
+    @JsonProperty("CompletedParts")
+    private List<UploadedPartV2> uploadedPartV2List;
     private String versionID;
     private String hashCrc64ecma;
+    private String callbackResult;
 
     public RequestInfo getRequestInfo() {
         return requestInfo;
@@ -79,6 +84,24 @@ public class CompleteMultipartUploadV2Output {
         return this;
     }
 
+    public List<UploadedPartV2> getUploadedPartV2List() {
+        return uploadedPartV2List;
+    }
+
+    public CompleteMultipartUploadV2Output setUploadedPartV2List(List<UploadedPartV2> uploadedPartV2List) {
+        this.uploadedPartV2List = uploadedPartV2List;
+        return this;
+    }
+
+    public String getCallbackResult() {
+        return callbackResult;
+    }
+
+    public CompleteMultipartUploadV2Output setCallbackResult(String callbackResult) {
+        this.callbackResult = callbackResult;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "CompleteMultipartUploadV2Output{" +
@@ -87,8 +110,10 @@ public class CompleteMultipartUploadV2Output {
                 ", key='" + key + '\'' +
                 ", etag='" + etag + '\'' +
                 ", location='" + location + '\'' +
+                ", uploadedPartV2List=" + uploadedPartV2List +
                 ", versionID='" + versionID + '\'' +
                 ", hashCrc64ecma='" + hashCrc64ecma + '\'' +
+                ", callbackResult='" + callbackResult + '\'' +
                 '}';
     }
 }

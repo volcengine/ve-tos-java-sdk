@@ -44,4 +44,12 @@ public class PayloadConverter {
             throw new TosClientException("tos: unable to do deserialization", e);
         }
     }
+
+    public static <T> T parsePayload(String reader, TypeReference<T> valueTypeRef) throws TosClientException {
+        try{
+            return TosUtils.getJsonMapper().readValue(reader, valueTypeRef);
+        } catch (IOException e){
+            throw new TosClientException("tos: unable to do deserialization", e);
+        }
+    }
 }

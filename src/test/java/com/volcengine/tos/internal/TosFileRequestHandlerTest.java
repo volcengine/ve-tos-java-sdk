@@ -657,7 +657,7 @@ public class TosFileRequestHandlerTest {
         Assert.assertEquals(output.getKey(), key);
     }
 
-    public String getMD5() {
+    private String getMD5() {
         if (sampleFileMD5 != null) {
             return sampleFileMD5;
         }

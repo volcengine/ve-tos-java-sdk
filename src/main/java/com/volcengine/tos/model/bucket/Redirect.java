@@ -16,6 +16,8 @@ public class Redirect {
     private MirrorHeader mirrorHeader;
     @JsonProperty("PublicSource")
     private PublicSource publicSource;
+    @JsonProperty("Transform")
+    private Transform transform;
 
     public RedirectType getRedirectType() {
         return redirectType;
@@ -71,6 +73,15 @@ public class Redirect {
         return this;
     }
 
+    public Transform getTransform() {
+        return transform;
+    }
+
+    public Redirect setTransform(Transform transform) {
+        this.transform = transform;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "Redirect{" +
@@ -80,6 +91,7 @@ public class Redirect {
                 ", followRedirect=" + followRedirect +
                 ", mirrorHeader=" + mirrorHeader +
                 ", publicSource=" + publicSource +
+                ", transform=" + transform +
                 '}';
     }
 
@@ -94,6 +106,7 @@ public class Redirect {
         private boolean followRedirect;
         private MirrorHeader mirrorHeader;
         private PublicSource publicSource;
+        private Transform transform;
 
         private RedirectBuilder() {
         }
@@ -128,6 +141,11 @@ public class Redirect {
             return this;
         }
 
+        public RedirectBuilder transform(Transform transform) {
+            this.transform = transform;
+            return this;
+        }
+
         public Redirect build() {
             Redirect redirect = new Redirect();
             redirect.setRedirectType(redirectType);
@@ -136,6 +154,7 @@ public class Redirect {
             redirect.setFollowRedirect(followRedirect);
             redirect.setMirrorHeader(mirrorHeader);
             redirect.setPublicSource(publicSource);
+            redirect.setTransform(transform);
             return redirect;
         }
     }

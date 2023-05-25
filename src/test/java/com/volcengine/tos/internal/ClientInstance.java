@@ -39,6 +39,12 @@ public class ClientInstance {
         return objectHandler;
     }
 
+    public static TosObjectRequestHandler getObjectRequestHandlerWithPathStyleInstance(TosRequestFactory factory) {
+        init();
+        return new TosObjectRequestHandler(transport, factory)
+                .setEnableCrcCheck(true).setClientAutoRecognizeContentType(true);
+    }
+
     public static TosFileRequestHandler getFileRequestHandlerInstance() {
         if (fileHandler != null) {
             return fileHandler;

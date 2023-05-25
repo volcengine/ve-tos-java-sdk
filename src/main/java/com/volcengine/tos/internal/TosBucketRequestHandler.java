@@ -1,19 +1,14 @@
 package com.volcengine.tos.internal;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.volcengine.tos.TosClientException;
 import com.volcengine.tos.TosException;
 import com.volcengine.tos.comm.HttpMethod;
 import com.volcengine.tos.comm.HttpStatus;
 import com.volcengine.tos.comm.TosHeader;
-import com.volcengine.tos.internal.util.ParamsChecker;
-import com.volcengine.tos.internal.util.PayloadConverter;
-import com.volcengine.tos.internal.util.StringUtils;
-import com.volcengine.tos.internal.util.TypeConverter;
+import com.volcengine.tos.internal.util.*;
 import com.volcengine.tos.model.bucket.*;
 
 import java.io.ByteArrayInputStream;
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
 public class TosBucketRequestHandler {
@@ -86,15 +81,8 @@ public class TosBucketRequestHandler {
         ParamsChecker.isValidBucketName(input.getBucket());
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("policy", "");
         TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
-        return bucketHandler.doRequest(req, HttpStatus.OK, res -> {
-            GetBucketPolicyOutput ret = new GetBucketPolicyOutput().setRequestInfo(res.RequestInfo());
-            try{
-                ret.setPolicy(StringUtils.toString(res.getInputStream()));
-            } catch (IOException e) {
-                throw new TosClientException("tos: read bucket policy failed", e);
-            }
-            return ret;
-        });
+        return bucketHandler.doRequest(req, HttpStatus.OK, res -> new GetBucketPolicyOutput().setRequestInfo(res.RequestInfo())
+                .setPolicy(StringUtils.toString(res.getInputStream(), "bucket policy")));
     }
 
     public DeleteBucketPolicyOutput deleteBucketPolicy(DeleteBucketPolicyInput input) throws TosException {
@@ -308,7 +296,7 @@ public class TosBucketRequestHandler {
     public PutBucketNotificationOutput putBucketNotification(PutBucketNotificationInput input) throws TosException {
         ParamsChecker.ensureNotNull(input, "PutBucketNotificationInput");
         ParamsChecker.isValidBucketName(input.getBucket());
-        ParamsChecker.ensureNotNull(input.getCloudFunctionConfigurations(), "CloudFunctionConfigurations");
+//        ParamsChecker.ensureNotNull(input.getCloudFunctionConfigurations(), "CloudFunctionConfigurations");
         TosMarshalResult marshalResult = PayloadConverter.serializePayloadAndComputeMD5(input);
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("notification", "")
                 .withHeader(TosHeader.HEADER_CONTENT_MD5, marshalResult.getContentMD5());
@@ -418,6 +406,36 @@ public class TosBucketRequestHandler {
         TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
         return bucketHandler.doRequest(req, HttpStatus.OK, res -> PayloadConverter.parsePayload(res.getInputStream(),
                 new TypeReference<GetBucketACLOutput>(){}).setRequestInfo(res.RequestInfo()));
+    }
+
+    public PutBucketRenameOutput putBucketRename(PutBucketRenameInput input) throws TosException {
+        ParamsChecker.ensureNotNull(input, "PutBucketRenameInput");
+        ParamsChecker.isValidBucketName(input.getBucket());
+        RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("rename", "");
+        TosMarshalResult marshalResult = PayloadConverter.serializePayloadAndComputeMD5(input);
+        builder.withHeader(TosHeader.HEADER_CONTENT_MD5, marshalResult.getContentMD5());
+        TosRequest req = this.factory.build(builder, HttpMethod.PUT, new ByteArrayInputStream(marshalResult.getData()))
+                .setContentLength(marshalResult.getData().length);
+        return bucketHandler.doRequest(req, HttpStatus.OK, res -> new PutBucketRenameOutput()
+                .setRequestInfo(res.RequestInfo()));
+    }
+
+    public GetBucketRenameOutput getBucketRename(GetBucketRenameInput input) throws TosException {
+        ParamsChecker.ensureNotNull(input, "GetBucketRenameInput");
+        ParamsChecker.isValidBucketName(input.getBucket());
+        RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("rename", "");
+        TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
+        return bucketHandler.doRequest(req, HttpStatus.OK, res -> PayloadConverter.parsePayload(res.getInputStream(),
+                new TypeReference<GetBucketRenameOutput>(){}).setRequestInfo(res.RequestInfo()));
+    }
+
+    public DeleteBucketRenameOutput deleteBucketRename(DeleteBucketRenameInput input) throws TosException {
+        ParamsChecker.ensureNotNull(input, "DeleteBucketRenameInput");
+        ParamsChecker.isValidBucketName(input.getBucket());
+        RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("rename", "");
+        TosRequest req = this.factory.build(builder, HttpMethod.DELETE, null);
+        return bucketHandler.doRequest(req, HttpStatus.NO_CONTENT, res -> new DeleteBucketRenameOutput()
+                .setRequestInfo(res.RequestInfo()));
     }
 
     public TosRequestFactory getFactory() {

@@ -20,6 +20,7 @@ public class ResumableCopyObjectTask extends TosTask implements TaskOutput<Uploa
     private TosObjectRequestHandler handler;
     private UploadPartCopyV2Output output;
     private ObjectMetaRequestOptions options;
+    private long trafficLimit;
 
     public ResumableCopyObjectTask(ResumableCopyObjectCheckpoint checkpoint, int taskIdx) {
         ParamsChecker.ensureNotNull(checkpoint, "ResumableCopyObjectCheckpoint");
@@ -40,6 +41,12 @@ public class ResumableCopyObjectTask extends TosTask implements TaskOutput<Uploa
                         .uploadID(checkpoint.getUploadID()).options(this.options).build();
                 uploadNullPart(input);
                 return this;
+            }
+            if (trafficLimit != 0) {
+                if (options == null) {
+                    options = new ObjectMetaRequestOptions();
+                }
+                options.setTrafficLimit(trafficLimit);
             }
             UploadPartCopyV2Input input = UploadPartCopyV2Input.builder()
                     .bucket(checkpoint.getBucket())
@@ -182,6 +189,15 @@ public class ResumableCopyObjectTask extends TosTask implements TaskOutput<Uploa
 
     public ResumableCopyObjectTask setCopySourceSSECKey(String copySourceSSECKey) {
         this.copySourceSSECKey = copySourceSSECKey;
+        return this;
+    }
+
+    public long getTrafficLimit() {
+        return trafficLimit;
+    }
+
+    public ResumableCopyObjectTask setTrafficLimit(long trafficLimit) {
+        this.trafficLimit = trafficLimit;
         return this;
     }
 }

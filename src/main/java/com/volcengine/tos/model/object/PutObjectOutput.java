@@ -19,6 +19,8 @@ public class PutObjectOutput {
     private String sseCustomerKeyMD5;
     private String sseCustomerKey;
 
+    private String callbackResult;
+
     public RequestInfo getRequestInfo() {
         return requestInfo;
     }
@@ -93,6 +95,15 @@ public class PutObjectOutput {
         return this;
     }
 
+    public String getCallbackResult() {
+        return callbackResult;
+    }
+
+    public PutObjectOutput setCallbackResult(String callbackResult) {
+        this.callbackResult = callbackResult;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "PutObjectOutput{" +
@@ -103,6 +114,7 @@ public class PutObjectOutput {
                 ", sseCustomerAlgorithm='" + sseCustomerAlgorithm + '\'' +
                 ", sseCustomerKeyMD5='" + sseCustomerKeyMD5 + '\'' +
                 ", sseCustomerKey='" + sseCustomerKey + '\'' +
+                ", callbackResult='" + callbackResult + '\'' +
                 '}';
     }
 }

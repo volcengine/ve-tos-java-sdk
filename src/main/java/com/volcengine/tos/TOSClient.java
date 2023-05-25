@@ -41,7 +41,7 @@ public class TOSClient implements TOS{
      */
     static final int URL_MODE_DEFAULT = 0;
 
-    private static final String VERSION = "v2.5.4";
+    private static final String VERSION = "v2.6.0";
     private static final String SDK_NAME = "ve-tos-java-sdk";
     private static final String USER_AGENT = String.format("%s/%s (%s/%s;%s)", SDK_NAME, VERSION,
             System.getProperty("os.name"), System.getProperty("os.arch"), System.getProperty("java.version", "0"));
@@ -148,32 +148,28 @@ public class TOSClient implements TOS{
         if (res.getStatusCode() == expectedCode) {
             return res;
         }
-        try {
-            if (res.getStatusCode() >= HttpStatus.BAD_REQUEST) {
-                String s = StringUtils.toString(res.getInputStream());
-                if (s.length() > 0) {
-                    try{
-                        ServerExceptionJson se = TosUtils.getJsonMapper().readValue(s, new TypeReference<ServerExceptionJson>(){});
-                        throw new TosServerException(res.getStatusCode(), se.getCode(), se.getMessage(), se.getRequestID(), se.getHostID());
-                    } catch (JsonProcessingException e) {
-                        if (res.getStatusCode() == HttpStatus.BAD_REQUEST) {
-                            throw new TosClientException("bad request, " + s, null);
-                        }
-                        throw new TosClientException("parse server exception failed", e);
+        if (res.getStatusCode() >= HttpStatus.BAD_REQUEST) {
+            String s = StringUtils.toString(res.getInputStream(), "response body");
+            if (s.length() > 0) {
+                try{
+                    ServerExceptionJson se = TosUtils.getJsonMapper().readValue(s, new TypeReference<ServerExceptionJson>(){});
+                    throw new TosServerException(res.getStatusCode(), se.getCode(), se.getMessage(), se.getRequestID(), se.getHostID());
+                } catch (JsonProcessingException e) {
+                    if (res.getStatusCode() == HttpStatus.BAD_REQUEST) {
+                        throw new TosClientException("bad request, " + s, null);
                     }
-                }
-                // head 不返回 body，此处特殊处理
-                if (res.getStatusCode() == HttpStatus.NOT_FOUND) {
-                    // 针对 head 404 场景
-                    throw new TosServerException(res.getStatusCode(), Code.NOT_FOUND, "", res.getRequesID(), "");
-                }
-                if (res.getStatusCode() == HttpStatus.FORBIDDEN) {
-                    // 针对 head 403 场景
-                    throw new TosServerException(res.getStatusCode(), Code.FORBIDDEN, "", res.getRequesID(), "");
+                    throw new TosClientException("parse server exception failed", e);
                 }
             }
-        } catch (IOException e){
-            throw new TosClientException("check exception error", e);
+            // head 不返回 body，此处特殊处理
+            if (res.getStatusCode() == HttpStatus.NOT_FOUND) {
+                // 针对 head 404 场景
+                throw new TosServerException(res.getStatusCode(), Code.NOT_FOUND, "", res.getRequesID(), "");
+            }
+            if (res.getStatusCode() == HttpStatus.FORBIDDEN) {
+                // 针对 head 403 场景
+                throw new TosServerException(res.getStatusCode(), Code.FORBIDDEN, "", res.getRequesID(), "");
+            }
         }
         throw new UnexpectedStatusCodeException(res.getStatusCode(), expectedCode, res.getRequesID());
     }
@@ -239,13 +235,8 @@ public class TOSClient implements TOS{
         TosRequest req = this.newBuilder(bucket, "").withQuery("policy", "").
                 buildRequest(HttpMethod.GET, null);
         TosResponse res = roundTrip(req, HttpStatus.OK);
-        GetBucketPolicyOutput ret = new GetBucketPolicyOutput().setRequestInfo(res.RequestInfo());
-        try{
-            ret.setPolicy(StringUtils.toString(res.getInputStream()));
-        } catch (IOException e) {
-            throw new TosClientException("read bucket policy failed", e);
-        }
-        return ret;
+        return new GetBucketPolicyOutput().setRequestInfo(res.RequestInfo())
+                .setPolicy(StringUtils.toString(res.getInputStream(), "bucket policy"));
     }
 
     @Override
