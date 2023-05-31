@@ -9,8 +9,7 @@ import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
 
-import static com.volcengine.tos.internal.Consts.URL_MODE_DEFAULT;
-import static com.volcengine.tos.internal.Consts.URL_MODE_PATH;
+import static com.volcengine.tos.internal.Consts.*;
 
 public class TosRequestFactory {
     private Signer signer;
@@ -89,7 +88,7 @@ public class TosRequestFactory {
     public TosRequestFactory setIsCustomDomain(boolean isCustomDomain) {
         this.isCustomDomain = isCustomDomain;
         if (this.isCustomDomain) {
-            this.urlMode = URL_MODE_PATH;
+            this.urlMode = URL_MODE_CUSTOM_DOMAIN;
         }
         return this;
     }

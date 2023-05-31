@@ -2,8 +2,7 @@ package com.volcengine.tos.model.object;
 
 import java.util.List;
 
-@Deprecated
-public class PreSingedPolicyURLInput {
+public class PreSignedPolicyURLInput {
     private String bucket;
     private long expires;
     private List<PolicySignatureCondition> conditions;
@@ -14,7 +13,7 @@ public class PreSingedPolicyURLInput {
         return expires;
     }
 
-    public PreSingedPolicyURLInput setExpires(long expires) {
+    public PreSignedPolicyURLInput setExpires(long expires) {
         this.expires = expires;
         return this;
     }
@@ -23,7 +22,7 @@ public class PreSingedPolicyURLInput {
         return conditions;
     }
 
-    public PreSingedPolicyURLInput setConditions(List<PolicySignatureCondition> conditions) {
+    public PreSignedPolicyURLInput setConditions(List<PolicySignatureCondition> conditions) {
         this.conditions = conditions;
         return this;
     }
@@ -32,7 +31,7 @@ public class PreSingedPolicyURLInput {
         return alternativeEndpoint;
     }
 
-    public PreSingedPolicyURLInput setAlternativeEndpoint(String alternativeEndpoint) {
+    public PreSignedPolicyURLInput setAlternativeEndpoint(String alternativeEndpoint) {
         this.alternativeEndpoint = alternativeEndpoint;
         return this;
     }
@@ -41,7 +40,7 @@ public class PreSingedPolicyURLInput {
         return bucket;
     }
 
-    public PreSingedPolicyURLInput setBucket(String bucket) {
+    public PreSignedPolicyURLInput setBucket(String bucket) {
         this.bucket = bucket;
         return this;
     }
@@ -50,14 +49,14 @@ public class PreSingedPolicyURLInput {
         return isCustomDomain;
     }
 
-    public PreSingedPolicyURLInput setCustomDomain(boolean customDomain) {
+    public PreSignedPolicyURLInput setCustomDomain(boolean customDomain) {
         this.isCustomDomain = customDomain;
         return this;
     }
 
     @Override
     public String toString() {
-        return "PreSingedPolicyURLInput{" +
+        return "PreSignedPolicyURLInput{" +
                 "bucket='" + bucket + '\'' +
                 ", expires=" + expires +
                 ", conditions=" + conditions +
@@ -66,53 +65,53 @@ public class PreSingedPolicyURLInput {
                 '}';
     }
 
-    public static PreSingedPolicyURLInputBuilder builder() {
-        return new PreSingedPolicyURLInputBuilder();
+    public static PreSignedPolicyURLInput.PreSignedPolicyURLInputBuilder builder() {
+        return new PreSignedPolicyURLInput.PreSignedPolicyURLInputBuilder();
     }
 
-    public static final class PreSingedPolicyURLInputBuilder {
+    public static final class PreSignedPolicyURLInputBuilder {
         private String bucket;
         private long expires;
         private List<PolicySignatureCondition> conditions;
         private String alternativeEndpoint;
         private boolean useEndpointWithoutBucket;
 
-        private PreSingedPolicyURLInputBuilder() {
+        private PreSignedPolicyURLInputBuilder() {
         }
 
-        public PreSingedPolicyURLInputBuilder bucket(String bucket) {
+        public PreSignedPolicyURLInput.PreSignedPolicyURLInputBuilder bucket(String bucket) {
             this.bucket = bucket;
             return this;
         }
 
-        public PreSingedPolicyURLInputBuilder expires(long expires) {
+        public PreSignedPolicyURLInput.PreSignedPolicyURLInputBuilder expires(long expires) {
             this.expires = expires;
             return this;
         }
 
-        public PreSingedPolicyURLInputBuilder conditions(List<PolicySignatureCondition> conditions) {
+        public PreSignedPolicyURLInput.PreSignedPolicyURLInputBuilder conditions(List<PolicySignatureCondition> conditions) {
             this.conditions = conditions;
             return this;
         }
 
-        public PreSingedPolicyURLInputBuilder alternativeEndpoint(String alternativeEndpoint) {
+        public PreSignedPolicyURLInput.PreSignedPolicyURLInputBuilder alternativeEndpoint(String alternativeEndpoint) {
             this.alternativeEndpoint = alternativeEndpoint;
             return this;
         }
 
-        public PreSingedPolicyURLInputBuilder useEndpointWithoutBucket(boolean useEndpointWithoutBucket) {
+        public PreSignedPolicyURLInput.PreSignedPolicyURLInputBuilder useEndpointWithoutBucket(boolean useEndpointWithoutBucket) {
             this.useEndpointWithoutBucket = useEndpointWithoutBucket;
             return this;
         }
 
-        public PreSingedPolicyURLInput build() {
-            PreSingedPolicyURLInput preSingedPolicyURLInput = new PreSingedPolicyURLInput();
-            preSingedPolicyURLInput.setBucket(bucket);
-            preSingedPolicyURLInput.setExpires(expires);
-            preSingedPolicyURLInput.setConditions(conditions);
-            preSingedPolicyURLInput.setAlternativeEndpoint(alternativeEndpoint);
-            preSingedPolicyURLInput.setCustomDomain(useEndpointWithoutBucket);
-            return preSingedPolicyURLInput;
+        public PreSignedPolicyURLInput build() {
+            PreSignedPolicyURLInput PreSignedPolicyURLInput = new PreSignedPolicyURLInput();
+            PreSignedPolicyURLInput.setBucket(bucket);
+            PreSignedPolicyURLInput.setExpires(expires);
+            PreSignedPolicyURLInput.setConditions(conditions);
+            PreSignedPolicyURLInput.setAlternativeEndpoint(alternativeEndpoint);
+            PreSignedPolicyURLInput.setCustomDomain(useEndpointWithoutBucket);
+            return PreSignedPolicyURLInput;
         }
     }
 }

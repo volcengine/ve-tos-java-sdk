@@ -1,13 +1,11 @@
 package com.volcengine.tos.internal;
 
 import com.volcengine.tos.TosClientException;
-import com.volcengine.tos.comm.event.DataTransferListener;
 import com.volcengine.tos.internal.model.CRC64Checksum;
 import com.volcengine.tos.internal.model.CheckCrc64AutoInputStream;
-import com.volcengine.tos.internal.model.SimpleDataTransferListenInputStream;
+import com.volcengine.tos.internal.model.TosCheckedInputStream;
 import com.volcengine.tos.internal.util.CRC64Utils;
 import com.volcengine.tos.internal.util.StringUtils;
-import com.volcengine.tos.model.object.TosObjectInputStream;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
@@ -15,7 +13,6 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.zip.CheckedInputStream;
 
 public class CRC64Test  {
@@ -77,6 +74,57 @@ public class CRC64Test  {
     }
 
     @Test
+    void crc64ResetTest() throws IOException {
+        CRC64Checksum checksum = new CRC64Checksum(0);
+        String data = StringUtils.randomString(16*1024+1234);
+        CRC64Checksum crc64 = new CRC64Checksum();
+        crc64.update(data.getBytes(), 0, data.length());
+        long crc64Val = crc64.getValue();
+
+        // 直接用原生 CheckedInputStream 库
+        InputStream in = new ByteArrayInputStream(data.getBytes());
+        in = new CheckedInputStream(in, checksum);
+        byte[] tmp = new byte[4096];
+        in.read(tmp);
+        in.read(tmp);
+        // reset 时没有一起 reset crc64 的 value
+        in.reset();
+        while (in.read(tmp) != -1 ){}
+        long clientCrcLong = ((CheckedInputStream) in).getChecksum().getValue();
+        // 计算错误
+        Assert.assertNotEquals(clientCrcLong, crc64Val);
+
+        // 使用继承的 TosCheckedInputStream 类
+        checksum = new CRC64Checksum(0);
+        in = new ByteArrayInputStream(data.getBytes());
+        in = new TosCheckedInputStream(in, checksum);
+        tmp = new byte[4096];
+        in.read(tmp);
+        in.read(tmp);
+        // reset 时会一起 reset crc64 的 value
+        in.reset();
+        while (in.read(tmp) != -1 ){}
+        clientCrcLong = ((CheckedInputStream) in).getChecksum().getValue();
+        // 计算正确
+        Assert.assertEquals(clientCrcLong, crc64Val);
+
+        // 使用继承的 TosCheckedInputStream 类，调用 mark
+        checksum = new CRC64Checksum(0);
+        in = new ByteArrayInputStream(data.getBytes());
+        in = new TosCheckedInputStream(in, checksum);
+        tmp = new byte[4096];
+        in.read(tmp);
+        in.mark(8192);
+        in.read(tmp);
+        // reset 时会一起 reset crc64 的 value
+        in.reset();
+        while (in.read(tmp) != -1 ){}
+        clientCrcLong = ((CheckedInputStream) in).getChecksum().getValue();
+        // 计算正确
+        Assert.assertEquals(clientCrcLong, crc64Val);
+    }
+
+    @Test
     void autoCheckCrc64InputStreamTest() {
         String data2 = "This is a test of the crc64 algorithm.";
         String data2Crc64 = "4479640849766114640";
@@ -121,14 +169,4 @@ public class CRC64Test  {
             Assert.fail();
         }
     }
-
-//    @Test
-//    void wrapInputStreamTest() {
-//        DataTransferListener listener = System.out::println;
-//        InputStream stream = new ByteArrayInputStream("hello world".getBytes());
-//        stream = new CheckedInputStream(stream, new CRC64Checksum());
-//        stream = new SimpleDataTransferListenInputStream(stream, listener, 100);
-//        stream = new TosObjectInputStream(stream);
-//        ((CheckedInputStream) stream).getChecksum().getValue();
-//    }
 }

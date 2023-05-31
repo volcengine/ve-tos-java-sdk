@@ -16,12 +16,15 @@ import java.util.concurrent.ThreadLocalRandom;
 import static com.volcengine.tos.internal.Consts.*;
 
 public class TosUtils {
-    private static final String USER_AGENT = String.format("%s/%s (%s/%s;%s)", SDK_NAME, SDK_VERSION,
-            System.getProperty("os.name"), System.getProperty("os.arch"), System.getProperty("java.version", "0"));
-    private static final ObjectMapper JSON = new ObjectMapper().configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+    private static final String USER_AGENT = String.format("%s/%s (%s/%s;%s)",
+            SDK_NAME, SDK_VERSION, OS_NAME, OS_ARCH, JAVA_VERSION);
+    private static final ObjectMapper JSON = new ObjectMapper()
+            .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
             .enable(DeserializationFeature.READ_UNKNOWN_ENUM_VALUES_USING_DEFAULT_VALUE);
 
+    @Deprecated
     private static final long MAX_PRE_SIGNED_TTL = 604800;
+
     private static final long DEFAULT_PRE_SIGNED_TTL = 3600;
 
     private static Map<String, List<String>> SUPPORTED_REGION = null;
