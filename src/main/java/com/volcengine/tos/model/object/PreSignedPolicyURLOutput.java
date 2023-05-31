@@ -1,7 +1,6 @@
 package com.volcengine.tos.model.object;
 
-@Deprecated
-public class PreSingedPolicyURLOutput {
+public class PreSignedPolicyURLOutput {
     private PreSignedPolicyURLGenerator preSignedPolicyURLGenerator;
     private String signatureQuery;
     private String host;
@@ -11,7 +10,7 @@ public class PreSingedPolicyURLOutput {
         return preSignedPolicyURLGenerator;
     }
 
-    public PreSingedPolicyURLOutput setPreSignedPolicyURLGenerator(PreSignedPolicyURLGenerator preSignedPolicyURLGenerator) {
+    public PreSignedPolicyURLOutput setPreSignedPolicyURLGenerator(PreSignedPolicyURLGenerator preSignedPolicyURLGenerator) {
         this.preSignedPolicyURLGenerator = preSignedPolicyURLGenerator;
         return this;
     }
@@ -20,7 +19,7 @@ public class PreSingedPolicyURLOutput {
         return signatureQuery;
     }
 
-    public PreSingedPolicyURLOutput setSignatureQuery(String signatureQuery) {
+    public PreSignedPolicyURLOutput setSignatureQuery(String signatureQuery) {
         this.signatureQuery = signatureQuery;
         return this;
     }
@@ -29,7 +28,7 @@ public class PreSingedPolicyURLOutput {
         return host;
     }
 
-    public PreSingedPolicyURLOutput setHost(String host) {
+    public PreSignedPolicyURLOutput setHost(String host) {
         this.host = host;
         return this;
     }
@@ -38,14 +37,14 @@ public class PreSingedPolicyURLOutput {
         return scheme;
     }
 
-    public PreSingedPolicyURLOutput setScheme(String scheme) {
+    public PreSignedPolicyURLOutput setScheme(String scheme) {
         this.scheme = scheme;
         return this;
     }
 
     @Override
     public String toString() {
-        return "PreSingedPolicyURLOutput{" +
+        return "PreSignedPolicyURLOutput{" +
                 "preSignedPolicyURLGenerator=" + preSignedPolicyURLGenerator +
                 ", signatureQuery='" + signatureQuery + '\'' +
                 ", host='" + host + '\'' +

@@ -1,28 +1,29 @@
 package com.volcengine.tos.transport;
 
+import com.volcengine.tos.internal.Consts;
 
 public class TransportConfig {
     /**
      * 连接池中允许打开的最大 HTTP 连接数，默认 1024
      */
-    private int maxConnections = 1024;
+    private int maxConnections = Consts.DEFAULT_MAX_CONNECTIONS;
     /**
      * 连接池中空闲 HTTP 连接时间超过此参数的设定值，则关闭 HTTP 连接，单位：毫秒，默认 60000 毫秒
      */
-    private int idleConnectionTimeMills = 60000;
+    private int idleConnectionTimeMills = Consts.DEFAULT_IDLE_CONNECTION_TIME_MILLS;
     /**
      * 建立连接超时时间，单位：毫秒，默认 10000 毫秒
      */
-    private int connectTimeoutMills = 10000;
+    private int connectTimeoutMills = Consts.DEFAULT_CONNECT_TIMEOUT_MILLS;
 
     /**
      * Socket 读超时时间，单位：毫秒，默认 30000 毫秒
      */
-    private int readTimeoutMills = 30000;
+    private int readTimeoutMills = Consts.DEFAULT_READ_TIMEOUT_MILLS;
     /**
      * Socket 写超时时间，单位：毫秒，默认 30000 毫秒
      */
-    private int writeTimeoutMills = 30000;
+    private int writeTimeoutMills = Consts.DEFAULT_WRITE_TIMEOUT_MILLS;
 
     /**
      * 代理服务器的主机地址，当前只支持 http 协议
@@ -44,7 +45,7 @@ public class TransportConfig {
     /**
      * 是否开启 SSL 证书校验，默认为 true
      */
-    private boolean enableVerifySSL = true;
+    private boolean enableVerifySSL = Consts.DEFAULT_ENABLE_VERIFY_SSL;
 
     /**
      * DNS 缓存的有效期，单位：毫秒，小与等于 0 时代表关闭 DNS 缓存，默认为 0
@@ -60,7 +61,7 @@ public class TransportConfig {
     /**
      * 最大重试次数，默认为 3 次
      */
-    private int maxRetryCount;
+    private int maxRetryCount = Consts.DEFAULT_MAX_RETRY_COUNT;
 
     private boolean isHttp;
 
@@ -197,28 +198,22 @@ public class TransportConfig {
     }
 
     public static final class TransportConfigBuilder {
-        private int maxConnections;
-        private int idleConnectionTimeMills;
-        private int connectTimeoutMills;
-        private int readTimeoutMills;
-        private int writeTimeoutMills;
+        private int maxConnections = Consts.DEFAULT_MAX_CONNECTIONS;
+        private int idleConnectionTimeMills = Consts.DEFAULT_IDLE_CONNECTION_TIME_MILLS;
+        private int connectTimeoutMills = Consts.DEFAULT_CONNECT_TIMEOUT_MILLS;
+        private int readTimeoutMills = Consts.DEFAULT_READ_TIMEOUT_MILLS;
+        private int writeTimeoutMills = Consts.DEFAULT_WRITE_TIMEOUT_MILLS;
         private String proxyHost;
         private int proxyPort;
         private String proxyUserName;
         private String proxyPassword;
-        private boolean enableVerifySSL;
+        private boolean enableVerifySSL = Consts.DEFAULT_ENABLE_VERIFY_SSL;
         @Deprecated
         private int dnsCacheTimeMills;
         private int dnsCacheTimeMinutes;
-        private int maxRetryCount;
+        private int maxRetryCount = Consts.DEFAULT_MAX_RETRY_COUNT;
 
         private TransportConfigBuilder() {
-            this.maxConnections = 1024;
-            this.idleConnectionTimeMills = 60000;
-            this.connectTimeoutMills = 10000;
-            this.readTimeoutMills = 30000;
-            this.writeTimeoutMills = 30000;
-            this.enableVerifySSL = true;
         }
 
         public TransportConfigBuilder maxConnections(int maxConnections) {

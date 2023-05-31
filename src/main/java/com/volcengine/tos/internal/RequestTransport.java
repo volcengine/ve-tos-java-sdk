@@ -7,6 +7,7 @@ import com.volcengine.tos.comm.TosHeader;
 import com.volcengine.tos.comm.io.TosRepeatableFileInputStream;
 import com.volcengine.tos.internal.model.CRC64Checksum;
 import com.volcengine.tos.internal.model.SimpleDataTransferListenInputStream;
+import com.volcengine.tos.internal.model.TosCheckedInputStream;
 import com.volcengine.tos.internal.util.CRC64Utils;
 import com.volcengine.tos.internal.util.ParamsChecker;
 import com.volcengine.tos.internal.util.StringUtils;
@@ -43,29 +44,20 @@ import java.util.zip.CheckedInputStream;
  */
 public class RequestTransport implements Transport {
     private static final MediaType DEFAULT_MEDIA_TYPE = null;
-    private static final int DEFAULT_MAX_RETRY_COUNT = 3;
-    private static final int DEFAULT_MAX_CONNECTIONS = 1024;
-    private static final int DEFAULT_IDLE_CONNECTION_TIME_MILLS = 60000;
-    private static final int DEFAULT_READ_TIMEOUT_MILLS = 30000;
-    private static final int DEFAULT_WRITE_TIMEOUT_MILLS = 30000;
-    private static final int DEFAULT_CONNECT_TIMEOUT_MILLS = 10000;
     private final OkHttpClient client;
     private int maxRetries;
     private DnsCacheService dnsCacheService;
 
     public RequestTransport(TransportConfig config){
         ParamsChecker.ensureNotNull(config, "TransportConfig");
-        int maxConnections = config.getMaxConnections() > 0 ? config.getMaxConnections() : DEFAULT_MAX_CONNECTIONS;
+        int maxConnections = config.getMaxConnections() > 0 ? config.getMaxConnections() : Consts.DEFAULT_MAX_CONNECTIONS;
         int maxIdleConnectionTimeMills = config.getIdleConnectionTimeMills() > 0 ?
-                config.getIdleConnectionTimeMills() : DEFAULT_IDLE_CONNECTION_TIME_MILLS;
-        int readTimeout = config.getReadTimeoutMills() > 0 ? config.getReadTimeoutMills() : DEFAULT_READ_TIMEOUT_MILLS;
-        int writeTimeout = config.getWriteTimeoutMills() > 0 ? config.getWriteTimeoutMills() : DEFAULT_WRITE_TIMEOUT_MILLS;
-        int connectTimeout = config.getConnectTimeoutMills() > 0 ? config.getConnectTimeoutMills() : DEFAULT_CONNECT_TIMEOUT_MILLS;
+                config.getIdleConnectionTimeMills() : Consts.DEFAULT_IDLE_CONNECTION_TIME_MILLS;
+        int readTimeout = config.getReadTimeoutMills() > 0 ? config.getReadTimeoutMills() : Consts.DEFAULT_READ_TIMEOUT_MILLS;
+        int writeTimeout = config.getWriteTimeoutMills() > 0 ? config.getWriteTimeoutMills() : Consts.DEFAULT_WRITE_TIMEOUT_MILLS;
+        int connectTimeout = config.getConnectTimeoutMills() > 0 ? config.getConnectTimeoutMills() : Consts.DEFAULT_CONNECT_TIMEOUT_MILLS;
 
         this.maxRetries = config.getMaxRetryCount();
-        if (maxRetries == 0) {
-            maxRetries = DEFAULT_MAX_RETRY_COUNT;
-        }
         if (maxRetries < 0) {
             maxRetries = 0;
         }
@@ -78,8 +70,8 @@ public class RequestTransport implements Transport {
         dispatcher.setMaxRequestsPerHost(maxConnections);
         OkHttpClient.Builder builder = new OkHttpClient.Builder();
         if (!config.isHttp() && !config.isEnableVerifySSL()) {
-            // verify ssl cert default,
-            // but if you use https and disable verifying ssl,
+            // the sdk verifies ssl cert while using https,
+            // but if you disable ssl verification,
             // will ignore it by the following method.
             builder = ignoreCertificate(builder);
         }
@@ -87,7 +79,8 @@ public class RequestTransport implements Transport {
             addProxyConfig(config, builder);
         }
 
-        RequestEventListener.RequestEventListenerFactory eventListener = new RequestEventListener.RequestEventListenerFactory(TosUtils.getLogger());
+        RequestEventListener.RequestEventListenerFactory eventListener = new
+                RequestEventListener.RequestEventListenerFactory(TosUtils.getLogger());
         if (config.getDnsCacheTimeMinutes() > 0) {
             dnsCacheService = new DefaultDnsCacheService(config.getDnsCacheTimeMinutes());
             eventListener.setDnsCacheService(dnsCacheService);
@@ -118,15 +111,6 @@ public class RequestTransport implements Transport {
             };
             builder.proxyAuthenticator(proxyAuthenticator);
         }
-    }
-
-    private static boolean needVerifySslCert(boolean enableVerifySsl, boolean isHttp) {
-        boolean need = enableVerifySsl;
-        if (isHttp) {
-            // if you use http, then do not verify ssl
-            need = false;
-        }
-        return need;
     }
 
     private Dns createDnsWithCache() {
@@ -175,7 +159,9 @@ public class RequestTransport implements Transport {
                 response = client.newCall(request).execute();
                 if (response.code() >= HttpStatus.INTERNAL_SERVER_ERROR
                 || response.code() == HttpStatus.TOO_MANY_REQUESTS) {
+                    // retry on 5xx, 429
                     if (tosRequest.isRetryableOnServerException()) {
+                        // the request can be retried.
                         if (i != maxRetries) {
                             // last time does not need to sleep
                             Thread.sleep(TosUtils.backoff(i));
@@ -236,7 +222,8 @@ public class RequestTransport implements Transport {
     }
 
     private void printAccessLogSucceed(int code, String reqId, long cost, int reqTimes) {
-        TosUtils.getLogger().info("tos: status code:{}, request id:{}, request cost {} ms, request {} times\n", code, reqId, cost, reqTimes);
+        TosUtils.getLogger().info("tos: status code:{}, request id:{}, request cost {} ms, request {} times\n",
+                code, reqId, cost, reqTimes);
     }
 
     private void printAccessLogFailed(Exception e) {
@@ -244,16 +231,22 @@ public class RequestTransport implements Transport {
     }
 
     private void checkCrc(TosRequest tosRequest, Response response) {
-        if (tosRequest.isEnableCrcCheck() && response.code() < HttpStatus.MULTIPLE_CHOICE
-            && tosRequest.getContent() instanceof CheckedInputStream) {
-            // request successful, check crc64
-            long clientCrcLong = ((CheckedInputStream) tosRequest.getContent()).getChecksum().getValue();
-            String clientHashCrc64Ecma = CRC64Utils.longToUnsignedLongString(clientCrcLong);
-            String serverHashCrc64Ecma = response.header(TosHeader.HEADER_CRC64);
-            if (!StringUtils.equals(clientHashCrc64Ecma, serverHashCrc64Ecma)) {
-                throw new TosClientException("tos: crc64 check failed, expected:" + serverHashCrc64Ecma
-                        + ", in fact:" + clientHashCrc64Ecma, null);
-            }
+        boolean needCheckCrc = tosRequest.isEnableCrcCheck()
+                && response.code() < HttpStatus.MULTIPLE_CHOICE
+                && tosRequest.getContent() != null
+                && tosRequest.getContent() instanceof CheckedInputStream;
+        if (!needCheckCrc) {
+            return;
+        }
+        // request successfully, check crc64
+        long clientCrcLong = ((CheckedInputStream) tosRequest.getContent()).getChecksum().getValue();
+        String clientHashCrc64Ecma = CRC64Utils.longToUnsignedLongString(clientCrcLong);
+        String serverHashCrc64Ecma = response.header(TosHeader.HEADER_CRC64);
+        if (!StringUtils.equals(clientHashCrc64Ecma, serverHashCrc64Ecma)) {
+            throw new TosClientException("tos: crc64 check failed, " +
+                    "expected:" + serverHashCrc64Ecma +
+                    ", in fact:" + clientHashCrc64Ecma,
+                    null);
         }
     }
 
@@ -261,7 +254,7 @@ public class RequestTransport implements Transport {
         HttpUrl url = request.toURL();
         Request.Builder builder = new Request.Builder().url(url);
         addHeader(request, builder);
-        wrapInputStream(request);
+        wrapTosRequestContent(request);
 
         switch (request.getMethod() == null ? "" : request.getMethod().toUpperCase()) {
             case HttpMethod.GET:
@@ -279,7 +272,8 @@ public class RequestTransport implements Transport {
                 } else if (request.getContent() != null){
                     // only appendObject use, not support chunk
                     // make sure the content length is set
-                    builder.post(new WrappedTransportRequestBody(getMediaType(request), request));
+                    builder.post(new WrappedTransportRequestBody(
+                            getMediaType(request), request.getContent(), request.getContentLength()));
                 } else if (request.getData() != null){
                     builder.post(RequestBody.create(getMediaType(request), request.getData()));
                 } else {
@@ -288,7 +282,8 @@ public class RequestTransport implements Transport {
                 break;
             case HttpMethod.PUT: {
                 if (request.getContent() != null) {
-                    builder.put(new WrappedTransportRequestBody(getMediaType(request), request));
+                    builder.put(new WrappedTransportRequestBody(
+                            getMediaType(request), request.getContent(), request.getContentLength()));
                 } else if (request.getData() != null){
                     builder.put(RequestBody.create(getMediaType(request), request.getData()));
                 } else {
@@ -319,18 +314,42 @@ public class RequestTransport implements Transport {
         }
     }
 
-    private void wrapInputStream(TosRequest request) {
-        InputStream wrappedInputStream = request.getContent();
-        if (request.getRateLimiter() != null && request.getContent() != null) {
+    private void wrapTosRequestContent(TosRequest request) {
+        if (request == null || request.getContent() == null) {
+            return;
+        }
+        // 确保 TosRequest 拿到的 InputStream 为外部传入，没有封装过，统一在此方法中进行封装
+        InputStream originalInputStream = request.getContent();
+        InputStream wrappedInputStream = null;
+        if (originalInputStream.markSupported()) {
+            // 流本身支持 mark&reset，不做封装
+            wrappedInputStream = originalInputStream;
+        } else {
+            if (originalInputStream instanceof FileInputStream) {
+                // 文件流封装成可重试的流
+                wrappedInputStream = new TosRepeatableFileInputStream((FileInputStream) originalInputStream);
+            } else {
+                wrappedInputStream = new BufferedInputStream(originalInputStream, Consts.DEFAULT_TOS_BUFFER_STREAM_SIZE);
+            }
+        }
+        if (originalInputStream.markSupported()) {
+            int readLimit = Consts.DEFAULT_TOS_BUFFER_STREAM_SIZE;
+            if (request.getReadLimit() > 0) {
+                readLimit = request.getReadLimit();
+            }
+            wrappedInputStream.mark(readLimit);
+        }
+        if (request.getRateLimiter() != null) {
             wrappedInputStream = new RateLimitedInputStream(wrappedInputStream, request.getRateLimiter());
         }
-        if (request.getDataTransferListener() != null && request.getContent() != null) {
-            wrappedInputStream = new SimpleDataTransferListenInputStream(request.getContent(),
+        if (request.getDataTransferListener() != null) {
+            wrappedInputStream = new SimpleDataTransferListenInputStream(wrappedInputStream,
                     request.getDataTransferListener(), request.getContentLength());
         }
-        if (request.isEnableCrcCheck() && request.getContent() != null) {
+        if (request.isEnableCrcCheck()) {
+            // 此封装需保证放最外层，因为上传后需要对上传结果的 crc 进行校验。
             CRC64Checksum checksum = new CRC64Checksum(request.getCrc64InitValue());
-            wrappedInputStream = new CheckedInputStream(wrappedInputStream, checksum);
+            wrappedInputStream = new TosCheckedInputStream(wrappedInputStream, checksum);
         }
         request.setContent(wrappedInputStream);
     }
@@ -358,7 +377,6 @@ public class RequestTransport implements Transport {
             builder.sslSocketFactory(sslSocketFactory, (X509TrustManager)trustAllCerts[0]);
             builder.hostnameVerifier((hostname, session) -> true);
         } catch (NoSuchAlgorithmException | KeyManagementException e) {
-            TosUtils.getLogger().error("tos: exception occurred while configuring ignoreSslCertificate");
             throw new TosClientException("tos: set ignoreCertificate failed", e);
         }
         return builder;
@@ -412,28 +430,15 @@ class WrappedTransportRequestBody extends RequestBody implements Closeable {
     private long contentLength;
     private volatile long totalBytesRead = 0;
 
-    WrappedTransportRequestBody(MediaType contentType, TosRequest request) {
-        ParamsChecker.ensureNotNull(request, "TosRequest");
-        ParamsChecker.ensureNotNull(request.getContent(), "inputStream");
+    WrappedTransportRequestBody(final MediaType contentType, final InputStream content, final long contentLength) {
+        ParamsChecker.ensureNotNull(content, "Content");
+        this.content = content;
         this.contentType = contentType;
-        this.contentLength = request.getContentLength();
+        this.contentLength = contentLength;
         if (this.contentLength < 0) {
             // chunked
             this.contentLength = -1L;
         }
-        this.content = request.getContent();
-        if (!this.content.markSupported()) {
-            if (this.content instanceof FileInputStream) {
-                this.content = new TosRepeatableFileInputStream((FileInputStream) this.content);
-            } else {
-                this.content = new BufferedInputStream(this.content, Consts.DEFAULT_TOS_BUFFER_STREAM_SIZE);
-            }
-        }
-        int readLimit = Consts.DEFAULT_TOS_BUFFER_STREAM_SIZE;
-        if (request.getReadLimit() > 0) {
-            readLimit = request.getReadLimit();
-        }
-        this.content.mark(readLimit);
     }
 
     @Override
@@ -449,6 +454,7 @@ class WrappedTransportRequestBody extends RequestBody implements Closeable {
     @Override
     public void writeTo(BufferedSink sink) throws IOException {
         if (totalBytesRead > 0 && this.content != null && this.content.markSupported()) {
+            TosUtils.getLogger().debug("tos: okhttp writeTo call reset");
             this.content.reset();
             totalBytesRead = 0;
         }

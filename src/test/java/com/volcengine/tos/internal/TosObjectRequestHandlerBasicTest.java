@@ -5,10 +5,8 @@ import com.volcengine.tos.*;
 import com.volcengine.tos.comm.Code;
 import com.volcengine.tos.comm.HttpStatus;
 import com.volcengine.tos.comm.TosHeader;
-import com.volcengine.tos.comm.common.CannedType;
-import com.volcengine.tos.comm.common.GranteeType;
-import com.volcengine.tos.comm.common.PermissionType;
-import com.volcengine.tos.comm.common.StorageClassType;
+import com.volcengine.tos.comm.common.*;
+import com.volcengine.tos.internal.util.base64.Base64;
 import com.volcengine.tos.internal.util.DateConverter;
 import com.volcengine.tos.internal.util.StringUtils;
 import com.volcengine.tos.internal.util.ratelimit.DefaultRateLimiter;
@@ -20,7 +18,6 @@ import com.volcengine.tos.model.object.*;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okhttp3.mockwebserver.RecordedRequest;
-import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.codec.binary.Hex;
 import org.testng.Assert;
 import org.testng.annotations.BeforeTest;
@@ -2026,7 +2023,7 @@ public class TosObjectRequestHandlerBasicTest {
             }
             RestoreObjectOutput output = getHandler().restoreObject(
                     new RestoreObjectInput().setBucket(bucket).setKey(key).setDays(1)
-                            .setRestoreJobParameters(new RestoreJobParameters().setTier("Expedited")));
+                            .setRestoreJobParameters(new RestoreJobParameters().setTier(TierType.TIER_EXPEDITED)));
             Assert.assertEquals(output.getRequestInfo().getStatusCode(), HttpStatus.ACCEPTED);
         } catch (Exception e) {
             testFailed(e);

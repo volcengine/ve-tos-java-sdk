@@ -5,6 +5,8 @@ import com.volcengine.tos.TosClientException;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
@@ -113,5 +115,24 @@ public class StringUtils {
             sb.append(strs.get(i));
         }
         return sb.toString();
+    }
+
+    public static byte[] getBytesUtf8(final String string) {
+        return getBytes(string, StandardCharsets.UTF_8);
+    }
+
+    private static byte[] getBytes(final String string, final Charset charset) {
+        if (string == null) {
+            return null;
+        }
+        return string.getBytes(charset);
+    }
+
+    public static String newStringUtf8(final byte[] bytes) {
+        return newString(bytes, StandardCharsets.UTF_8);
+    }
+
+    private static String newString(final byte[] bytes, final Charset charset) {
+        return bytes == null ? null : new String(bytes, charset);
     }
 }
