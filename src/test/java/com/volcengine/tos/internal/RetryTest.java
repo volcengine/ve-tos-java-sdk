@@ -1,6 +1,9 @@
 package com.volcengine.tos.internal;
 
+import com.volcengine.tos.comm.TosHeader;
 import com.volcengine.tos.comm.io.TosRepeatableBoundedFileInputStream;
+import com.volcengine.tos.internal.model.CRC64Checksum;
+import com.volcengine.tos.internal.util.CRC64Utils;
 import com.volcengine.tos.internal.util.StringUtils;
 import com.volcengine.tos.transport.TransportConfig;
 import okhttp3.mockwebserver.MockResponse;
@@ -13,6 +16,7 @@ import java.io.*;
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
 import java.net.URL;
+import java.util.zip.CheckedInputStream;
 
 public class RetryTest {
     @Test
@@ -74,6 +78,20 @@ public class RetryTest {
 
     @Test
     void retryWithStreamTest() throws IOException, InterruptedException {
+        String bodyStr = StringUtils.randomString(1024*1024);
+        String filePath = "src/test/resources/tmp."+System.nanoTime();
+        File file = new File(filePath);
+        try (FileOutputStream fos = new FileOutputStream(file)){
+            fos.write(bodyStr.getBytes());
+            fos.write(bodyStr.getBytes());
+            fos.flush();
+        }
+        CRC64Checksum checksumTmp = new CRC64Checksum(0);
+        CheckedInputStream inputStream = new CheckedInputStream(new FileInputStream(filePath), checksumTmp);
+        byte[] tmp = new byte[8192];
+        while (inputStream.read(tmp) != -1) {}
+        String cliCrc = CRC64Utils.longToUnsignedLongString(inputStream.getChecksum().getValue());
+
         MockWebServer server = new MockWebServer();
         // 第1个请求
         server.enqueue(new MockResponse().setResponseCode(500));
@@ -83,21 +101,13 @@ public class RetryTest {
         // 第2个请求
         server.enqueue(new MockResponse().setResponseCode(500));
         server.enqueue(new MockResponse().setResponseCode(500));
-        server.enqueue(new MockResponse().setResponseCode(200).setBody("put succeed"));
+        server.enqueue(new MockResponse().setResponseCode(200).setBody("put succeed").setHeader(TosHeader.HEADER_CRC64, cliCrc));
 
         // 第3个请求
         server.enqueue(new MockResponse().setResponseCode(500));
         server.enqueue(new MockResponse().setResponseCode(500));
         server.enqueue(new MockResponse().setResponseCode(200).setBody("put succeed"));
 
-        String bodyStr = StringUtils.randomString(1000);
-        String filePath = "src/test/resources/tmp."+System.nanoTime();
-        File file = new File(filePath);
-        try (FileOutputStream fos = new FileOutputStream(file)){
-            fos.write(bodyStr.getBytes());
-            fos.write(bodyStr.getBytes());
-            fos.flush();
-        }
         try {
             server.start();
             TransportConfig config = TransportConfig.builder().maxRetryCount(3).readTimeoutMills(1000)
@@ -124,7 +134,8 @@ public class RetryTest {
 
             tosRequest = new TosRequest("http", "PUT", server.getHostName(), "/")
                     .setPort(server.getPort()).setRetryableOnServerException(true).setRetryableOnClientException(true)
-                    .setContent(new FileInputStream(file)).setContentLength(file.length());
+                    .setContent(new FileInputStream(file)).setContentLength(file.length()).setEnableCrcCheck(true)
+                    .setReadLimit(1024*1024*3);
             response = transport.roundTrip(tosRequest);
             Assert.assertEquals(response.getStatusCode(), 200);
             Assert.assertEquals(StringUtils.toString(response.getInputStream(), "content"), "put succeed");
@@ -181,7 +192,7 @@ public class RetryTest {
 
             TosRequest tosRequest = new TosRequest("http", "PUT", server.getHostName(), "/")
                     .setPort(server.getPort()).setRetryableOnServerException(true).setRetryableOnClientException(true)
-                    .setContent(bufferedInputStream).setReadLimit(1024 * 1024).setContentLength(-1);
+                    .setContent(bufferedInputStream).setReadLimit(1024 * 1024 * 1024).setContentLength(-1);
             TosResponse response = transport.roundTrip(tosRequest);
             Assert.assertEquals(response.getStatusCode(), 200);
             Assert.assertEquals(StringUtils.toString(response.getInputStream(), "content"), "put succeed");

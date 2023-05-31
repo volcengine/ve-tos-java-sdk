@@ -18,6 +18,8 @@ public class PreSignedURLInput {
      */
     private String alternativeEndpoint;
 
+    private Boolean isCustomDomain;
+
     public String getHttpMethod() {
         return httpMethod;
     }
@@ -81,16 +83,26 @@ public class PreSignedURLInput {
         return this;
     }
 
+    public Boolean isCustomDomain() {
+        return isCustomDomain;
+    }
+
+    public PreSignedURLInput setCustomDomain(Boolean customDomain) {
+        isCustomDomain = customDomain;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "PreSignedURLInput{" +
-                "httpMethod=" + httpMethod +
+                "httpMethod='" + httpMethod + '\'' +
                 ", bucket='" + bucket + '\'' +
                 ", key='" + key + '\'' +
                 ", expires=" + expires +
                 ", header=" + header +
                 ", query=" + query +
                 ", alternativeEndpoint='" + alternativeEndpoint + '\'' +
+                ", isCustomDomain=" + isCustomDomain +
                 '}';
     }
 
@@ -106,6 +118,7 @@ public class PreSignedURLInput {
         private Map<String, String> header;
         private Map<String, String> query;
         private String alternativeEndpoint;
+        private boolean isCustomDomain;
 
         private PreSignedURLInputBuilder() {
         }
@@ -145,6 +158,11 @@ public class PreSignedURLInput {
             return this;
         }
 
+        public PreSignedURLInputBuilder isCustomDomain(boolean isCustomDomain) {
+            this.isCustomDomain = isCustomDomain;
+            return this;
+        }
+
         public PreSignedURLInput build() {
             PreSignedURLInput preSignedURLInput = new PreSignedURLInput();
             preSignedURLInput.expires = this.expires;
@@ -154,6 +172,7 @@ public class PreSignedURLInput {
             preSignedURLInput.header = this.header;
             preSignedURLInput.httpMethod = this.httpMethod;
             preSignedURLInput.key = this.key;
+            preSignedURLInput.isCustomDomain = this.isCustomDomain;
             return preSignedURLInput;
         }
     }

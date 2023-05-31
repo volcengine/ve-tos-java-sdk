@@ -671,6 +671,14 @@ public interface TOSV2 extends TOS {
      */
     PreSingedPolicyURLOutput preSingedPolicyURL(PreSingedPolicyURLInput input) throws TosException;
 
+    /**
+     * create a pre-signed for batch object request
+     * @param input PreSignedPolicyURLInput
+     * @return {@link PreSignedPolicyURLOutput}
+     * @throws TosException
+     */
+    PreSignedPolicyURLOutput preSignedPolicyURL(PreSignedPolicyURLInput input) throws TosException;
+
     void changeCredentials(Credentials credentials);
 
     void changeRegionAndEndpoint(String region, String endpoint);

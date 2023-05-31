@@ -539,9 +539,20 @@ public class TOSV2Client implements TOSV2 {
         return preSignedRequestHandler.preSignedPostSignature(input);
     }
 
+    @Deprecated
     @Override
     public PreSingedPolicyURLOutput preSingedPolicyURL(PreSingedPolicyURLInput input) throws TosException {
-        return preSignedRequestHandler.preSingedPolicyURL(input);
+        ParamsChecker.ensureNotNull(input, "PreSingedPolicyURLInput");
+        PreSignedPolicyURLOutput out = preSignedRequestHandler.preSignedPolicyURL(new PreSignedPolicyURLInput()
+                .setBucket(input.getBucket()).setExpires(input.getExpires()).setConditions(input.getConditions())
+                .setAlternativeEndpoint(input.getAlternativeEndpoint()).setCustomDomain(input.isCustomDomain()));
+        return new PreSingedPolicyURLOutput().setPreSignedPolicyURLGenerator(out.getPreSignedPolicyURLGenerator())
+                .setSignatureQuery(out.getSignatureQuery()).setHost(out.getHost()).setScheme(out.getScheme());
+    }
+
+    @Override
+    public PreSignedPolicyURLOutput preSignedPolicyURL(PreSignedPolicyURLInput input) throws TosException {
+        return preSignedRequestHandler.preSignedPolicyURL(input);
     }
 
     @Override

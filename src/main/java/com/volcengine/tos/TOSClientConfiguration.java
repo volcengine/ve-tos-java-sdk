@@ -2,13 +2,10 @@ package com.volcengine.tos;
 
 import com.volcengine.tos.auth.Credentials;
 import com.volcengine.tos.auth.StaticCredentials;
+import com.volcengine.tos.internal.Consts;
 import com.volcengine.tos.transport.TransportConfig;
 
 public class TOSClientConfiguration {
-    private static final boolean DEFAULT_AUTO_RECOGNIZE_CONTENT_TYPE = true;
-    private static final boolean DEFAULT_ENABLE_CRC = true;
-    private static final boolean DEFAULT_ENABLE_VERIFY_SSL = true;
-
     private Credentials credentials;
     private String endpoint;
     private String region;
@@ -19,16 +16,16 @@ public class TOSClientConfiguration {
     /**
      * 客户端根据对象名后缀自动识别 Content-Type
      */
-    private boolean clientAutoRecognizeContentType;
+    private boolean clientAutoRecognizeContentType = Consts.DEFAULT_AUTO_RECOGNIZE_CONTENT_TYPE;
     /**
      * 客户端对上传对象开启 CRC 校验
      */
-    private boolean enableCrc;
+    private boolean enableCrc = Consts.DEFAULT_ENABLE_CRC;
 
     /**
      * 是否是自定义域名
      */
-    private boolean isCustomDomain;
+    private boolean isCustomDomain = false;
 
     public boolean isClientAutoRecognizeContentType() {
         return clientAutoRecognizeContentType;
@@ -100,19 +97,12 @@ public class TOSClientConfiguration {
         private Credentials credentials;
         private String endpoint;
         private String region;
-        private TransportConfig transportConfig;
-        private boolean clientAutoRecognizeContentType;
-        private boolean enableCrc;
-        private boolean isCustomDomain;
+        private TransportConfig transportConfig = TransportConfig.builder().build();
+        private boolean clientAutoRecognizeContentType = Consts.DEFAULT_AUTO_RECOGNIZE_CONTENT_TYPE;
+        private boolean enableCrc = Consts.DEFAULT_ENABLE_CRC;
+        private boolean isCustomDomain = false;
 
         private TosClientConfigurationBuilder() {
-            this.transportConfig = TransportConfig.builder()
-                    .enableVerifySSL(DEFAULT_ENABLE_VERIFY_SSL).build();
-            this.clientAutoRecognizeContentType = DEFAULT_AUTO_RECOGNIZE_CONTENT_TYPE;
-            this.enableCrc = DEFAULT_ENABLE_CRC;
-            this.region = "";
-            this.endpoint = "";
-            this.credentials = new StaticCredentials("", "");
         }
 
         public TosClientConfigurationBuilder credentials(Credentials credentials) {
