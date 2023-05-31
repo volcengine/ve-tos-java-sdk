@@ -100,9 +100,9 @@ public class TosRequestTest {
         Assert.assertNotNull(url);
         Assert.assertEquals(url.host(), "custom.domain.test");
         Assert.assertEquals(url.port(), 443);
-        Assert.assertEquals(url.encodedPath(), "/aaa%2Fbbb");
+        Assert.assertEquals(url.encodedPath(), "/bbb");
         Consts.LOG.info(url.toString());
-        Assert.assertEquals(url.toString(), "https://custom.domain.test/aaa%2Fbbb");
+        Assert.assertEquals(url.toString(), "https://custom.domain.test/bbb");
     }
 
     @Test

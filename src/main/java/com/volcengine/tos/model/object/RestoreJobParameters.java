@@ -1,16 +1,17 @@
 package com.volcengine.tos.model.object;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.volcengine.tos.comm.common.TierType;
 
 public class RestoreJobParameters {
     @JsonProperty("Tier")
-    private String tier;
+    private TierType tier;
 
-    public String getTier() {
+    public TierType getTier() {
         return tier;
     }
 
-    public RestoreJobParameters setTier(String tier) {
+    public RestoreJobParameters setTier(TierType tier) {
         this.tier = tier;
         return this;
     }
@@ -27,12 +28,12 @@ public class RestoreJobParameters {
     }
 
     public static final class RestoreJobParametersBuilder {
-        private String tier;
+        private TierType tier;
 
         private RestoreJobParametersBuilder() {
         }
 
-        public RestoreJobParametersBuilder tier(String tier) {
+        public RestoreJobParametersBuilder tier(TierType tier) {
             this.tier = tier;
             return this;
         }

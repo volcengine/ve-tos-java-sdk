@@ -12,6 +12,9 @@ public interface Consts {
     String SCHEME_HTTPS = "https";
     String SDK_NAME = "ve-tos-java-sdk";
     String SDK_VERSION = "v2.6.0";
+    String OS_NAME = System.getProperty("os.name");
+    String OS_ARCH = System.getProperty("os.arch");
+    String JAVA_VERSION = System.getProperty("java.version", "0");
 
     String SDK_LOG_NAMESPACE = "com.volcengine.tos";
 
@@ -46,10 +49,25 @@ public interface Consts {
      * URL_MODE_PATH url pattern is http(s)://domain/{bucket}/{object}
      */
     int URL_MODE_PATH = 1;
+    /**
+     * URL_MODE_CUSTOM_DOMAIN url pattern is http(s)://domain/{object}
+     */
+    int URL_MODE_CUSTOM_DOMAIN = 2;
 
     int DEFAULT_HTTPS_PORT = 443;
 
     Set<String> CUSTOM_SERVER_SIDE_ENCRYPTION_ALGORITHM_LIST = new HashSet<>(Collections.singletonList("AES256"));
 
     String USE_COMPLETE_ALL = "yes";
+
+    boolean DEFAULT_AUTO_RECOGNIZE_CONTENT_TYPE = true;
+    boolean DEFAULT_ENABLE_CRC = true;
+    boolean DEFAULT_ENABLE_VERIFY_SSL = true;
+
+    int DEFAULT_MAX_CONNECTIONS = 1024;
+    int DEFAULT_IDLE_CONNECTION_TIME_MILLS = 60000;
+    int DEFAULT_CONNECT_TIMEOUT_MILLS = 10000;
+    int DEFAULT_READ_TIMEOUT_MILLS = 30000;
+    int DEFAULT_WRITE_TIMEOUT_MILLS = 30000;
+    int DEFAULT_MAX_RETRY_COUNT = 3;
 }

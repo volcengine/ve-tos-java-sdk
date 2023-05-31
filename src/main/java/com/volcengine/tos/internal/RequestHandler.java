@@ -41,6 +41,33 @@ class RequestHandler {
         }
     }
 
+    // 特殊场景下 server 会返回非常规状态码，此时不能直接抛 UnexpectedStatusCodeException
+    protected <T> T doRequest(TosRequest request,
+                              int expectedCode, List<Integer> unexpectedCodes,
+                              Action<TosResponse, T> action) {
+        try (TosResponse res = doRequest(request)) {
+            if (containExpectedCode(res.getStatusCode(), expectedCode)) {
+                return action.apply(res);
+            }
+            boolean containUnexpectedCode = false;
+            for (int code : unexpectedCodes) {
+                if (containUnexpectedCode(res.getStatusCode(), code)) {
+                    containUnexpectedCode = true;
+                    break;
+                }
+            }
+            if (containUnexpectedCode) {
+                String s = StringUtils.toString(res.getInputStream(), "response body");
+                checkException(s, res.getStatusCode(), res.getRequesID());
+            } else {
+                checkException(res);
+            }
+            throw new UnexpectedStatusCodeException(res.getStatusCode(), expectedCode, res.getRequesID());
+        } catch (IOException e) {
+            throw new TosClientException("tos: close body failed", e);
+        }
+    }
+
     protected <T> T doRequest(TosRequest request, List<Integer> expectedCodes, Action<TosResponse, T> action) {
         try (TosResponse res = doRequest(request, expectedCodes)) {
             return action.apply(res);
@@ -82,6 +109,10 @@ class RequestHandler {
         return statusCode == expectedCode;
     }
 
+    protected boolean containUnexpectedCode(int statusCode, int unexpectedCode) {
+        return statusCode == unexpectedCode;
+    }
+
     protected void checkException(TosResponse res) {
         if (res.getStatusCode() < HttpStatus.MULTIPLE_CHOICE) {
             // < 300, no exception
@@ -89,30 +120,34 @@ class RequestHandler {
         }
         // other cases, throw exception
         String s = StringUtils.toString(res.getInputStream(), "response body");
-        if (s.length() > 0) {
+        checkException(s, res.getStatusCode(), res.getRequesID());
+    }
+
+    private static void checkException(String rspBody, int statusCode, String reqId) {
+        if (StringUtils.isNotEmpty(rspBody)) {
             ServerExceptionJson se = null;
             try{
-                se = TosUtils.getJsonMapper().readValue(s, new TypeReference<ServerExceptionJson>(){});
+                se = TosUtils.getJsonMapper().readValue(rspBody, new TypeReference<ServerExceptionJson>(){});
             } catch (JsonProcessingException e) {
-                if (res.getStatusCode() == HttpStatus.BAD_REQUEST) {
-                    throw new TosClientException("tos: bad request" + s, null);
+                if (statusCode == HttpStatus.BAD_REQUEST) {
+                    throw new TosClientException("tos: bad request" + rspBody, null);
                 }
-                throw new TosClientException("tos: parse server exception failed"+ s, null);
+                throw new TosClientException("tos: parse server exception failed"+ rspBody, null);
             }
-            throw new TosServerException(res.getStatusCode(), se.getCode(), se.getMessage(), se.getRequestID(), se.getHostID());
+            throw new TosServerException(statusCode, se.getCode(), se.getMessage(), se.getRequestID(), se.getHostID());
         }
         // head请求服务端报错时不返回body，以下特殊处理
         // 404、403场景给 message 赋值，这两种场景比较常见
-        if (res.getStatusCode() == HttpStatus.NOT_FOUND) {
+        if (statusCode == HttpStatus.NOT_FOUND) {
             // 针对 head 404 场景
-            throw new TosServerException(res.getStatusCode(), Code.NOT_FOUND, "", res.getRequesID(), "");
+            throw new TosServerException(statusCode, Code.NOT_FOUND, "", reqId, "");
         }
-        if (res.getStatusCode() == HttpStatus.FORBIDDEN) {
+        if (statusCode == HttpStatus.FORBIDDEN) {
             // 针对 head 403 场景
-            throw new TosServerException(res.getStatusCode(), Code.FORBIDDEN, "", res.getRequesID(), "");
+            throw new TosServerException(statusCode, Code.FORBIDDEN, "", reqId, "");
         }
         // 2.5.1 版本后统一抛出TosServerException，之前版本会抛UnexpectedStatusCodeException
-        throw new TosServerException(res.getStatusCode(), "", "", res.getRequesID(), "");
+        throw new TosServerException(statusCode, "", "", reqId, "");
     }
 }
 

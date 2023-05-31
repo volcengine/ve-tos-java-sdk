@@ -230,7 +230,7 @@ public class TosPreSignedRequestHandlerTest {
         Assert.assertTrue(url.getSignedUrl().contains(Consts.bucket + "." + Consts.endpoint2));
 
         // generate url without bucket
-        input = new PreSignedURLInput().setHttpMethod(HttpMethod.PUT)
+        input = new PreSignedURLInput().setHttpMethod(HttpMethod.PUT).setCustomDomain(true)
                 .setKey(key).setExpires(20).setAlternativeEndpoint(Consts.endpoint2);
         url = handler.preSignedURL(input);
         Assert.assertTrue(url.getSignedUrl().startsWith("https://" + Consts.endpoint2 + "/"));
@@ -359,8 +359,8 @@ public class TosPreSignedRequestHandlerTest {
         conditions.add(condition);
         condition = new PolicySignatureCondition().setKey("key").setValue(key3);
         conditions.add(condition);
-        PreSingedPolicyURLInput input = new PreSingedPolicyURLInput().setExpires(1000).setConditions(conditions).setBucket(Consts.bucket);
-        PreSingedPolicyURLOutput output = handler.preSingedPolicyURL(input);
+        PreSignedPolicyURLInput input = new PreSignedPolicyURLInput().setExpires(1000).setConditions(conditions).setBucket(Consts.bucket);
+        PreSignedPolicyURLOutput output = handler.preSignedPolicyURL(input);
 
         String getUrl = output.getPreSignedPolicyURLGenerator().getSignedURLForGetOrHead(key, null);
         try{
@@ -470,8 +470,7 @@ public class TosPreSignedRequestHandlerTest {
                 break;
             case HttpMethod.PUT: {
                 if (content != null) {
-                    builder.put(new WrappedTransportRequestBody(MediaType.parse(contentType),
-                            new TosRequest().setContent(content).setContentLength(contentLength)));
+                    builder.put(new WrappedTransportRequestBody(MediaType.parse(contentType), content, contentLength));
                 } else {
                     builder.put(RequestBody.create(MediaType.parse(contentType), ""));
                 }

@@ -5,7 +5,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.volcengine.tos.TosClientException;
 import com.volcengine.tos.internal.TosMarshalResult;
-import org.apache.commons.codec.binary.Base64;
+import com.volcengine.tos.internal.util.base64.Base64;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -49,7 +49,7 @@ public class PayloadConverter {
         try{
             return TosUtils.getJsonMapper().readValue(reader, valueTypeRef);
         } catch (IOException e){
-            throw new TosClientException("tos: unable to do deserialization", e);
+            throw new TosClientException("tos: unable to do deserialization of " + reader, e);
         }
     }
 }

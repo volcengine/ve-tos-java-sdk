@@ -6,8 +6,8 @@ import com.volcengine.tos.comm.event.DataTransferListener;
 import com.volcengine.tos.comm.event.DataTransferStatus;
 import com.volcengine.tos.internal.Consts;
 import com.volcengine.tos.internal.util.StringUtils;
+import com.volcengine.tos.internal.util.base64.Base64;
 import com.volcengine.tos.model.object.*;
-import org.apache.commons.codec.binary.Base64;
 
 import java.io.File;
 import java.security.MessageDigest;

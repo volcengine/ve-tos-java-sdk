@@ -1,11 +1,11 @@
 package com.volcengine.tos.internal.model;
 
-import java.util.zip.Checksum;
+import com.volcengine.tos.internal.util.TosUtils;
 
 /**
  * Crc64Checksum implements the standard ECMA-182 CRC64 algorithm.
  */
-public class CRC64Checksum implements Checksum {
+public class CRC64Checksum implements TosRepeatableChecksum {
     public final static long ECMA_POLY = 0xC96C5795D7870F42L;
 
     private final static long[][] TABLE;
@@ -13,6 +13,8 @@ public class CRC64Checksum implements Checksum {
     private final static int WORD_NUM = 256;
 
     private long value;
+
+    private long lastValue = 0L;
 
     public CRC64Checksum() {
         this.value = 0;
@@ -61,7 +63,8 @@ public class CRC64Checksum implements Checksum {
 
     @Override
     public void reset() {
-        this.value = 0;
+        this.value = this.lastValue;
+        TosUtils.getLogger().debug("tos: call checksum reset, value {}", this.value);
     }
 
     static {
@@ -84,5 +87,10 @@ public class CRC64Checksum implements Checksum {
                 TABLE[j][i] = crc;
             }
         }
+    }
+
+    @Override
+    public void markCurrentValue() {
+        this.lastValue = this.value;
     }
 }

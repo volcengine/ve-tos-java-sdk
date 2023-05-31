@@ -22,7 +22,7 @@ public class TosBucketRequestHandler {
 
     public CreateBucketV2Output createBucket(CreateBucketV2Input input) throws TosException {
         ParamsChecker.ensureNotNull(input, "CreateBucketV2Input");
-        ParamsChecker.isValidBucketName(input.getBucket());
+        ensureValidBucketName(input.getBucket());
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null)
                 .withHeader(TosHeader.HEADER_ACL, input.getAcl() == null ? null : input.getAcl().toString())
                 .withHeader(TosHeader.HEADER_GRANT_FULL_CONTROL, input.getGrantFullControl())
@@ -38,7 +38,7 @@ public class TosBucketRequestHandler {
 
     public HeadBucketV2Output headBucket(HeadBucketV2Input input) throws TosException {
         ParamsChecker.ensureNotNull(input, "HeadBucketInput");
-        ParamsChecker.isValidBucketName(input.getBucket());
+        ensureValidBucketName(input.getBucket());
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null);
         TosRequest req = this.factory.build(builder, HttpMethod.HEAD, null);
         return bucketHandler.doRequest(req, HttpStatus.OK, res -> new HeadBucketV2Output(res.RequestInfo(),
@@ -49,7 +49,7 @@ public class TosBucketRequestHandler {
 
     public DeleteBucketOutput deleteBucket(DeleteBucketInput input) throws TosException {
         ParamsChecker.ensureNotNull(input, "DeleteBucketInput");
-        ParamsChecker.isValidBucketName(input.getBucket());
+        ensureValidBucketName(input.getBucket());
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null);
         TosRequest req = this.factory.build(builder, HttpMethod.DELETE, null).setRetryableOnClientException(false);
         return bucketHandler.doRequest(req, HttpStatus.NO_CONTENT, res -> new DeleteBucketOutput(res.RequestInfo()));
@@ -68,7 +68,7 @@ public class TosBucketRequestHandler {
     public PutBucketPolicyOutput putBucketPolicy(PutBucketPolicyInput input) throws TosException {
         ParamsChecker.ensureNotNull(input, "PutBucketPolicyInput");
         ParamsChecker.ensureNotNull(input.getPolicy(), "policy");
-        ParamsChecker.isValidBucketName(input.getBucket());
+        ensureValidBucketName(input.getBucket());
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("policy", "");
         TosRequest req = this.factory.build(builder, HttpMethod.PUT, new ByteArrayInputStream(input.getPolicy()
                 .getBytes(StandardCharsets.UTF_8))).setContentLength(input.getPolicy().length());
@@ -78,7 +78,7 @@ public class TosBucketRequestHandler {
 
     public GetBucketPolicyOutput getBucketPolicy(GetBucketPolicyInput input) throws TosException {
         ParamsChecker.ensureNotNull(input, "GetBucketPolicyInput");
-        ParamsChecker.isValidBucketName(input.getBucket());
+        ensureValidBucketName(input.getBucket());
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("policy", "");
         TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
         return bucketHandler.doRequest(req, HttpStatus.OK, res -> new GetBucketPolicyOutput().setRequestInfo(res.RequestInfo())
@@ -87,7 +87,7 @@ public class TosBucketRequestHandler {
 
     public DeleteBucketPolicyOutput deleteBucketPolicy(DeleteBucketPolicyInput input) throws TosException {
         ParamsChecker.ensureNotNull(input, "DeleteBucketPolicyInput");
-        ParamsChecker.isValidBucketName(input.getBucket());
+        ensureValidBucketName(input.getBucket());
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("policy", "");
         TosRequest req = this.factory.build(builder, HttpMethod.DELETE, null);
         return bucketHandler.doRequest(req, HttpStatus.NO_CONTENT, res ->
@@ -97,7 +97,7 @@ public class TosBucketRequestHandler {
     public PutBucketCORSOutput putBucketCORS(PutBucketCORSInput input) throws TosException {
         ParamsChecker.ensureNotNull(input, "PutBucketCORSInput");
         ParamsChecker.ensureNotNull(input.getRules(), "CORSRules");
-        ParamsChecker.isValidBucketName(input.getBucket());
+        ensureValidBucketName(input.getBucket());
         TosMarshalResult marshalResult = PayloadConverter.serializePayloadAndComputeMD5(input);
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null)
                 .withQuery("cors", "").withHeader(TosHeader.HEADER_CONTENT_MD5, marshalResult.getContentMD5());
@@ -109,7 +109,7 @@ public class TosBucketRequestHandler {
 
     public GetBucketCORSOutput getBucketCORS(GetBucketCORSInput input) throws TosException {
         ParamsChecker.ensureNotNull(input, "GetBucketCORSInput");
-        ParamsChecker.isValidBucketName(input.getBucket());
+        ensureValidBucketName(input.getBucket());
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("cors", "");
         TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
         return bucketHandler.doRequest(req, HttpStatus.OK, res -> PayloadConverter.parsePayload(res.getInputStream(),
@@ -118,7 +118,7 @@ public class TosBucketRequestHandler {
 
     public DeleteBucketCORSOutput deleteBucketCORS(DeleteBucketCORSInput input) throws TosException {
         ParamsChecker.ensureNotNull(input, "DeleteBucketCORSInput");
-        ParamsChecker.isValidBucketName(input.getBucket());
+        ensureValidBucketName(input.getBucket());
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("cors", "");
         TosRequest req = this.factory.build(builder, HttpMethod.DELETE, null);
         return bucketHandler.doRequest(req, HttpStatus.NO_CONTENT, res ->
@@ -128,7 +128,7 @@ public class TosBucketRequestHandler {
     public PutBucketStorageClassOutput putBucketStorageClass(PutBucketStorageClassInput input) throws TosException {
         ParamsChecker.ensureNotNull(input, "PutBucketStorageClassInput");
         ParamsChecker.ensureNotNull(input.getStorageClass(), "StorageClass");
-        ParamsChecker.isValidBucketName(input.getBucket());
+        ensureValidBucketName(input.getBucket());
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("storageClass", "")
                 .withHeader(TosHeader.HEADER_STORAGE_CLASS, input.getStorageClass().toString());
         TosRequest req = this.factory.build(builder, HttpMethod.PUT, null);
@@ -138,7 +138,7 @@ public class TosBucketRequestHandler {
 
     public GetBucketLocationOutput getBucketLocation(GetBucketLocationInput input) throws TosException {
         ParamsChecker.ensureNotNull(input, "GetBucketLocationInput");
-        ParamsChecker.isValidBucketName(input.getBucket());
+        ensureValidBucketName(input.getBucket());
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("location", "");
         TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
         return bucketHandler.doRequest(req, HttpStatus.OK, res -> PayloadConverter.parsePayload(res.getInputStream(),
@@ -148,7 +148,7 @@ public class TosBucketRequestHandler {
     public PutBucketLifecycleOutput putBucketLifecycle(PutBucketLifecycleInput input) throws TosException {
         ParamsChecker.ensureNotNull(input, "PutBucketLifecycleInput");
         ParamsChecker.ensureNotNull(input.getRules(), "LifecycleRules");
-        ParamsChecker.isValidBucketName(input.getBucket());
+        ensureValidBucketName(input.getBucket());
         TosMarshalResult marshalResult = PayloadConverter.serializePayloadAndComputeMD5(input);
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("lifecycle", "")
                 .withHeader(TosHeader.HEADER_CONTENT_MD5, marshalResult.getContentMD5());
@@ -160,7 +160,7 @@ public class TosBucketRequestHandler {
 
     public GetBucketLifecycleOutput getBucketLifecycle(GetBucketLifecycleInput input) throws TosException {
         ParamsChecker.ensureNotNull(input, "GetBucketLifecycleInput");
-        ParamsChecker.isValidBucketName(input.getBucket());
+        ensureValidBucketName(input.getBucket());
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("lifecycle", "");
         TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
         return bucketHandler.doRequest(req, HttpStatus.OK, res -> PayloadConverter.parsePayload(res.getInputStream(),
@@ -169,7 +169,7 @@ public class TosBucketRequestHandler {
 
     public DeleteBucketLifecycleOutput deleteBucketLifecycle(DeleteBucketLifecycleInput input) throws TosException {
         ParamsChecker.ensureNotNull(input, "DeleteBucketLifecycleInput");
-        ParamsChecker.isValidBucketName(input.getBucket());
+        ensureValidBucketName(input.getBucket());
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("lifecycle", "");
         TosRequest req = this.factory.build(builder, HttpMethod.DELETE, null);
         return bucketHandler.doRequest(req, HttpStatus.NO_CONTENT, res ->
@@ -179,7 +179,7 @@ public class TosBucketRequestHandler {
     public PutBucketMirrorBackOutput putBucketMirrorBack(PutBucketMirrorBackInput input) throws TosException {
         ParamsChecker.ensureNotNull(input, "PutBucketMirrorBackInput");
         ParamsChecker.ensureNotNull(input.getRules(), "MirrorBackRules");
-        ParamsChecker.isValidBucketName(input.getBucket());
+        ensureValidBucketName(input.getBucket());
         TosMarshalResult marshalResult = PayloadConverter.serializePayloadAndComputeMD5(input);
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("mirror", "")
                 .withHeader(TosHeader.HEADER_CONTENT_MD5, marshalResult.getContentMD5());
@@ -191,7 +191,7 @@ public class TosBucketRequestHandler {
 
     public GetBucketMirrorBackOutput getBucketMirrorBack(GetBucketMirrorBackInput input) throws TosException {
         ParamsChecker.ensureNotNull(input, "GetBucketMirrorBackInput");
-        ParamsChecker.isValidBucketName(input.getBucket());
+        ensureValidBucketName(input.getBucket());
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("mirror", "");
         TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
         return bucketHandler.doRequest(req, HttpStatus.OK, res -> PayloadConverter.parsePayload(res.getInputStream(),
@@ -200,7 +200,7 @@ public class TosBucketRequestHandler {
 
     public DeleteBucketMirrorBackOutput deleteBucketMirrorBack(DeleteBucketMirrorBackInput input) throws TosException {
         ParamsChecker.ensureNotNull(input, "DeleteBucketMirrorBackInput");
-        ParamsChecker.isValidBucketName(input.getBucket());
+        ensureValidBucketName(input.getBucket());
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("mirror", "");
         TosRequest req = this.factory.build(builder, HttpMethod.DELETE, null);
         return bucketHandler.doRequest(req, HttpStatus.NO_CONTENT, res ->
@@ -212,7 +212,7 @@ public class TosBucketRequestHandler {
         ParamsChecker.ensureNotNull(input, "PutBucketReplicationInput");
         ParamsChecker.ensureNotNull(input.getRole(), "ReplicationRole");
         ParamsChecker.ensureNotNull(input.getRules(), "ReplicationRule");
-        ParamsChecker.isValidBucketName(input.getBucket());
+        ensureValidBucketName(input.getBucket());
         TosMarshalResult marshalResult = PayloadConverter.serializePayloadAndComputeMD5(input);
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("replication", "")
                 .withHeader(TosHeader.HEADER_CONTENT_MD5, marshalResult.getContentMD5());
@@ -224,7 +224,7 @@ public class TosBucketRequestHandler {
 
     public GetBucketReplicationOutput getBucketReplication(GetBucketReplicationInput input) throws TosException {
         ParamsChecker.ensureNotNull(input, "GetBucketReplicationInput");
-        ParamsChecker.isValidBucketName(input.getBucket());
+        ensureValidBucketName(input.getBucket());
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null)
                 .withQuery("replication", "").withQuery("progress", "").withQuery("rule-id", input.getRuleID());
         TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
@@ -234,7 +234,7 @@ public class TosBucketRequestHandler {
 
     public DeleteBucketReplicationOutput deleteBucketReplication(DeleteBucketReplicationInput input) throws TosException {
         ParamsChecker.ensureNotNull(input, "DeleteBucketReplicationInput");
-        ParamsChecker.isValidBucketName(input.getBucket());
+        ensureValidBucketName(input.getBucket());
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("replication", "");
         TosRequest req = this.factory.build(builder, HttpMethod.DELETE, null);
         return bucketHandler.doRequest(req, HttpStatus.NO_CONTENT, res -> new DeleteBucketReplicationOutput()
@@ -244,7 +244,7 @@ public class TosBucketRequestHandler {
     public PutBucketVersioningOutput putBucketVersioning(PutBucketVersioningInput input) throws TosException {
         ParamsChecker.ensureNotNull(input, "PutBucketVersioningInput");
         ParamsChecker.ensureNotNull(input.getStatus(), "VersioningStatusType");
-        ParamsChecker.isValidBucketName(input.getBucket());
+        ensureValidBucketName(input.getBucket());
         TosMarshalResult marshalResult = PayloadConverter.serializePayloadAndComputeMD5(input);
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("versioning", "")
                 .withHeader(TosHeader.HEADER_CONTENT_MD5, marshalResult.getContentMD5());
@@ -256,7 +256,7 @@ public class TosBucketRequestHandler {
 
     public GetBucketVersioningOutput getBucketVersioning(GetBucketVersioningInput input) throws TosException {
         ParamsChecker.ensureNotNull(input, "GetBucketVersioningInput");
-        ParamsChecker.isValidBucketName(input.getBucket());
+        ensureValidBucketName(input.getBucket());
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("versioning", "");
         TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
         return bucketHandler.doRequest(req, HttpStatus.OK, res -> PayloadConverter.parsePayload(res.getInputStream(),
@@ -265,7 +265,7 @@ public class TosBucketRequestHandler {
 
     public PutBucketWebsiteOutput putBucketWebsite(PutBucketWebsiteInput input) throws TosException {
         ParamsChecker.ensureNotNull(input, "PutBucketWebsiteInput");
-        ParamsChecker.isValidBucketName(input.getBucket());
+        ensureValidBucketName(input.getBucket());
         TosMarshalResult marshalResult = PayloadConverter.serializePayloadAndComputeMD5(input);
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("website", "")
                 .withHeader(TosHeader.HEADER_CONTENT_MD5, marshalResult.getContentMD5());
@@ -277,7 +277,7 @@ public class TosBucketRequestHandler {
 
     public GetBucketWebsiteOutput getBucketWebsite(GetBucketWebsiteInput input) throws TosException {
         ParamsChecker.ensureNotNull(input, "GetBucketWebsiteInput");
-        ParamsChecker.isValidBucketName(input.getBucket());
+        ensureValidBucketName(input.getBucket());
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("website", "");
         TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
         return bucketHandler.doRequest(req, HttpStatus.OK, res -> PayloadConverter.parsePayload(res.getInputStream(),
@@ -286,7 +286,7 @@ public class TosBucketRequestHandler {
 
     public DeleteBucketWebsiteOutput deleteBucketWebsite(DeleteBucketWebsiteInput input) throws TosException {
         ParamsChecker.ensureNotNull(input, "DeleteBucketWebsiteInput");
-        ParamsChecker.isValidBucketName(input.getBucket());
+        ensureValidBucketName(input.getBucket());
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("website", "");
         TosRequest req = this.factory.build(builder, HttpMethod.DELETE, null);
         return bucketHandler.doRequest(req, HttpStatus.NO_CONTENT, res -> new DeleteBucketWebsiteOutput()
@@ -295,7 +295,7 @@ public class TosBucketRequestHandler {
 
     public PutBucketNotificationOutput putBucketNotification(PutBucketNotificationInput input) throws TosException {
         ParamsChecker.ensureNotNull(input, "PutBucketNotificationInput");
-        ParamsChecker.isValidBucketName(input.getBucket());
+        ensureValidBucketName(input.getBucket());
 //        ParamsChecker.ensureNotNull(input.getCloudFunctionConfigurations(), "CloudFunctionConfigurations");
         TosMarshalResult marshalResult = PayloadConverter.serializePayloadAndComputeMD5(input);
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("notification", "")
@@ -308,7 +308,7 @@ public class TosBucketRequestHandler {
 
     public GetBucketNotificationOutput getBucketNotification(GetBucketNotificationInput input) throws TosException {
         ParamsChecker.ensureNotNull(input, "GetBucketNotificationInput");
-        ParamsChecker.isValidBucketName(input.getBucket());
+        ensureValidBucketName(input.getBucket());
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("notification", "");
         TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
         return bucketHandler.doRequest(req, HttpStatus.OK, res -> PayloadConverter.parsePayload(res.getInputStream(),
@@ -317,7 +317,7 @@ public class TosBucketRequestHandler {
 
     public PutBucketCustomDomainOutput putBucketCustomDomain(PutBucketCustomDomainInput input) throws TosException {
         ParamsChecker.ensureNotNull(input, "PutBucketCustomDomainInput");
-        ParamsChecker.isValidBucketName(input.getBucket());
+        ensureValidBucketName(input.getBucket());
         TosMarshalResult marshalResult = PayloadConverter.serializePayloadAndComputeMD5(input);
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("customdomain", "")
                 .withHeader(TosHeader.HEADER_CONTENT_MD5, marshalResult.getContentMD5());
@@ -329,7 +329,7 @@ public class TosBucketRequestHandler {
 
     public ListBucketCustomDomainOutput listBucketCustomDomain(ListBucketCustomDomainInput input) throws TosException {
         ParamsChecker.ensureNotNull(input, "ListBucketCustomDomainInput");
-        ParamsChecker.isValidBucketName(input.getBucket());
+        ensureValidBucketName(input.getBucket());
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("customdomain", "");
         TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
         return bucketHandler.doRequest(req, HttpStatus.OK, res -> PayloadConverter.parsePayload(res.getInputStream(),
@@ -339,7 +339,7 @@ public class TosBucketRequestHandler {
     public DeleteBucketCustomDomainOutput deleteBucketCustomDomain(DeleteBucketCustomDomainInput input) throws TosException {
         ParamsChecker.ensureNotNull(input, "DeleteBucketCustomDomainInput");
         ParamsChecker.ensureNotNull(input.getDomain(), "Domain");
-        ParamsChecker.isValidBucketName(input.getBucket());
+        ensureValidBucketName(input.getBucket());
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("customdomain", input.getDomain());
         TosRequest req = this.factory.build(builder, HttpMethod.DELETE, null);
         return bucketHandler.doRequest(req, HttpStatus.OK, res -> new DeleteBucketCustomDomainOutput()
@@ -348,7 +348,7 @@ public class TosBucketRequestHandler {
 
     public PutBucketRealTimeLogOutput putBucketRealTimeLog(PutBucketRealTimeLogInput input) throws TosException {
         ParamsChecker.ensureNotNull(input, "PutBucketRealTimeLogInput");
-        ParamsChecker.isValidBucketName(input.getBucket());
+        ensureValidBucketName(input.getBucket());
         TosMarshalResult marshalResult = PayloadConverter.serializePayloadAndComputeMD5(input);
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("realtimeLog", "")
                 .withHeader(TosHeader.HEADER_CONTENT_MD5, marshalResult.getContentMD5());
@@ -360,7 +360,7 @@ public class TosBucketRequestHandler {
 
     public GetBucketRealTimeLogOutput getBucketRealTimeLog(GetBucketRealTimeLogInput input) throws TosException {
         ParamsChecker.ensureNotNull(input, "GetBucketRealTimeLogInput");
-        ParamsChecker.isValidBucketName(input.getBucket());
+        ensureValidBucketName(input.getBucket());
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("realtimeLog", "");
         TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
         return bucketHandler.doRequest(req, HttpStatus.OK, res -> PayloadConverter.parsePayload(res.getInputStream(),
@@ -369,7 +369,7 @@ public class TosBucketRequestHandler {
 
     public DeleteBucketRealTimeLogOutput deleteBucketRealTimeLog(DeleteBucketRealTimeLogInput input) throws TosException {
         ParamsChecker.ensureNotNull(input, "DeleteBucketRealTimeLogInput");
-        ParamsChecker.isValidBucketName(input.getBucket());
+        ensureValidBucketName(input.getBucket());
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("realtimeLog", "");
         TosRequest req = this.factory.build(builder, HttpMethod.DELETE, null);
         return bucketHandler.doRequest(req, HttpStatus.NO_CONTENT, res -> new DeleteBucketRealTimeLogOutput()
@@ -378,7 +378,7 @@ public class TosBucketRequestHandler {
 
     public PutBucketACLOutput putBucketACL(PutBucketACLInput input) throws TosException {
         ParamsChecker.ensureNotNull(input, "PutBucketACLInput");
-        ParamsChecker.isValidBucketName(input.getBucket());
+        ensureValidBucketName(input.getBucket());
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null)
                 .withQuery("acl", "")
                 .withHeader(TosHeader.HEADER_ACL, input.getAcl() == null ? null : input.getAcl().toString())
@@ -401,7 +401,7 @@ public class TosBucketRequestHandler {
 
     public GetBucketACLOutput getBucketACL(GetBucketACLInput input) throws TosException {
         ParamsChecker.ensureNotNull(input, "GetBucketACLInput");
-        ParamsChecker.isValidBucketName(input.getBucket());
+        ensureValidBucketName(input.getBucket());
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("acl", "");
         TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
         return bucketHandler.doRequest(req, HttpStatus.OK, res -> PayloadConverter.parsePayload(res.getInputStream(),
@@ -410,7 +410,7 @@ public class TosBucketRequestHandler {
 
     public PutBucketRenameOutput putBucketRename(PutBucketRenameInput input) throws TosException {
         ParamsChecker.ensureNotNull(input, "PutBucketRenameInput");
-        ParamsChecker.isValidBucketName(input.getBucket());
+        ensureValidBucketName(input.getBucket());
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("rename", "");
         TosMarshalResult marshalResult = PayloadConverter.serializePayloadAndComputeMD5(input);
         builder.withHeader(TosHeader.HEADER_CONTENT_MD5, marshalResult.getContentMD5());
@@ -422,7 +422,7 @@ public class TosBucketRequestHandler {
 
     public GetBucketRenameOutput getBucketRename(GetBucketRenameInput input) throws TosException {
         ParamsChecker.ensureNotNull(input, "GetBucketRenameInput");
-        ParamsChecker.isValidBucketName(input.getBucket());
+        ensureValidBucketName(input.getBucket());
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("rename", "");
         TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
         return bucketHandler.doRequest(req, HttpStatus.OK, res -> PayloadConverter.parsePayload(res.getInputStream(),
@@ -431,7 +431,7 @@ public class TosBucketRequestHandler {
 
     public DeleteBucketRenameOutput deleteBucketRename(DeleteBucketRenameInput input) throws TosException {
         ParamsChecker.ensureNotNull(input, "DeleteBucketRenameInput");
-        ParamsChecker.isValidBucketName(input.getBucket());
+        ensureValidBucketName(input.getBucket());
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("rename", "");
         TosRequest req = this.factory.build(builder, HttpMethod.DELETE, null);
         return bucketHandler.doRequest(req, HttpStatus.NO_CONTENT, res -> new DeleteBucketRenameOutput()
@@ -461,5 +461,13 @@ public class TosBucketRequestHandler {
             return this.bucketHandler.getTransport();
         }
         return null;
+    }
+
+    private void ensureValidBucketName(String bucket) {
+        if (this.factory.isCustomDomain()) {
+            // 使用自定义域名时不校验桶名
+            return;
+        }
+        ParamsChecker.isValidBucketName(bucket);
     }
 }

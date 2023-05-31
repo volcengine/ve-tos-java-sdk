@@ -7,9 +7,13 @@ import com.volcengine.tos.auth.SignKeyInfo;
 import com.volcengine.tos.auth.Signer;
 import com.volcengine.tos.internal.model.PostPolicyJson;
 import com.volcengine.tos.internal.model.PreSignedPolicyJson;
-import com.volcengine.tos.internal.util.*;
+import com.volcengine.tos.internal.util.ParamsChecker;
+import com.volcengine.tos.internal.util.PayloadConverter;
+import com.volcengine.tos.internal.util.SigningUtils;
+import com.volcengine.tos.internal.util.StringUtils;
+import com.volcengine.tos.internal.util.TosUtils;
+import com.volcengine.tos.internal.util.base64.Base64;
 import com.volcengine.tos.model.object.*;
-import org.apache.commons.codec.binary.Base64;
 
 import java.io.ByteArrayInputStream;
 import java.time.Instant;
@@ -51,8 +55,12 @@ public class TosPreSignedRequestHandler {
 
     public PreSignedURLOutput preSignedURL(PreSignedURLInput input) throws TosException {
         ParamsChecker.ensureNotNull(input, "PreSignedURLInput");
-        // bucket 允许为空，不为空时校验
-        if (input.getBucket() != null) {
+        // 使用自定义域名时桶名不校验
+        boolean useCustomDomain = factory.isCustomDomain();
+        if (input.isCustomDomain() != null) {
+            useCustomDomain = input.isCustomDomain();
+        }
+        if (!useCustomDomain) {
             ParamsChecker.isValidBucketName(input.getBucket());
         }
         ParamsChecker.isValidHttpMethod(input.getHttpMethod());
@@ -64,6 +72,8 @@ public class TosPreSignedRequestHandler {
         }
         RequestBuilder builder = this.factory.init(input.getBucket(), objectKey, input.getHeader());
 
+        // 直接走 custom domain 模式，此设置针对单次请求，不会修改 factory 中的 urlMode
+        builder.setUrlMode(useCustomDomain ? Consts.URL_MODE_CUSTOM_DOMAIN : Consts.URL_MODE_DEFAULT);
         if (StringUtils.isNotEmpty(input.getAlternativeEndpoint())) {
             String newHost= ParamsChecker.parseFromEndpoint(input.getAlternativeEndpoint()).get(1);
             builder.setHost(newHost);
@@ -159,7 +169,7 @@ public class TosPreSignedRequestHandler {
                 .setCredential(credential).setDate(date8601).setSignature(signature);
     }
 
-    public PreSingedPolicyURLOutput preSingedPolicyURL(PreSingedPolicyURLInput input) throws TosException {
+    public PreSignedPolicyURLOutput preSignedPolicyURL(PreSignedPolicyURLInput input) throws TosException {
         ParamsChecker.ensureNotNull(input, "PreSingedPolicyURLInput");
         ParamsChecker.isValidBucketName(input.getBucket());
         if (input.getConditions() == null || input.getConditions().size() == 0) {
@@ -236,7 +246,7 @@ public class TosPreSignedRequestHandler {
                 .setSignatureQuery(encodedQuery).setCustomDomain(input.isCustomDomain())
                 .setBucket(input.getBucket()).setHost(host);
 
-        return new PreSingedPolicyURLOutput().setPreSignedPolicyURLGenerator(generator)
+        return new PreSignedPolicyURLOutput().setPreSignedPolicyURLGenerator(generator)
                 .setScheme(scheme).setHost(host).setSignatureQuery(encodedQuery);
     }
 }

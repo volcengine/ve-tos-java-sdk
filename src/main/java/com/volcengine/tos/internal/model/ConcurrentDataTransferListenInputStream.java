@@ -17,6 +17,8 @@ public class ConcurrentDataTransferListenInputStream extends DataTransferListenI
     private AtomicLong consumedBytes;
     private int unNotifiedBytes;
     private boolean doneEOF;
+    private long markedSubConsumedBytes;
+    private int markedUnNotifiedBytes;
 
     public ConcurrentDataTransferListenInputStream(InputStream is, DataTransferListener listener, long total, AtomicLong consumed) {
         super(is);
@@ -40,12 +42,19 @@ public class ConcurrentDataTransferListenInputStream extends DataTransferListenI
     }
 
     @Override
-    public void reset() throws IOException {
+    public synchronized void mark(int readlimit) {
+        super.mark(readlimit);
+        markedSubConsumedBytes = subConsumedBytes;
+        markedUnNotifiedBytes = unNotifiedBytes;
+    }
+
+    @Override
+    public synchronized void reset() throws IOException {
         super.reset();
-        unNotifiedBytes = 0;
+        unNotifiedBytes = markedUnNotifiedBytes;
         long old = consumedBytes.get();
-        consumedBytes.compareAndSet(old, old-subConsumedBytes);
-        subConsumedBytes = 0;
+        consumedBytes.compareAndSet(old, old-(subConsumedBytes-markedSubConsumedBytes));
+        subConsumedBytes = markedSubConsumedBytes;
     }
 
     @Override

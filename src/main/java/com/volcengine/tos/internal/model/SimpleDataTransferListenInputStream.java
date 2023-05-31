@@ -16,6 +16,8 @@ public class SimpleDataTransferListenInputStream extends DataTransferListenInput
     private int unNotifiedBytes;
     private boolean readStarted;
     private boolean doneEOF;
+    private long markedConsumedBytes;
+    private int markedUnNotifiedBytes;
 
     public SimpleDataTransferListenInputStream(InputStream is, DataTransferListener listener, long total) {
         super(is);
@@ -47,10 +49,17 @@ public class SimpleDataTransferListenInputStream extends DataTransferListenInput
     }
 
     @Override
-    public void reset() throws IOException {
+    public synchronized void mark(int readlimit) {
+        super.mark(readlimit);
+        markedConsumedBytes = consumedBytes;
+        markedUnNotifiedBytes = unNotifiedBytes;
+    }
+
+    @Override
+    public synchronized void reset() throws IOException {
         super.reset();
-        unNotifiedBytes = 0;
-        consumedBytes = 0;
+        unNotifiedBytes = markedUnNotifiedBytes;
+        consumedBytes = markedConsumedBytes;
     }
 
     @Override
