@@ -30,7 +30,8 @@ public class TosBucketRequestHandler {
                 .withHeader(TosHeader.HEADER_GRANT_READ_ACP, input.getGrantReadAcp())
                 .withHeader(TosHeader.HEADER_GRANT_WRITE, input.getGrantWrite())
                 .withHeader(TosHeader.HEADER_GRANT_WRITE_ACP, input.getGrantWriteAcp())
-                .withHeader(TosHeader.HEADER_STORAGE_CLASS, input.getStorageClass() == null ? null : input.getStorageClass().toString());
+                .withHeader(TosHeader.HEADER_STORAGE_CLASS, input.getStorageClass() == null ? null : input.getStorageClass().toString())
+                .withHeader(TosHeader.HEADER_AZ_REDUNDANCY, input.getAzRedundancy() == null ? null: input.getAzRedundancy().toString());
         TosRequest req = this.factory.build(builder, HttpMethod.PUT, null).setRetryableOnClientException(false);
         return bucketHandler.doRequest(req, HttpStatus.OK, res -> new CreateBucketV2Output(res.RequestInfo(),
                         res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_LOCATION)));
