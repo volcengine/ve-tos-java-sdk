@@ -50,6 +50,7 @@ public class TosBucketRequestHandlerTest {
                     .bucket(bucketName)
                     .acl(ACLType.ACL_BUCKET_OWNER_READ)
                     .storageClass(StorageClassType.STORAGE_CLASS_IA)
+                    .azRedundancy(AzRedundancyType.AZ_REDUNDANCY_SINGLE_AZ)
                     .build();
             CreateBucketV2Output output = getHandler().createBucket(input);
             Assert.assertEquals(output.getLocation(), "/"+bucketName);
