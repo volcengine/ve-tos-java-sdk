@@ -30,6 +30,7 @@ public interface TosHeader {
     String HEADER_VERSIONID = "X-Tos-Version-Id";
     String HEADER_DELETE_MARKER = "X-Tos-Delete-Marker";
     String HEADER_STORAGE_CLASS = "X-Tos-Storage-Class";
+    String HEADER_AZ_REDUNDANCY = "X-Tos-Az-Redundancy";
     String HEADER_RESTORE = "X-Tos-Restore";
     String HEADER_MIRROR_TAG = "X-Tos-Tag";
     String HEADER_SSE_CUSTOMER_ALGORITHM = "X-Tos-Server-Side-Encryption-Customer-Algorithm";
