@@ -1,4 +1,6 @@
 ## Release Note
+### 2023.8.8 Version 2.6.1
+- fix:create bucket un-support az-redundancy param
 ### 2023.5.30 Version 2.6.0
 - 支持若干新特性，归档取回、自定义域名、智能分层和冷归档存储类型、上传回调等
 - 修复若干已知bug
