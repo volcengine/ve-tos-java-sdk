@@ -11,7 +11,7 @@ TOS Java SDK为Java开发者提供了访问火山引擎对象存储服务TOS（T
 <dependency>
     <groupId>com.volcengine</groupId>
     <artifactId>ve-tos-java-sdk</artifactId>
-    <version>2.6.1</version>
+    <version>2.6.2</version>
 </dependency>
 ```
 
