@@ -11,7 +11,7 @@ public interface Consts {
     String SCHEME_HTTP = "http";
     String SCHEME_HTTPS = "https";
     String SDK_NAME = "ve-tos-java-sdk";
-    String SDK_VERSION = "v2.6.1";
+    String SDK_VERSION = "v2.6.2";
     String OS_NAME = System.getProperty("os.name");
     String OS_ARCH = System.getProperty("os.arch");
     String JAVA_VERSION = System.getProperty("java.version", "0");

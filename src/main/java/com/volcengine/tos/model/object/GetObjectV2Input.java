@@ -37,6 +37,17 @@ public class GetObjectV2Input {
 
     private String process;
 
+    /**
+     * 图片另存为参数
+     */
+    private String saveBucket;
+
+    /**
+     * 图片另存为参数
+     */
+    private String saveObject;
+
+
     public String getBucket() {
         return bucket;
     }
@@ -163,6 +174,24 @@ public class GetObjectV2Input {
         return this;
     }
 
+    public String getSaveBucket() {
+        return saveBucket;
+    }
+
+    public GetObjectV2Input setSaveBucket(String saveBucket) {
+        this.saveBucket = saveBucket;
+        return this;
+    }
+
+    public String getSaveObject() {
+        return saveObject;
+    }
+
+    public GetObjectV2Input setSaveObject(String saveObject) {
+        this.saveObject = saveObject;
+        return this;
+    }
+
     public Map<String, String> getAllSettedHeaders() {
         Map<String, String> allHeaders = new HashMap<>(options == null ? Collections.emptyMap() : options.headers());
         if (StringUtils.isNotEmpty(range)) {
@@ -189,6 +218,8 @@ public class GetObjectV2Input {
                 ", dataTransferListener=" + dataTransferListener +
                 ", rateLimiter=" + rateLimiter +
                 ", process='" + process + '\'' +
+                ", saveBucket='" + saveBucket + '\'' +
+                ", saveObject='" + saveObject + '\'' +
                 '}';
     }
 
@@ -211,6 +242,8 @@ public class GetObjectV2Input {
         private DataTransferListener dataTransferListener;
         private RateLimiter rateLimiter;
         private String process;
+        private String saveBucket;
+        private String saveObject;
 
         private GetObjectV2InputBuilder() {
         }
@@ -285,6 +318,16 @@ public class GetObjectV2Input {
             return this;
         }
 
+        public GetObjectV2InputBuilder saveBucket(String saveBucket) {
+            this.saveBucket = saveBucket;
+            return this;
+        }
+
+        public GetObjectV2InputBuilder saveObject(String saveObject) {
+            this.saveObject = saveObject;
+            return this;
+        }
+
         public GetObjectV2Input build() {
             GetObjectV2Input getObjectV2Input = new GetObjectV2Input();
             getObjectV2Input.bucket = this.bucket;
@@ -301,6 +344,8 @@ public class GetObjectV2Input {
             getObjectV2Input.responseExpires = this.responseExpires;
             getObjectV2Input.rateLimiter = this.rateLimiter;
             getObjectV2Input.process = this.process;
+            getObjectV2Input.saveBucket = this.saveBucket;
+            getObjectV2Input.saveObject = this.saveObject;
             return getObjectV2Input;
         }
     }

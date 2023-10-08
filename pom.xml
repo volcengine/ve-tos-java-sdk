@@ -6,7 +6,7 @@
 
     <groupId>com.volcengine</groupId>
     <artifactId>ve-tos-java-sdk</artifactId>
-    <version>2.6.1</version>
+    <version>2.6.2</version>
 
     <properties>
         <maven.compiler.source>8</maven.compiler.source>
@@ -154,7 +154,9 @@
                 <configuration>
                     <encoding>UTF-8</encoding>
                     <source>1.8</source>
-                    <excludePackageNames>com.volcengine.tos.comm.*;com.volcengine.tos.internal.*;com.volcengine.tos.auth.*</excludePackageNames>
+                    <excludePackageNames>
+                        com.volcengine.tos.comm.*;com.volcengine.tos.internal.*;com.volcengine.tos.auth.*
+                    </excludePackageNames>
                     <doclint>none</doclint>
                 </configuration>
             </plugin>
