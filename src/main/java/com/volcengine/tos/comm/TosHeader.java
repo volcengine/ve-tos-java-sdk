@@ -78,6 +78,8 @@ public interface TosHeader {
     String QUERY_RESPONSE_CACHE_CONTROL = "response-cache-control";
     String QUERY_RESPONSE_EXPIRES = "response-expires";
     String QUERY_DATA_PROCESS = "x-tos-process";
+    String QUERY_SAVE_BUCKET = "x-tos-save-bucket";
+    String QUERY_SAVE_OBJECT = "x-tos-save-object";
 
     String HEADER_WEBSITE_REDIRECT_LOCATION = "X-Tos-Website-Redirect-Location";
     String HEADER_CS_TYPE = "X-Tos-Cs-Type";
