@@ -89,7 +89,7 @@ public class RequestTransport implements Transport {
 
         this.client = builder.dispatcher(dispatcher)
                 .connectionPool(connectionPool)
-                .retryOnConnectionFailure(true)
+                .retryOnConnectionFailure(false)
                 .readTimeout(readTimeout, TimeUnit.MILLISECONDS)
                 .writeTimeout(writeTimeout, TimeUnit.MILLISECONDS)
                 .connectTimeout(connectTimeout, TimeUnit.MILLISECONDS)

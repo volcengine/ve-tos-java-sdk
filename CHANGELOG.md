@@ -1,5 +1,7 @@
 ## Release Note
-### 2023.10.7 Version 2.6.2
+### 2023.10.18 Version 2.6.3
+- fix input stream not support reset
+### 2023.10.7 Version 2.6.3
 - add GetObject支持saveBucket和saveObject参数
 - fix crc64计算未兼容老对象和图片处理
 ### 2023.8.8 Version 2.6.1
