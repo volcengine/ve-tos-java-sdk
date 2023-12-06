@@ -28,6 +28,10 @@ public enum StorageClassType {
      * 冷归档
      */
     STORAGE_CLASS_COLD_ARCHIVE("COLD_ARCHIVE"),
+    /**
+     * 归档
+     */
+    STORAGE_CLASS_ARCHIVE("ARCHIVE"),
 
     @JsonEnumDefaultValue
     STORAGE_CLASS_UNKNOWN("UNKNOWN");

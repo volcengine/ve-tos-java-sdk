@@ -32,6 +32,8 @@ public interface Consts {
     String STORAGE_CLASS_INTELLIGENT_TIERING = "INTELLIGENT_TIERING";
     String STORAGE_CLASS_COLD_ARCHIVE = "COLD_ARCHIVE";
 
+    String STORAGE_CLASS_ARCHIVE = "ARCHIVE";
+
     String CANNED_ALL_USERS = "AllUsers";
     String CANNED_AUTHENTICATED_USERS = "AuthenticatedUsers";
     String CANNED_LOG_DELIVERY = "LogDelivery";
