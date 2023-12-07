@@ -28,7 +28,6 @@ public class ResumableCopyObjectTaskHandler {
 
     public ResumableCopyObjectTaskHandler(ResumableCopyObjectInput input, TosObjectRequestHandler handler, boolean enableCrcCheck) {
         ParamsChecker.ensureNotNull(input, "ResumableCopyObjectInput");
-        ParamsChecker.isValidBucketNameAndKey(input.getBucket(), input.getKey());
         ParamsChecker.isValidBucketNameAndKey(input.getSrcBucket(), input.getSrcKey());
         ParamsChecker.ensureNotNull(handler, "TosObjectRequestHandler");
         this.input = input;

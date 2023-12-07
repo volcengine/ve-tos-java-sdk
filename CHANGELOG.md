@@ -1,4 +1,6 @@
 ## Release Note
+### 2023.12.6 Version 2.6.5
+- fix: remove bucket name check in uploadFile/downloadFile/resumableCopyObject methods.
 ### 2023.12.4 Version 2.6.4
 - add STORAGE_CLASS_ARCHIVE for StorageClassType
 ### 2023.10.18 Version 2.6.3
