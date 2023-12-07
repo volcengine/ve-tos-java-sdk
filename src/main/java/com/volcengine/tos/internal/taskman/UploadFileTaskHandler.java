@@ -36,7 +36,6 @@ public class UploadFileTaskHandler {
     public UploadFileTaskHandler(UploadFileV2Input input, TosObjectRequestHandler handler, boolean enableCrcCheck) {
         ParamsChecker.ensureNotNull(input, "UploadFileV2Input");
         ParamsChecker.ensureNotNull(input.getFilePath(), "UploadFilePath");
-        ParamsChecker.isValidBucketNameAndKey(input.getBucket(), input.getKey());
         ParamsChecker.ensureNotNull(handler, "TosObjectRequestHandler");
         this.input = input;
         this.handler = handler;

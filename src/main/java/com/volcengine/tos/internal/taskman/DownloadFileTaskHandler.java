@@ -33,7 +33,6 @@ public class DownloadFileTaskHandler {
 
     public DownloadFileTaskHandler(DownloadFileInput input, TosObjectRequestHandler handler, boolean enableCrcCheck) {
         ParamsChecker.ensureNotNull(input, "DownloadFileInput");
-        ParamsChecker.isValidBucketNameAndKey(input.getBucket(), input.getKey());
         ParamsChecker.ensureNotNull(handler, "TosObjectRequestHandler");
         this.input = input;
         this.handler = handler;
