@@ -31,10 +31,10 @@ public class TosBucketRequestHandler {
                 .withHeader(TosHeader.HEADER_GRANT_WRITE, input.getGrantWrite())
                 .withHeader(TosHeader.HEADER_GRANT_WRITE_ACP, input.getGrantWriteAcp())
                 .withHeader(TosHeader.HEADER_STORAGE_CLASS, input.getStorageClass() == null ? null : input.getStorageClass().toString())
-                .withHeader(TosHeader.HEADER_AZ_REDUNDANCY, input.getAzRedundancy() == null ? null: input.getAzRedundancy().toString());
+                .withHeader(TosHeader.HEADER_AZ_REDUNDANCY, input.getAzRedundancy() == null ? null : input.getAzRedundancy().toString());
         TosRequest req = this.factory.build(builder, HttpMethod.PUT, null).setRetryableOnClientException(false);
         return bucketHandler.doRequest(req, HttpStatus.OK, res -> new CreateBucketV2Output(res.RequestInfo(),
-                        res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_LOCATION)));
+                res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_LOCATION)));
     }
 
     public HeadBucketV2Output headBucket(HeadBucketV2Input input) throws TosException {
@@ -43,8 +43,8 @@ public class TosBucketRequestHandler {
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null);
         TosRequest req = this.factory.build(builder, HttpMethod.HEAD, null);
         return bucketHandler.doRequest(req, HttpStatus.OK, res -> new HeadBucketV2Output(res.RequestInfo(),
-                        res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_BUCKET_REGION),
-                        TypeConverter.convertStorageClassType(res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_STORAGE_CLASS)))
+                res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_BUCKET_REGION),
+                TypeConverter.convertStorageClassType(res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_STORAGE_CLASS)))
         );
     }
 
@@ -63,7 +63,8 @@ public class TosBucketRequestHandler {
         TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
         return bucketHandler.doRequest(req, HttpStatus.OK,
                 res -> PayloadConverter.parsePayload(res.getInputStream(),
-                        new TypeReference<ListBucketsV2Output>(){}).setRequestInfo(res.RequestInfo()));
+                        new TypeReference<ListBucketsV2Output>() {
+                        }).setRequestInfo(res.RequestInfo()));
     }
 
     public PutBucketPolicyOutput putBucketPolicy(PutBucketPolicyInput input) throws TosException {
@@ -114,7 +115,8 @@ public class TosBucketRequestHandler {
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("cors", "");
         TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
         return bucketHandler.doRequest(req, HttpStatus.OK, res -> PayloadConverter.parsePayload(res.getInputStream(),
-                new TypeReference<GetBucketCORSOutput>(){}).setRequestInfo(res.RequestInfo()));
+                new TypeReference<GetBucketCORSOutput>() {
+                }).setRequestInfo(res.RequestInfo()));
     }
 
     public DeleteBucketCORSOutput deleteBucketCORS(DeleteBucketCORSInput input) throws TosException {
@@ -143,7 +145,8 @@ public class TosBucketRequestHandler {
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("location", "");
         TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
         return bucketHandler.doRequest(req, HttpStatus.OK, res -> PayloadConverter.parsePayload(res.getInputStream(),
-                new TypeReference<GetBucketLocationOutput>(){}).setRequestInfo(res.RequestInfo()));
+                new TypeReference<GetBucketLocationOutput>() {
+                }).setRequestInfo(res.RequestInfo()));
     }
 
     public PutBucketLifecycleOutput putBucketLifecycle(PutBucketLifecycleInput input) throws TosException {
@@ -165,7 +168,8 @@ public class TosBucketRequestHandler {
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("lifecycle", "");
         TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
         return bucketHandler.doRequest(req, HttpStatus.OK, res -> PayloadConverter.parsePayload(res.getInputStream(),
-                new TypeReference<GetBucketLifecycleOutput>(){}).setRequestInfo(res.RequestInfo()));
+                new TypeReference<GetBucketLifecycleOutput>() {
+                }).setRequestInfo(res.RequestInfo()));
     }
 
     public DeleteBucketLifecycleOutput deleteBucketLifecycle(DeleteBucketLifecycleInput input) throws TosException {
@@ -196,7 +200,8 @@ public class TosBucketRequestHandler {
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("mirror", "");
         TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
         return bucketHandler.doRequest(req, HttpStatus.OK, res -> PayloadConverter.parsePayload(res.getInputStream(),
-                new TypeReference<GetBucketMirrorBackOutput>(){}).setRequestInfo(res.RequestInfo()));
+                new TypeReference<GetBucketMirrorBackOutput>() {
+                }).setRequestInfo(res.RequestInfo()));
     }
 
     public DeleteBucketMirrorBackOutput deleteBucketMirrorBack(DeleteBucketMirrorBackInput input) throws TosException {
@@ -230,7 +235,8 @@ public class TosBucketRequestHandler {
                 .withQuery("replication", "").withQuery("progress", "").withQuery("rule-id", input.getRuleID());
         TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
         return bucketHandler.doRequest(req, HttpStatus.OK, res -> PayloadConverter.parsePayload(res.getInputStream(),
-                new TypeReference<GetBucketReplicationOutput>(){}).setRequestInfo(res.RequestInfo()));
+                new TypeReference<GetBucketReplicationOutput>() {
+                }).setRequestInfo(res.RequestInfo()));
     }
 
     public DeleteBucketReplicationOutput deleteBucketReplication(DeleteBucketReplicationInput input) throws TosException {
@@ -261,7 +267,8 @@ public class TosBucketRequestHandler {
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("versioning", "");
         TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
         return bucketHandler.doRequest(req, HttpStatus.OK, res -> PayloadConverter.parsePayload(res.getInputStream(),
-                new TypeReference<GetBucketVersioningOutput>(){}).setRequestInfo(res.RequestInfo()));
+                new TypeReference<GetBucketVersioningOutput>() {
+                }).setRequestInfo(res.RequestInfo()));
     }
 
     public PutBucketWebsiteOutput putBucketWebsite(PutBucketWebsiteInput input) throws TosException {
@@ -313,7 +320,30 @@ public class TosBucketRequestHandler {
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("notification", "");
         TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
         return bucketHandler.doRequest(req, HttpStatus.OK, res -> PayloadConverter.parsePayload(res.getInputStream(),
-                new TypeReference<GetBucketNotificationOutput>(){}).setRequestInfo(res.RequestInfo()));
+                new TypeReference<GetBucketNotificationOutput>() {
+                }).setRequestInfo(res.RequestInfo()));
+    }
+
+    public PutBucketNotificationType2Output putBucketNotificationType2(PutBucketNotificationType2Input input) throws TosException {
+        ParamsChecker.ensureNotNull(input, "PutBucketNotificationType2Output");
+        ensureValidBucketName(input.getBucket());
+        TosMarshalResult marshalResult = PayloadConverter.serializePayloadAndComputeMD5(input);
+        RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("notification_v2", "")
+                .withHeader(TosHeader.HEADER_CONTENT_MD5, marshalResult.getContentMD5());
+        TosRequest req = this.factory.build(builder, HttpMethod.PUT, new ByteArrayInputStream(marshalResult.getData()))
+                .setContentLength(marshalResult.getData().length);
+        return bucketHandler.doRequest(req, HttpStatus.OK, res -> new PutBucketNotificationType2Output()
+                .setRequestInfo(res.RequestInfo()));
+    }
+
+    public GetBucketNotificationType2Output getBucketNotificationType2(GetBucketNotificationType2Input input) throws TosException {
+        ParamsChecker.ensureNotNull(input, "GetBucketNotificationType2Output");
+        ensureValidBucketName(input.getBucket());
+        RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("notification_v2", "");
+        TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
+        return bucketHandler.doRequest(req, HttpStatus.OK, res -> PayloadConverter.parsePayload(res.getInputStream(),
+                new TypeReference<GetBucketNotificationType2Output>() {
+                }).setRequestInfo(res.RequestInfo()));
     }
 
     public PutBucketCustomDomainOutput putBucketCustomDomain(PutBucketCustomDomainInput input) throws TosException {
@@ -334,7 +364,8 @@ public class TosBucketRequestHandler {
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("customdomain", "");
         TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
         return bucketHandler.doRequest(req, HttpStatus.OK, res -> PayloadConverter.parsePayload(res.getInputStream(),
-                new TypeReference<ListBucketCustomDomainOutput>(){}).setRequestInfo(res.RequestInfo()));
+                new TypeReference<ListBucketCustomDomainOutput>() {
+                }).setRequestInfo(res.RequestInfo()));
     }
 
     public DeleteBucketCustomDomainOutput deleteBucketCustomDomain(DeleteBucketCustomDomainInput input) throws TosException {
@@ -365,7 +396,8 @@ public class TosBucketRequestHandler {
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("realtimeLog", "");
         TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
         return bucketHandler.doRequest(req, HttpStatus.OK, res -> PayloadConverter.parsePayload(res.getInputStream(),
-                new TypeReference<GetBucketRealTimeLogOutput>(){}).setRequestInfo(res.RequestInfo()));
+                new TypeReference<GetBucketRealTimeLogOutput>() {
+                }).setRequestInfo(res.RequestInfo()));
     }
 
     public DeleteBucketRealTimeLogOutput deleteBucketRealTimeLog(DeleteBucketRealTimeLogInput input) throws TosException {
@@ -406,7 +438,8 @@ public class TosBucketRequestHandler {
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("acl", "");
         TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
         return bucketHandler.doRequest(req, HttpStatus.OK, res -> PayloadConverter.parsePayload(res.getInputStream(),
-                new TypeReference<GetBucketACLOutput>(){}).setRequestInfo(res.RequestInfo()));
+                new TypeReference<GetBucketACLOutput>() {
+                }).setRequestInfo(res.RequestInfo()));
     }
 
     public PutBucketRenameOutput putBucketRename(PutBucketRenameInput input) throws TosException {
@@ -427,7 +460,8 @@ public class TosBucketRequestHandler {
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("rename", "");
         TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
         return bucketHandler.doRequest(req, HttpStatus.OK, res -> PayloadConverter.parsePayload(res.getInputStream(),
-                new TypeReference<GetBucketRenameOutput>(){}).setRequestInfo(res.RequestInfo()));
+                new TypeReference<GetBucketRenameOutput>() {
+                }).setRequestInfo(res.RequestInfo()));
     }
 
     public DeleteBucketRenameOutput deleteBucketRename(DeleteBucketRenameInput input) throws TosException {

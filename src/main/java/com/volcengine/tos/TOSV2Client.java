@@ -306,6 +306,16 @@ public class TOSV2Client implements TOSV2 {
     }
 
     @Override
+    public PutBucketNotificationType2Output putBucketNotificationType2(PutBucketNotificationType2Input input) throws TosException {
+        return bucketRequestHandler.putBucketNotificationType2(input);
+    }
+
+    @Override
+    public GetBucketNotificationType2Output getBucketNotificationType2(GetBucketNotificationType2Input input) throws TosException {
+        return bucketRequestHandler.getBucketNotificationType2(input);
+    }
+
+    @Override
     public PutBucketCustomDomainOutput putBucketCustomDomain(PutBucketCustomDomainInput input) throws TosException {
         return bucketRequestHandler.putBucketCustomDomain(input);
     }

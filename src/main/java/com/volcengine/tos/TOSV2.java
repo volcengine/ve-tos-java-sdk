@@ -18,8 +18,7 @@ public interface TOSV2 extends TOS {
     /**
      * create a new bucket
      *
-     * @param input
-     *              require input's bucketName not null
+     * @param input require input's bucketName not null
      * @return {@link CreateBucketV2Output}
      * @throws TosException
      */
@@ -62,6 +61,7 @@ public interface TOSV2 extends TOS {
 
     /**
      * set bucket policy
+     *
      * @param bucket bucket name
      * @param policy bucket policy
      * @return PutBucketPolicyOutput
@@ -72,6 +72,7 @@ public interface TOSV2 extends TOS {
 
     /**
      * set bucket policy
+     *
      * @param input set bucket name and bucket policy
      * @return PutBucketPolicyOutput
      * @throws TosException
@@ -80,6 +81,7 @@ public interface TOSV2 extends TOS {
 
     /**
      * get policy of a bucket
+     *
      * @param bucket bucket name
      * @return GetBucketPolicyOutput
      * @throws TosException
@@ -89,6 +91,7 @@ public interface TOSV2 extends TOS {
 
     /**
      * get policy of a bucket
+     *
      * @param input set bucket name
      * @return GetBucketPolicyOutput
      * @throws TosException
@@ -97,6 +100,7 @@ public interface TOSV2 extends TOS {
 
     /**
      * delete the policy of a bucket
+     *
      * @param bucket bucket name
      * @return DeleteBucketPolicyOutput
      * @throws TosException
@@ -106,6 +110,7 @@ public interface TOSV2 extends TOS {
 
     /**
      * delete the policy of a bucket
+     *
      * @param input set bucket name
      * @return DeleteBucketPolicyOutput
      * @throws TosException
@@ -115,6 +120,7 @@ public interface TOSV2 extends TOS {
 
     /**
      * set the CORS of a bucket
+     *
      * @param input set bucket name and the bucket CORS rules
      * @return PutBucketCORSOutput
      * @throws TosException
@@ -123,6 +129,7 @@ public interface TOSV2 extends TOS {
 
     /**
      * get the CORS of a bucket
+     *
      * @param input set bucket name
      * @return GetBucketCORSOutput
      * @throws TosException
@@ -131,6 +138,7 @@ public interface TOSV2 extends TOS {
 
     /**
      * delete the CORS of a bucket
+     *
      * @param input set bucket name
      * @return DeleteBucketCORSOutput
      * @throws TosException
@@ -139,6 +147,7 @@ public interface TOSV2 extends TOS {
 
     /**
      * set storageClass of a bucket
+     *
      * @param input set bucket name and the specific storageClassType
      * @return PutBucketStorageClassOutput
      * @throws TosException
@@ -147,6 +156,7 @@ public interface TOSV2 extends TOS {
 
     /**
      * get the location of a bucket
+     *
      * @param input set bucket name
      * @return GetBucketLocationOutput
      * @throws TosException
@@ -155,6 +165,7 @@ public interface TOSV2 extends TOS {
 
     /**
      * set the lifecycle rules of a bucket
+     *
      * @param input set bucket name and the bucket lifecycle rules
      * @return PutBucketLifecycleOutput
      * @throws TosException
@@ -163,6 +174,7 @@ public interface TOSV2 extends TOS {
 
     /**
      * get the lifecycle rules of a bucket
+     *
      * @param input set bucket name
      * @return GetBucketLifecycleOutput
      * @throws TosException
@@ -171,6 +183,7 @@ public interface TOSV2 extends TOS {
 
     /**
      * delete the lifecycle rules of a bucket
+     *
      * @param input set bucket name
      * @return DeleteBucketLifecycleOutput
      * @throws TosException
@@ -179,6 +192,7 @@ public interface TOSV2 extends TOS {
 
     /**
      * set the mirrorBack rules of a bucket
+     *
      * @param input set bucket name and the bucket mirrorBack rules
      * @return PutBucketMirrorBackOutput
      * @throws TosException
@@ -187,6 +201,7 @@ public interface TOSV2 extends TOS {
 
     /**
      * get the mirrorBack rules of a bucket
+     *
      * @param input set bucket name
      * @return GetBucketMirrorBackOutput
      * @throws TosException
@@ -195,6 +210,7 @@ public interface TOSV2 extends TOS {
 
     /**
      * delete the mirrorBack rules of a bucket
+     *
      * @param input set bucket name
      * @return DeleteBucketMirrorBackOutput
      * @throws TosException
@@ -203,6 +219,7 @@ public interface TOSV2 extends TOS {
 
     /**
      * set the replication rules of a bucket
+     *
      * @param input set bucket name and the bucket replication rules
      * @return PutBucketReplicationOutput
      * @throws TosException
@@ -211,6 +228,7 @@ public interface TOSV2 extends TOS {
 
     /**
      * get the replication rules of a bucket
+     *
      * @param input set bucket name
      * @return GetBucketReplicationOutput
      * @throws TosException
@@ -219,6 +237,7 @@ public interface TOSV2 extends TOS {
 
     /**
      * delete the replication rules of a bucket
+     *
      * @param input set bucket name
      * @return DeleteBucketReplicationOutput
      * @throws TosException
@@ -227,6 +246,7 @@ public interface TOSV2 extends TOS {
 
     /**
      * set the multi-version status of a bucket
+     *
      * @param input set bucket name and the bucket multi-version status
      * @return PutBucketVersioningOutput
      * @throws TosException
@@ -235,6 +255,7 @@ public interface TOSV2 extends TOS {
 
     /**
      * get the multi-version status of a bucket
+     *
      * @param input set bucket name
      * @return GetBucketVersioningOutput
      * @throws TosException
@@ -243,6 +264,7 @@ public interface TOSV2 extends TOS {
 
     /**
      * set the website config of a bucket
+     *
      * @param input set bucket name and the bucket website config rules
      * @return PutBucketWebsiteOutput
      * @throws TosException
@@ -251,6 +273,7 @@ public interface TOSV2 extends TOS {
 
     /**
      * get the website config of a bucket
+     *
      * @param input set bucket name
      * @return GetBucketWebsiteOutput
      * @throws TosException
@@ -259,6 +282,7 @@ public interface TOSV2 extends TOS {
 
     /**
      * delete the website config of a bucket
+     *
      * @param input set bucket name
      * @return DeleteBucketWebsiteOutput
      * @throws TosException
@@ -267,6 +291,7 @@ public interface TOSV2 extends TOS {
 
     /**
      * set the event notification rules of a bucket
+     *
      * @param input set bucket name and the bucket event notification rules
      * @return PutBucketNotificationOutput
      * @throws TosException
@@ -275,14 +300,35 @@ public interface TOSV2 extends TOS {
 
     /**
      * get the event notification rules of a bucket
+     *
      * @param input set bucket name
      * @return GetBucketNotificationOutput
      * @throws TosException
      */
     GetBucketNotificationOutput getBucketNotification(GetBucketNotificationInput input) throws TosException;
 
+
+    /**
+     * set the event notification v2 rules of a bucket
+     *
+     * @param input set bucket name and the bucket event notification rules
+     * @return PutBucketNotificationType2Output
+     * @throws TosException
+     */
+    PutBucketNotificationType2Output putBucketNotificationType2(PutBucketNotificationType2Input input) throws TosException;
+
+    /**
+     * get the event notification rules of a bucket
+     *
+     * @param input set bucket name
+     * @return GetBucketNotificationType2Output
+     * @throws TosException
+     */
+    GetBucketNotificationType2Output getBucketNotificationType2(GetBucketNotificationType2Input input) throws TosException;
+
     /**
      * add a custom domain config of a bucket
+     *
      * @param input set bucket name and the custom domain rule
      * @return PutBucketCustomDomainOutput
      * @throws TosException
@@ -291,6 +337,7 @@ public interface TOSV2 extends TOS {
 
     /**
      * list all the custom domains of a bucket
+     *
      * @param input set bucket name
      * @return ListBucketCustomDomainOutput
      * @throws TosException
@@ -299,6 +346,7 @@ public interface TOSV2 extends TOS {
 
     /**
      * delete a specific custom domain of a bucket
+     *
      * @param input set bucket name
      * @return DeleteBucketCustomDomainOutput
      * @throws TosException
@@ -307,6 +355,7 @@ public interface TOSV2 extends TOS {
 
     /**
      * set the realtime log config of a bucket
+     *
      * @param input set bucket name and the realtime log config
      * @return PutBucketRealTimeLogOutput
      * @throws TosException
@@ -315,6 +364,7 @@ public interface TOSV2 extends TOS {
 
     /**
      * get the realtime log config of a bucket
+     *
      * @param input set bucket name
      * @return GetBucketRealTimeLogOutput
      * @throws TosException
@@ -323,6 +373,7 @@ public interface TOSV2 extends TOS {
 
     /**
      * delete the realtime log config of a bucket
+     *
      * @param input set bucket name
      * @return DeleteBucketRealTimeLogOutput
      * @throws TosException
@@ -331,6 +382,7 @@ public interface TOSV2 extends TOS {
 
     /**
      * set the acl rules of a bucket
+     *
      * @param input set bucket name and the bucket lifecycle rules
      * @return PutBucketACLOutput
      * @throws TosException
@@ -339,6 +391,7 @@ public interface TOSV2 extends TOS {
 
     /**
      * get the acl rules of a bucket
+     *
      * @param input set bucket name
      * @return GetBucketACLOutput
      * @throws TosException
@@ -347,6 +400,7 @@ public interface TOSV2 extends TOS {
 
     /**
      * set rename enabled of a bucket
+     *
      * @param input set bucket name and the rename-switch
      * @return PutBucketRenameOutput
      * @throws TosException
@@ -355,6 +409,7 @@ public interface TOSV2 extends TOS {
 
     /**
      * get the rename-enable status of a bucket
+     *
      * @param input set bucket name
      * @return GetBucketRenameOutput
      * @throws TosException
@@ -363,6 +418,7 @@ public interface TOSV2 extends TOS {
 
     /**
      * delete the rename-enable config of a bucket
+     *
      * @param input set bucket name
      * @return DeleteBucketRenameOutput
      * @throws TosException
@@ -487,6 +543,7 @@ public interface TOSV2 extends TOS {
 
     /**
      * copy an object in the same bucket
+     *
      * @param input set copy object option
      * @return {@link CopyObjectV2Output}
      * @throws TosException
@@ -569,7 +626,6 @@ public interface TOSV2 extends TOS {
      * create a multipart upload operation
      *
      * @param input set the createMultipartUpload option
-     *
      * @return {@link CreateMultipartUploadOutput}
      * @throws TosException
      */
@@ -649,6 +705,7 @@ public interface TOSV2 extends TOS {
 
     /**
      * create a pre-signed URL
+     *
      * @param input PreSignedURLInput
      * @return {@link PreSignedURLOutput}
      * @throws TosException
@@ -657,6 +714,7 @@ public interface TOSV2 extends TOS {
 
     /**
      * create a pre-signed for postObject request
+     *
      * @param input PreSignedPostSignatureInput
      * @return {@link PreSignedPostSignatureOutput}
      * @throws TosException
@@ -665,6 +723,7 @@ public interface TOSV2 extends TOS {
 
     /**
      * create a pre-signed for batch object request
+     *
      * @param input PreSingedPolicyURLInput
      * @return {@link PreSingedPolicyURLOutput}
      * @throws TosException
@@ -673,6 +732,7 @@ public interface TOSV2 extends TOS {
 
     /**
      * create a pre-signed for batch object request
+     *
      * @param input PreSignedPolicyURLInput
      * @return {@link PreSignedPolicyURLOutput}
      * @throws TosException
