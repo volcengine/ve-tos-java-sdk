@@ -87,19 +87,39 @@ public class PutObjectFromFileInput {
         return this;
     }
 
+    public String getCallback() {
+        return putObjectBasicInput.getCallback();
+    }
+
+    public PutObjectFromFileInput setCallback(String callback) {
+        this.putObjectBasicInput.setCallback(callback);
+        return this;
+    }
+
+    public String getCallbackVar() {
+        return putObjectBasicInput.getCallbackVar();
+    }
+
+    public PutObjectFromFileInput setCallbackVar(String callbackVar) {
+        this.putObjectBasicInput.setCallbackVar(callbackVar);
+        return this;
+    }
+
+    public static PutObjectFromFileInputBuilder builder() {
+        return new PutObjectFromFileInputBuilder();
+    }
+
     @Override
     public String toString() {
         return "PutObjectFromFileInput{" +
                 "bucket='" + getBucket() + '\'' +
                 ", key='" + getKey() + '\'' +
                 ", options=" + getOptions() +
-                ", filePath='" + filePath + '\'' +
-                ", file=" + file +
+                ", dataTransferListener=" + getDataTransferListener() +
+                ", rateLimit=" + getRateLimiter() +
+                ", callback='" + getCallback() + '\'' +
+                ", callbackVar='" + getCallbackVar() + '\'' +
                 '}';
-    }
-
-    public static PutObjectFromFileInputBuilder builder() {
-        return new PutObjectFromFileInputBuilder();
     }
 
     public static final class PutObjectFromFileInputBuilder {
@@ -154,6 +174,16 @@ public class PutObjectFromFileInput {
 
         public PutObjectFromFileInputBuilder rateLimiter(RateLimiter rateLimiter) {
             this.putObjectBasicInput.setRateLimiter(rateLimiter);
+            return this;
+        }
+
+        public PutObjectFromFileInputBuilder callback(String callback) {
+            this.putObjectBasicInput.setCallback(callback);
+            return this;
+        }
+
+        public PutObjectFromFileInputBuilder callbackVar(String callbackVar) {
+            this.putObjectBasicInput.setCallbackVar(callbackVar);
             return this;
         }
 

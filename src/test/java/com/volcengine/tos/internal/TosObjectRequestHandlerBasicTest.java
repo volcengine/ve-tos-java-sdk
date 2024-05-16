@@ -49,12 +49,12 @@ public class TosObjectRequestHandlerBasicTest {
 
     @BeforeTest
     void init() throws InterruptedException {
-        try{
+        try {
             HeadBucketV2Output head = ClientInstance.getBucketRequestHandlerInstance()
                     .headBucket(HeadBucketV2Input.builder().bucket(Consts.bucket).build());
         } catch (TosException e) {
             if (e.getStatusCode() == HttpStatus.NOT_FOUND) {
-                try{
+                try {
                     ClientInstance.getBucketRequestHandlerInstance().createBucket(
                             CreateBucketV2Input.builder().bucket(Consts.bucket).build()
                     );
@@ -69,12 +69,12 @@ public class TosObjectRequestHandlerBasicTest {
                 testFailed(e);
             }
         }
-        try{
+        try {
             HeadBucketV2Output head = ClientInstance.getBucketRequestHandlerInstance()
                     .headBucket(HeadBucketV2Input.builder().bucket(Consts.bucketCopy).build());
         } catch (TosException e) {
             if (e.getStatusCode() == HttpStatus.NOT_FOUND) {
-                try{
+                try {
                     ClientInstance.getBucketRequestHandlerInstance().createBucket(
                             CreateBucketV2Input.builder().bucket(Consts.bucketCopy).build()
                     );
@@ -97,7 +97,7 @@ public class TosObjectRequestHandlerBasicTest {
         // can not be \x00
         char[] invisibleChars = new char[32];
         for (int i = 0; i < 32; ++i) {
-            invisibleChars[i] = (char) (i+1);
+            invisibleChars[i] = (char) (i + 1);
         }
         String invisibleString = Arrays.toString(invisibleChars);
         try {
@@ -108,7 +108,7 @@ public class TosObjectRequestHandlerBasicTest {
 
         invisibleChars = new char[128];
         for (int i = 0; i < 128; ++i) {
-            invisibleChars[i] = (char) (i+128+1);
+            invisibleChars[i] = (char) (i + 128 + 1);
         }
         invisibleString = Arrays.toString(invisibleChars);
         try {
@@ -187,17 +187,17 @@ public class TosObjectRequestHandlerBasicTest {
                         .key(s)
                         .content(content)
                         .build());
-                try(GetObjectV2Output got = getHandler().getObject(GetObjectV2Input.builder()
+                try (GetObjectV2Output got = getHandler().getObject(GetObjectV2Input.builder()
                         .bucket(Consts.bucket)
                         .key(s)
-                        .build())){
+                        .build())) {
                     validateDataSame(sampleData, StringUtils.toString(got.getContent(), "content"));
                 } catch (Exception e) {
                     testFailed(e);
                 }
             } catch (Exception e) {
                 testFailed(e);
-            } finally{
+            } finally {
                 clearData(s);
             }
         }
@@ -209,7 +209,7 @@ public class TosObjectRequestHandlerBasicTest {
         String key = getUniqueObjectKey();
         String data = sampleData + StringUtils.randomString(new Random().nextInt(128));
         InputStream content = new ByteArrayInputStream(data.getBytes(StandardCharsets.UTF_8));
-        try{
+        try {
             PutObjectOutput putRes = getHandler().putObject(PutObjectInput.builder()
                     .bucket(Consts.bucket)
                     .key(key)
@@ -224,10 +224,10 @@ public class TosObjectRequestHandlerBasicTest {
             Assert.assertEquals(headRes.getEtag(), putRes.getEtag());
             Assert.assertEquals(headRes.getVersionID(), putRes.getVersionID());
 
-            try(GetObjectV2Output getRes = getHandler().getObject(GetObjectV2Input.builder()
+            try (GetObjectV2Output getRes = getHandler().getObject(GetObjectV2Input.builder()
                     .bucket(Consts.bucket)
                     .key(key)
-                    .build())){
+                    .build())) {
                 Assert.assertEquals(getRes.getContentLength(), data.length());
                 Assert.assertEquals(getRes.getEtag(), putRes.getEtag());
                 Assert.assertEquals(getRes.getVersionID(), putRes.getVersionID());
@@ -237,7 +237,7 @@ public class TosObjectRequestHandlerBasicTest {
             }
         } catch (Exception e) {
             testFailed(e);
-        } finally{
+        } finally {
             clearData(key);
         }
     }
@@ -245,15 +245,15 @@ public class TosObjectRequestHandlerBasicTest {
     @Test
     void nullObjectCRUDTest() {
         String key = getUniqueObjectKey();
-        try{
+        try {
             PutObjectOutput putRes = getHandler().putObject(PutObjectInput.builder()
                     .bucket(Consts.bucket)
                     .key(key)
                     .build());
-            try(GetObjectV2Output got = getHandler().getObject(GetObjectV2Input.builder()
+            try (GetObjectV2Output got = getHandler().getObject(GetObjectV2Input.builder()
                     .bucket(Consts.bucket)
                     .key(key)
-                    .build())){
+                    .build())) {
                 Assert.assertEquals(got.getContentLength(), 0);
                 Assert.assertEquals(got.getEtag(), putRes.getEtag());
                 Assert.assertEquals(got.getVersionID(), putRes.getVersionID());
@@ -263,7 +263,7 @@ public class TosObjectRequestHandlerBasicTest {
             }
         } catch (Exception e) {
             testFailed(e);
-        } finally{
+        } finally {
             clearData(key);
         }
     }
@@ -290,7 +290,7 @@ public class TosObjectRequestHandlerBasicTest {
 //                .serverSideEncryption(ssecAlgorithm) incompatible with ssec
                 .storageClass(StorageClassType.STORAGE_CLASS_IA)
                 .build();
-        try{
+        try {
             PutObjectOutput putRes = getHandler().putObject(PutObjectInput.builder()
                     .bucket(Consts.bucket)
                     .key(key)
@@ -323,7 +323,7 @@ public class TosObjectRequestHandlerBasicTest {
             Assert.assertEquals(headRes.getSsecKeyMD5(), ssecKeyMD5);
             Assert.assertEquals(headRes.getStorageClass(), StorageClassType.STORAGE_CLASS_IA);
 
-            try(GetObjectV2Output got = getHandler().getObject(GetObjectV2Input.builder()
+            try (GetObjectV2Output got = getHandler().getObject(GetObjectV2Input.builder()
                     .bucket(Consts.bucket)
                     .key(key)
                     .options(ObjectMetaRequestOptions.builder()
@@ -332,7 +332,7 @@ public class TosObjectRequestHandlerBasicTest {
                             .ssecKey(ssecKey)
                             .ssecKeyMD5(ssecKeyMD5)
                             .build())
-                    .build())){
+                    .build())) {
                 Assert.assertEquals(got.getContentLength(), data.length());
                 Assert.assertEquals(got.getEtag(), putRes.getEtag());
                 Assert.assertEquals(got.getVersionID(), putRes.getVersionID());
@@ -353,7 +353,7 @@ public class TosObjectRequestHandlerBasicTest {
             }
         } catch (Exception e) {
             testFailed(e);
-        } finally{
+        } finally {
             clearData(key);
         }
     }
@@ -372,7 +372,7 @@ public class TosObjectRequestHandlerBasicTest {
                 .customMetadata(custom)
                 .contentDisposition("attachment;filename=中文测试.txt")
                 .build();
-        try{
+        try {
             getHandler().putObject(PutObjectInput.builder()
                     .bucket(Consts.bucket)
                     .key(key)
@@ -390,10 +390,10 @@ public class TosObjectRequestHandlerBasicTest {
             Assert.assertEquals(headRes.getCustomMetadata().get("custom4"), "aabb=cc%20");
             Assert.assertEquals(headRes.getContentDisposition(), "attachment;filename=中文测试.txt");
 
-            try(GetObjectV2Output getRes = getHandler().getObject(GetObjectV2Input.builder()
+            try (GetObjectV2Output getRes = getHandler().getObject(GetObjectV2Input.builder()
                     .bucket(Consts.bucket)
                     .key(key)
-                    .build())){
+                    .build())) {
                 Assert.assertEquals(headRes.getCustomMetadata().get("custom1"), "中文1");
                 Assert.assertEquals(headRes.getCustomMetadata().get("custom2"), "中文 空格");
                 Assert.assertEquals(headRes.getCustomMetadata().get("custom3"), "aabb-cc%20");
@@ -404,7 +404,7 @@ public class TosObjectRequestHandlerBasicTest {
             }
         } catch (Exception e) {
             testFailed(e);
-        } finally{
+        } finally {
             clearData(key);
         }
     }
@@ -414,68 +414,68 @@ public class TosObjectRequestHandlerBasicTest {
         String key = getUniqueObjectKey();
         String data = sampleData + StringUtils.randomString(new Random().nextInt(128));
         InputStream content = new ByteArrayInputStream(data.getBytes(StandardCharsets.UTF_8));
-        try{
+        try {
             getHandler().putObject(PutObjectInput.builder()
                     .bucket(Consts.bucket)
                     .key(key)
                     .content(content)
                     .build());
 
-            try(GetObjectV2Output getRes = getHandler().getObject(GetObjectV2Input.builder()
+            try (GetObjectV2Output getRes = getHandler().getObject(GetObjectV2Input.builder()
                     .bucket(Consts.bucket)
                     .key(key)
                     // [1,31]
-                    .options(ObjectMetaRequestOptions.builder().range(1,31).build())
-                    .build())){
+                    .options(ObjectMetaRequestOptions.builder().range(1, 31).build())
+                    .build())) {
                 Assert.assertEquals(getRes.getContentLength(), 31);
-                validateDataSame(data.substring(1,32), StringUtils.toString(getRes.getContent(), "content"));
+                validateDataSame(data.substring(1, 32), StringUtils.toString(getRes.getContent(), "content"));
             } catch (IOException e) {
                 testFailed(e);
             }
 
-            try(GetObjectV2Output getRes = getHandler().getObject(GetObjectV2Input.builder()
+            try (GetObjectV2Output getRes = getHandler().getObject(GetObjectV2Input.builder()
                     .bucket(Consts.bucket)
                     .key(key)
                     // [1,31]
                     .range("bytes=1-31")
-                    .options(ObjectMetaRequestOptions.builder().range(1,32).build())
-                    .build())){
+                    .options(ObjectMetaRequestOptions.builder().range(1, 32).build())
+                    .build())) {
                 Assert.assertEquals(getRes.getContentLength(), 31);
-                validateDataSame(data.substring(1,32), StringUtils.toString(getRes.getContent(), "content"));
+                validateDataSame(data.substring(1, 32), StringUtils.toString(getRes.getContent(), "content"));
             } catch (IOException e) {
                 testFailed(e);
             }
 
-            try(GetObjectV2Output getRes = getHandler().getObject(GetObjectV2Input.builder()
+            try (GetObjectV2Output getRes = getHandler().getObject(GetObjectV2Input.builder()
                     .bucket(Consts.bucket)
                     .key(key)
                     // [-1,31]
-                    .options(ObjectMetaRequestOptions.builder().range(-1,31).build())
-                    .build())){
+                    .options(ObjectMetaRequestOptions.builder().range(-1, 31).build())
+                    .build())) {
                 Assert.assertEquals(getRes.getContentLength(), 32);
-                validateDataSame(data.substring(0,32), StringUtils.toString(getRes.getContent(), "content"));
+                validateDataSame(data.substring(0, 32), StringUtils.toString(getRes.getContent(), "content"));
             } catch (IOException e) {
                 testFailed(e);
             }
 
-            try(GetObjectV2Output getRes = getHandler().getObject(GetObjectV2Input.builder()
+            try (GetObjectV2Output getRes = getHandler().getObject(GetObjectV2Input.builder()
                     .bucket(Consts.bucket)
                     .key(key)
                     // [1,-1] to the end
-                    .options(ObjectMetaRequestOptions.builder().range(1,-1).build())
-                    .build())){
-                Assert.assertEquals(getRes.getContentLength(), data.length()-1);
+                    .options(ObjectMetaRequestOptions.builder().range(1, -1).build())
+                    .build())) {
+                Assert.assertEquals(getRes.getContentLength(), data.length() - 1);
                 validateDataSame(data.substring(1, data.length()), StringUtils.toString(getRes.getContent(), "content"));
             } catch (IOException e) {
                 testFailed(e);
             }
 
-            try(GetObjectV2Output getRes = getHandler().getObject(GetObjectV2Input.builder()
+            try (GetObjectV2Output getRes = getHandler().getObject(GetObjectV2Input.builder()
                     .bucket(Consts.bucket)
                     .key(key)
                     // [-1,-1] from start to the end
-                    .options(ObjectMetaRequestOptions.builder().range(-1,-1).build())
-                    .build())){
+                    .options(ObjectMetaRequestOptions.builder().range(-1, -1).build())
+                    .build())) {
                 Assert.assertEquals(getRes.getContentLength(), data.length());
                 validateDataSame(data, StringUtils.toString(getRes.getContent(), "content"));
             } catch (IOException e) {
@@ -483,7 +483,7 @@ public class TosObjectRequestHandlerBasicTest {
             }
         } catch (Exception e) {
             testFailed(e);
-        } finally{
+        } finally {
             clearData(key);
         }
     }
@@ -493,7 +493,7 @@ public class TosObjectRequestHandlerBasicTest {
         String key = getUniqueObjectKey();
         String data = sampleData + StringUtils.randomString(new Random().nextInt(128));
         InputStream content = new ByteArrayInputStream(data.getBytes(StandardCharsets.UTF_8));
-        try{
+        try {
             String md5 = getContentMD5(data);
             String wrongMd5 = md5 + StringUtils.randomString(new Random().nextInt(3));
             ObjectMetaRequestOptions options = ObjectMetaRequestOptions.builder()
@@ -510,7 +510,7 @@ public class TosObjectRequestHandlerBasicTest {
             Assert.assertEquals(e.getCode(), Code.INVALID_DIGEST);
         }
 
-        try{
+        try {
             ObjectMetaRequestOptions options = ObjectMetaRequestOptions.builder()
                     .ssecAlgorithm("AES128") // wrong algorithm
                     .build();
@@ -519,7 +519,7 @@ public class TosObjectRequestHandlerBasicTest {
             Assert.assertEquals(e.getMessage(), "invalid encryption-decryption algorithm");
         }
 
-        try{
+        try {
             ObjectMetaRequestOptions options = ObjectMetaRequestOptions.builder()
                     .serverSideEncryption("AES128") // wrong algorithm
                     .build();
@@ -528,7 +528,7 @@ public class TosObjectRequestHandlerBasicTest {
             Assert.assertEquals(e.getMessage(), "invalid serverSideEncryption input, only support AES256");
         }
 
-        try{
+        try {
             ObjectMetaRequestOptions options = ObjectMetaRequestOptions.builder()
                     .ssecAlgorithm(ssecAlgorithm)
                     .ssecKey(ssecKey)
@@ -547,7 +547,7 @@ public class TosObjectRequestHandlerBasicTest {
             Assert.assertEquals(e.getCode(), Code.INVALID_ARGUMENT);
         }
 
-        try{
+        try {
             ObjectMetaRequestOptions options = ObjectMetaRequestOptions.builder()
                     .ssecAlgorithm(ssecAlgorithm)
                     .ssecKey(ssecKey)
@@ -582,7 +582,7 @@ public class TosObjectRequestHandlerBasicTest {
         String data = sampleData + StringUtils.randomString(new Random().nextInt(128));
         InputStream content = new ByteArrayInputStream(data.getBytes(StandardCharsets.UTF_8));
         String putContentType = "application/json";
-        try{
+        try {
             PutObjectOutput putRes = getHandler().putObject(PutObjectInput.builder()
                     .bucket(Consts.bucket)
                     .key(key)
@@ -600,11 +600,11 @@ public class TosObjectRequestHandlerBasicTest {
 
             // 304 case
             // if-modified-since
-            try(GetObjectV2Output getRes = getHandler().getObject(GetObjectV2Input.builder()
+            try (GetObjectV2Output getRes = getHandler().getObject(GetObjectV2Input.builder()
                     .bucket(Consts.bucket)
                     .key(key)
                     .options(ObjectMetaRequestOptions.builder().ifModifiedSince(lastModified).build())
-                    .build())){
+                    .build())) {
             } catch (IOException e) {
                 testFailed(e);
             } catch (TosException e) {
@@ -614,11 +614,11 @@ public class TosObjectRequestHandlerBasicTest {
 
             // if-none-math
             String etag = headRes.getEtag();
-            try(GetObjectV2Output getRes = getHandler().getObject(GetObjectV2Input.builder()
+            try (GetObjectV2Output getRes = getHandler().getObject(GetObjectV2Input.builder()
                     .bucket(Consts.bucket)
                     .key(key)
                     .options(ObjectMetaRequestOptions.builder().ifNoneMatch(etag).build())
-                    .build())){
+                    .build())) {
             } catch (IOException e) {
                 testFailed(e);
             } catch (TosException e) {
@@ -627,13 +627,13 @@ public class TosObjectRequestHandlerBasicTest {
             }
 
             // 412
-            try(GetObjectV2Output getRes = getHandler().getObject(GetObjectV2Input.builder()
+            try (GetObjectV2Output getRes = getHandler().getObject(GetObjectV2Input.builder()
                     .bucket(Consts.bucket)
                     .key(key)
                     .options(ObjectMetaRequestOptions.builder()
                             .ifUnmodifiedSince(Date.from(lastModified.toInstant().minusSeconds(120)))
                             .build())
-                    .build())){
+                    .build())) {
             } catch (IOException e) {
                 testFailed(e);
             } catch (TosException e) {
@@ -641,11 +641,11 @@ public class TosObjectRequestHandlerBasicTest {
                 Assert.assertEquals(e.getCode(), Code.PRECONDITION_FAILED);
             }
 
-            try(GetObjectV2Output getRes = getHandler().getObject(GetObjectV2Input.builder()
+            try (GetObjectV2Output getRes = getHandler().getObject(GetObjectV2Input.builder()
                     .bucket(Consts.bucket)
                     .key(key)
                     .responseContentType("image/jpeg")
-                    .build())){
+                    .build())) {
                 Assert.assertNotEquals(getRes.getContentType(), putContentType);
                 Assert.assertEquals(getRes.getContentType(), "image/jpeg");
             } catch (IOException e) {
@@ -653,18 +653,18 @@ public class TosObjectRequestHandlerBasicTest {
             }
         } catch (Exception e) {
             testFailed(e);
-        } finally{
+        } finally {
             clearData(key);
         }
     }
 
     @Test
     void objectCRUDInNotFoundBucketTest() {
-        String notFoundBucket = "notfoundbucket-"+System.currentTimeMillis();
+        String notFoundBucket = "notfoundbucket-" + System.currentTimeMillis();
         String key = getUniqueObjectKey();
         String data = sampleData + StringUtils.randomString(new Random().nextInt(128));
         InputStream content = new ByteArrayInputStream(data.getBytes(StandardCharsets.UTF_8));
-        try{
+        try {
             getHandler().putObject(PutObjectInput.builder()
                     .bucket(notFoundBucket)
                     .key(key)
@@ -675,15 +675,15 @@ public class TosObjectRequestHandlerBasicTest {
             Assert.assertEquals(e.getCode(), Code.NO_SUCH_BUCKET);
         }
 
-       try{
-           getHandler().headObject(HeadObjectV2Input.builder()
-                .bucket(notFoundBucket)
-                .key(key)
-                .build());
-       } catch (TosException e) {
-           Assert.assertEquals(e.getStatusCode(), HttpStatus.NOT_FOUND);
-           Assert.assertEquals(e.getCode(), Code.NOT_FOUND);
-       }
+        try {
+            getHandler().headObject(HeadObjectV2Input.builder()
+                    .bucket(notFoundBucket)
+                    .key(key)
+                    .build());
+        } catch (TosException e) {
+            Assert.assertEquals(e.getStatusCode(), HttpStatus.NOT_FOUND);
+            Assert.assertEquals(e.getCode(), Code.NOT_FOUND);
+        }
 
         try {
             getHandler().getObject(GetObjectV2Input.builder()
@@ -710,7 +710,7 @@ public class TosObjectRequestHandlerBasicTest {
     void listObjectTest() {
         String uniquePrefix = internalObjectListPrefix + getUniqueObjectKey();
         List<String> objectKeys = null;
-        try{
+        try {
             objectKeys = generateDataAndGetKeyList(12, uniquePrefix);
             String marker = null;
             boolean isTruncated = true;
@@ -731,9 +731,9 @@ public class TosObjectRequestHandlerBasicTest {
                 isTruncated = output.isTruncated();
                 marker = output.getNextMarker();
             }
-        }catch (Exception e) {
+        } catch (Exception e) {
             testFailed(e);
-        } finally{
+        } finally {
             if (objectKeys != null) {
                 List<ObjectTobeDeleted> objs = new ArrayList<>(objectKeys.size());
                 for (String key : objectKeys) {
@@ -755,7 +755,7 @@ public class TosObjectRequestHandlerBasicTest {
         String thirdPath = "ccc/";
         String forthPath = "ddd/";
         List<String> objectKeys = null;
-        try{
+        try {
             // aaa/
             objectKeys = generateDataAndGetKeyList(11, uniquePrefix);
             // aaa/bbb/
@@ -849,9 +849,9 @@ public class TosObjectRequestHandlerBasicTest {
                 isTruncated = output.isTruncated();
                 marker = output.getNextMarker();
             }
-        }catch (Exception e) {
+        } catch (Exception e) {
             testFailed(e);
-        } finally{
+        } finally {
             if (objectKeys != null) {
                 List<ObjectTobeDeleted> objs = new ArrayList<>(objectKeys.size());
                 for (String key : objectKeys) {
@@ -870,7 +870,7 @@ public class TosObjectRequestHandlerBasicTest {
     void listObjectType2Test() {
         String uniquePrefix = internalObjectListPrefix + getUniqueObjectKey();
         List<String> objectKeys = null;
-        try{
+        try {
             objectKeys = generateDataAndGetKeyList(12, uniquePrefix);
             String startAfter = null;
             String continuationToken = null;
@@ -893,9 +893,9 @@ public class TosObjectRequestHandlerBasicTest {
                 isTruncated = output.isTruncated();
                 continuationToken = output.getNextContinuationToken();
             }
-        }catch (Exception e) {
+        } catch (Exception e) {
             testFailed(e);
-        } finally{
+        } finally {
             if (objectKeys != null) {
                 List<ObjectTobeDeleted> objs = new ArrayList<>(objectKeys.size());
                 for (String key : objectKeys) {
@@ -914,7 +914,7 @@ public class TosObjectRequestHandlerBasicTest {
     void listObjectType2LoopTest() {
         String uniquePrefix = internalObjectListPrefix + getUniqueObjectKey();
         List<String> objectKeys = null;
-        try{
+        try {
             objectKeys = generateDataAndGetKeyList(12, uniquePrefix);
             String startAfter = null;
             String continuationToken = null;
@@ -937,9 +937,9 @@ public class TosObjectRequestHandlerBasicTest {
                 isTruncated = output.isTruncated();
                 continuationToken = output.getNextContinuationToken();
             }
-        }catch (Exception e) {
+        } catch (Exception e) {
             testFailed(e);
-        } finally{
+        } finally {
             if (objectKeys != null) {
                 List<ObjectTobeDeleted> objs = new ArrayList<>(objectKeys.size());
                 for (String key : objectKeys) {
@@ -961,7 +961,7 @@ public class TosObjectRequestHandlerBasicTest {
         String thirdPath = "ccc/";
         String forthPath = "ddd/";
         List<String> objectKeys = null;
-        try{
+        try {
             // aaa/
             objectKeys = generateDataAndGetKeyList(11, uniquePrefix);
             // aaa/bbb/
@@ -1060,9 +1060,9 @@ public class TosObjectRequestHandlerBasicTest {
                 isTruncated = output.isTruncated();
                 continuationToken = output.getNextContinuationToken();
             }
-        }catch (Exception e) {
+        } catch (Exception e) {
             testFailed(e);
-        } finally{
+        } finally {
             if (objectKeys != null) {
                 List<ObjectTobeDeleted> objs = new ArrayList<>(objectKeys.size());
                 for (String key : objectKeys) {
@@ -1080,7 +1080,7 @@ public class TosObjectRequestHandlerBasicTest {
     @Test
     void listObjectVersionsTest() {
         String uniqueKey = internalObjectListVersionsPrefix + getUniqueObjectKey();
-        try{
+        try {
             generateDataWithSameKey(3, uniqueKey);
             String keyMarker = null;
             String versionIdMarker = null;
@@ -1106,17 +1106,18 @@ public class TosObjectRequestHandlerBasicTest {
             // 写两次，删一次
             Assert.assertEquals(versionsCount, 6);
             Assert.assertEquals(deleteMarkersCount, 3);
-        }catch (Exception e) {
+        } catch (Exception e) {
             testFailed(e);
         }
     }
+
     @Test
     void listObjectVersionsWithSubDirTest() {
         String uniquePrefix = internalObjectListPrefix + getUniqueObjectKey();
         String secondPath = "/bbb";
         String thirdPath = "/ccc";
         String forthPath = "/ddd";
-        try{
+        try {
             // aaa/
             generateDataWithSameKey(1, uniquePrefix);
             // aaa/bbb/
@@ -1238,7 +1239,7 @@ public class TosObjectRequestHandlerBasicTest {
             // 写两次，删一次
             Assert.assertEquals(versionsCount, 20);
             Assert.assertEquals(deleteMarkersCount, 10);
-        }catch (Exception e) {
+        } catch (Exception e) {
             testFailed(e);
         }
     }
@@ -1249,7 +1250,7 @@ public class TosObjectRequestHandlerBasicTest {
         String secondPath = "/bbb";
         String thirdPath = "/ccc";
         String forthPath = "/ddd";
-        try{
+        try {
             // aaa/
             generateDataWithSameKey(3, uniquePrefix);
             // aaa/bbb/
@@ -1364,7 +1365,7 @@ public class TosObjectRequestHandlerBasicTest {
                 keyMarker = output.getNextKeyMarker();
                 versionIdMarker = output.getNextVersionIDMarker();
             }
-        }catch (Exception e) {
+        } catch (Exception e) {
             testFailed(e);
         }
     }
@@ -1395,7 +1396,7 @@ public class TosObjectRequestHandlerBasicTest {
 //                .serverSideEncryption(ssecAlgorithm) incompatible with ssec
                 .storageClass(StorageClassType.STORAGE_CLASS_IA)
                 .build();
-        try{
+        try {
             PutObjectOutput putRes = getHandler().putObject(PutObjectInput.builder()
                     .bucket(Consts.bucket)
                     .key(key)
@@ -1443,7 +1444,7 @@ public class TosObjectRequestHandlerBasicTest {
             Assert.assertEquals(headRes.getStorageClass(), StorageClassType.STORAGE_CLASS_STANDARD);
         } catch (Exception e) {
             testFailed(e);
-        } finally{
+        } finally {
             clearData(key);
         }
     }
@@ -1453,7 +1454,7 @@ public class TosObjectRequestHandlerBasicTest {
         String key = getUniqueObjectKey();
         String data = sampleData + StringUtils.randomString(new Random().nextInt(128));
         InputStream content = new ByteArrayInputStream(data.getBytes(StandardCharsets.UTF_8));
-        try{
+        try {
             getHandler().putObject(PutObjectInput.builder()
                     .bucket(Consts.bucket)
                     .key(key)
@@ -1506,7 +1507,43 @@ public class TosObjectRequestHandlerBasicTest {
             }
         } catch (Exception e) {
             testFailed(e);
-        } finally{
+        } finally {
+            clearData(key);
+        }
+    }
+
+    @Test
+    void getFileStatusTest() {
+        String key = getUniqueObjectKey();
+        String data = sampleData + StringUtils.randomString(new Random().nextInt(128));
+        InputStream content = new ByteArrayInputStream(data.getBytes(StandardCharsets.UTF_8));
+        int getCount = 0;
+        try {
+            getHandler().putObject(PutObjectInput.builder()
+                    .bucket(Consts.bucket)
+                    .key(key)
+                    .content(content)
+                    .build());
+
+            GetFileStatusInput input = GetFileStatusInput.builder().bucket(Consts.bucket).key(key).build();
+            GetFileStatusOutput out = getHandler().getFileStatus(input);
+            Assert.assertEquals(out.getKey(), key);
+            Assert.assertEquals(out.getSize().intValue(), data.length());
+            Assert.assertNotNull(out.getLastModified());
+            Assert.assertNotNull(out.getCrc32());
+            Assert.assertNotNull(out.getCrc64());
+            getCount++;
+
+            input.setKey(key.substring(0, key.length() - 1));
+            GetFileStatusOutput output = getHandler().getFileStatus(input);
+            Assert.assertNull(output);
+            getCount++;
+        } catch (TosException e) {
+            Assert.assertEquals(e.getStatusCode(), 404);
+            Assert.assertEquals(getCount, 1);
+        } catch (Exception e) {
+            testFailed(e);
+        } finally {
             clearData(key);
         }
     }
@@ -1514,7 +1551,7 @@ public class TosObjectRequestHandlerBasicTest {
     @Test
     void deleteMultiObjectsTest() {
         List<String> objectKeys = null;
-        try{
+        try {
             objectKeys = generateDataAndGetKeyList(10, internalObjectCrudPrefix);
             List<ObjectTobeDeleted> delObjs = new ArrayList<>(objectKeys.size());
             for (String key : objectKeys) {
@@ -1566,7 +1603,7 @@ public class TosObjectRequestHandlerBasicTest {
             Assert.assertEquals(output.getDeleteds().size(), delObjs.size());
         } catch (Exception e) {
             testFailed(e);
-        } finally{
+        } finally {
             if (objectKeys != null) {
                 for (String key : objectKeys) {
                     getHandler().deleteObject(DeleteObjectInput.builder().bucket(bucket).key(key).build());
@@ -1581,7 +1618,7 @@ public class TosObjectRequestHandlerBasicTest {
         String key = getUniqueObjectKey();
         String data = sampleData + StringUtils.randomString(new Random().nextInt(128));
         InputStream content = new ByteArrayInputStream(data.getBytes(StandardCharsets.UTF_8));
-        try{
+        try {
             PutObjectOutput putRes = getHandler().putObject(PutObjectInput.builder()
                     .bucket(Consts.bucket)
                     .key(key)
@@ -1596,10 +1633,10 @@ public class TosObjectRequestHandlerBasicTest {
             Assert.assertEquals(headRes.getEtag(), putRes.getEtag());
             Assert.assertEquals(headRes.getVersionID(), putRes.getVersionID());
 
-            try(GetObjectV2Output getRes = getHandler().getObject(GetObjectV2Input.builder()
+            try (GetObjectV2Output getRes = getHandler().getObject(GetObjectV2Input.builder()
                     .bucket(Consts.bucket)
                     .key(key)
-                    .build())){
+                    .build())) {
                 Assert.assertEquals(getRes.getContentLength(), data.length());
                 Assert.assertEquals(getRes.getEtag(), putRes.getEtag());
                 Assert.assertEquals(getRes.getVersionID(), putRes.getVersionID());
@@ -1611,7 +1648,7 @@ public class TosObjectRequestHandlerBasicTest {
             }
             ObjectMetaRequestOptions options = ObjectMetaRequestOptions.builder()
                     .range(0, 127).build();
-            try(GetObjectV2Output getRes = getHandler().getObject(GetObjectV2Input.builder()
+            try (GetObjectV2Output getRes = getHandler().getObject(GetObjectV2Input.builder()
                     .bucket(Consts.bucket)
                     .key(key)
                     .options(options)
@@ -1621,7 +1658,7 @@ public class TosObjectRequestHandlerBasicTest {
             }
         } catch (Exception e) {
             testFailed(e);
-        } finally{
+        } finally {
             clearData(key);
         }
     }
@@ -1631,7 +1668,7 @@ public class TosObjectRequestHandlerBasicTest {
         String key = getUniqueObjectKey();
         String data = sampleData + StringUtils.randomString(new Random().nextInt(128));
         InputStream content = new ByteArrayInputStream(data.getBytes(StandardCharsets.UTF_8));
-        try{
+        try {
             long start = System.currentTimeMillis();
             PutObjectOutput putRes = getHandler().putObject(PutObjectInput.builder()
                     .bucket(Consts.bucket)
@@ -1640,8 +1677,8 @@ public class TosObjectRequestHandlerBasicTest {
                     .content(content)
                     .build());
             long end = System.currentTimeMillis();
-            LOG.info("putObject cost {} ms", end-start);
-            Assert.assertTrue((end-start) > 7000);
+            LOG.info("putObject cost {} ms", end - start);
+            Assert.assertTrue((end - start) > 7000);
 
             HeadObjectV2Output headRes = getHandler().headObject(HeadObjectV2Input.builder()
                     .bucket(Consts.bucket)
@@ -1652,31 +1689,31 @@ public class TosObjectRequestHandlerBasicTest {
             Assert.assertEquals(headRes.getVersionID(), putRes.getVersionID());
 
             start = System.currentTimeMillis();
-            try(GetObjectV2Output getRes = getHandler().getObject(GetObjectV2Input.builder()
+            try (GetObjectV2Output getRes = getHandler().getObject(GetObjectV2Input.builder()
                     .bucket(Consts.bucket)
                     .key(key)
                     .rateLimiter(new DefaultRateLimiter(10 * 1024))
                     .build());
-                InputStream stream = getRes.getContent();
-                ByteArrayOutputStream result = new ByteArrayOutputStream()){
+                 InputStream stream = getRes.getContent();
+                 ByteArrayOutputStream result = new ByteArrayOutputStream()) {
                 Assert.assertEquals(getRes.getContentLength(), data.length());
                 Assert.assertEquals(getRes.getEtag(), putRes.getEtag());
                 Assert.assertEquals(getRes.getVersionID(), putRes.getVersionID());
                 byte[] tmp = new byte[1024];
                 int once = 0;
-                while((once = stream.read(tmp)) != -1) {
+                while ((once = stream.read(tmp)) != -1) {
                     result.write(tmp, 0, once);
                 }
                 validateDataSame(data, result.toString());
                 end = System.currentTimeMillis();
-                LOG.info("getObject cost {} ms", end-start);
-                Assert.assertTrue((end-start) > 10000);
+                LOG.info("getObject cost {} ms", end - start);
+                Assert.assertTrue((end - start) > 10000);
             } catch (IOException e) {
                 testFailed(e);
             }
         } catch (Exception e) {
             testFailed(e);
-        } finally{
+        } finally {
             clearData(key);
         }
     }
@@ -1684,7 +1721,7 @@ public class TosObjectRequestHandlerBasicTest {
     @Test
     void putObjectWithTrafficLimitTest() {
         String key = getUniqueObjectKey();
-        try(InputStream content = new FileInputStream(sampleFilePath)){
+        try (InputStream content = new FileInputStream(sampleFilePath)) {
             long start = System.currentTimeMillis();
             PutObjectOutput putRes = getHandler().putObject(PutObjectInput.builder()
                     .bucket(Consts.bucket)
@@ -1693,8 +1730,8 @@ public class TosObjectRequestHandlerBasicTest {
                     .content(content)
                     .build());
             long end = System.currentTimeMillis();
-            LOG.info("putObject cost {} ms", end-start);
-            Assert.assertTrue((end-start) > 12000);
+            LOG.info("putObject cost {} ms", end - start);
+            Assert.assertTrue((end - start) > 12000);
 
             HeadObjectV2Output headRes = getHandler().headObject(HeadObjectV2Input.builder()
                     .bucket(Consts.bucket)
@@ -1705,12 +1742,12 @@ public class TosObjectRequestHandlerBasicTest {
             Assert.assertEquals(headRes.getVersionID(), putRes.getVersionID());
 
             start = System.currentTimeMillis();
-            try(GetObjectV2Output getRes = getHandler().getObject(GetObjectV2Input.builder()
+            try (GetObjectV2Output getRes = getHandler().getObject(GetObjectV2Input.builder()
                     .bucket(Consts.bucket)
                     .key(key)
                     .options(new ObjectMetaRequestOptions().setTrafficLimit(800 * 1024))
                     .build());
-                InputStream stream = getRes.getContent()){
+                 InputStream stream = getRes.getContent()) {
                 Assert.assertEquals(getRes.getContentLength(), new File(sampleFilePath).length());
                 Assert.assertEquals(getRes.getEtag(), putRes.getEtag());
                 Assert.assertEquals(getRes.getVersionID(), putRes.getVersionID());
@@ -1723,14 +1760,14 @@ public class TosObjectRequestHandlerBasicTest {
                 }
                 Assert.assertEquals(new String(Hex.encodeHex(md5.digest())), getMD5());
                 end = System.currentTimeMillis();
-                LOG.info("getObject cost {} ms", end-start);
-                Assert.assertTrue((end-start) > 12000);
+                LOG.info("getObject cost {} ms", end - start);
+                Assert.assertTrue((end - start) > 12000);
             } catch (IOException e) {
                 testFailed(e);
             }
         } catch (Exception e) {
             testFailed(e);
-        } finally{
+        } finally {
             clearData(key);
         }
     }
@@ -1740,7 +1777,7 @@ public class TosObjectRequestHandlerBasicTest {
         // basic crud
         String key = getUniqueObjectKey();
         String dataUrl = "https://www.volcengine.com/docs/6349/79895";
-        try(BufferedInputStream content = new BufferedInputStream(new URL(dataUrl).openStream())){
+        try (BufferedInputStream content = new BufferedInputStream(new URL(dataUrl).openStream())) {
             PutObjectOutput putRes = getHandler().putObject(PutObjectInput.builder()
                     .bucket(Consts.bucket)
                     .key(key)
@@ -1755,10 +1792,10 @@ public class TosObjectRequestHandlerBasicTest {
             Assert.assertEquals(headRes.getEtag(), putRes.getEtag());
             Assert.assertEquals(headRes.getVersionID(), putRes.getVersionID());
 
-            try(GetObjectV2Output getRes = getHandler().getObject(GetObjectV2Input.builder()
+            try (GetObjectV2Output getRes = getHandler().getObject(GetObjectV2Input.builder()
                     .bucket(Consts.bucket)
                     .key(key)
-                    .build())){
+                    .build())) {
                 Assert.assertEquals(getRes.getContentLength(), headRes.getContentLength());
                 Assert.assertEquals(getRes.getEtag(), putRes.getEtag());
                 Assert.assertEquals(getRes.getVersionID(), putRes.getVersionID());
@@ -1767,7 +1804,7 @@ public class TosObjectRequestHandlerBasicTest {
             }
         } catch (Exception e) {
             testFailed(e);
-        } finally{
+        } finally {
             clearData(key);
         }
     }
@@ -1778,7 +1815,7 @@ public class TosObjectRequestHandlerBasicTest {
         String data = sampleData + StringUtils.randomString(new Random().nextInt(128));
         InputStream content = new ByteArrayInputStream(data.getBytes(StandardCharsets.UTF_8));
         try {
-            try{
+            try {
                 getHandler().deleteObjectTagging(new DeleteObjectTaggingInput().setBucket(bucket).setKey(key));
             } catch (TosException e) {
                 Assert.assertEquals(e.getStatusCode(), HttpStatus.NOT_FOUND);
@@ -1816,15 +1853,15 @@ public class TosObjectRequestHandlerBasicTest {
             Assert.assertTrue(matched);
 
             getHandler().deleteObjectTagging(new DeleteObjectTaggingInput().setBucket(bucket).setKey(key));
-            try{
+            try {
                 getHandler().getObjectTagging(new GetObjectTaggingInput().setBucket(bucket).setKey(key));
-            }catch (TosException e) {
+            } catch (TosException e) {
                 Assert.assertEquals(e.getStatusCode(), HttpStatus.NOT_FOUND);
             }
         } catch (TosException e) {
             testFailed(e);
         } finally {
-            try{
+            try {
                 getHandler().deleteObjectTagging(new DeleteObjectTaggingInput().setBucket(bucket).setKey(key));
             } catch (TosException e) {
                 Assert.assertEquals(e.getStatusCode(), HttpStatus.NOT_FOUND);
@@ -1840,7 +1877,7 @@ public class TosObjectRequestHandlerBasicTest {
         server.enqueue(new MockResponse().setResponseCode(200).setBody(callbackResult)
                 .setHeader(TosHeader.HEADER_CRC64, "0"));
 
-        try{
+        try {
             server.start();
             String endpoint = server.getHostName() + ":" + server.getPort();
             TosObjectRequestHandler handler = ClientInstance.getObjectRequestHandlerWithPathStyleInstance(
@@ -1868,7 +1905,7 @@ public class TosObjectRequestHandlerBasicTest {
                 .setHeader(TosHeader.HEADER_ETAG, etag)
                 .setHeader(TosHeader.HEADER_LOCATION, location));
 
-        try{
+        try {
             server.start();
             String endpoint = server.getHostName() + ":" + server.getPort();
             TosObjectRequestHandler handler = ClientInstance.getObjectRequestHandlerWithPathStyleInstance(
@@ -1900,11 +1937,11 @@ public class TosObjectRequestHandlerBasicTest {
     @Test
     void seekLargeObjectTest() {
         String data = StringUtils.randomString(16 << 20);
-        String key = "object-large-"+System.currentTimeMillis();
+        String key = "object-large-" + System.currentTimeMillis();
         try {
             getHandler().putObject(new PutObjectInput().setBucket(bucket).setKey(key).setContentLength(16 << 20)
                     .setContent(new ByteArrayInputStream(data.getBytes())));
-        } catch (TosException e){
+        } catch (TosException e) {
             Consts.LOG.error(e.toString(), e);
             Assert.fail();
         }
@@ -1919,15 +1956,15 @@ public class TosObjectRequestHandlerBasicTest {
             // 只读一点 body 数据，立即 close
             object.forceClose();
             long end = System.currentTimeMillis();
-            LOG.info("close stream immediately, {} ms.", end-start);
+            LOG.info("close stream immediately, {} ms.", end - start);
             Assert.assertTrue(end - start <= 10);
         } catch (TosException | IOException e) {
             Consts.LOG.error(e.toString(), e);
             Assert.fail();
         } finally {
-            try{
+            try {
                 getHandler().deleteObject(new DeleteObjectInput().setBucket(bucket).setKey(key));
-            } catch (TosException e){
+            } catch (TosException e) {
                 Consts.LOG.error(e.toString(), e);
                 Assert.fail();
             }
@@ -1991,7 +2028,7 @@ public class TosObjectRequestHandlerBasicTest {
         String key = getUniqueObjectKey();
         String data = sampleData + StringUtils.randomString(new Random().nextInt(128));
         InputStream content = new ByteArrayInputStream(data.getBytes(StandardCharsets.UTF_8));
-        try{
+        try {
             getHandler().putObject(PutObjectInput.builder()
                     .bucket(Consts.bucket)
                     .key(key)
@@ -2002,7 +2039,7 @@ public class TosObjectRequestHandlerBasicTest {
                             .build())
                     .build());
 
-            try{
+            try {
                 getHandler().headObject(HeadObjectV2Input.builder()
                         .bucket(Consts.bucket)
                         .key(key)
@@ -2013,7 +2050,7 @@ public class TosObjectRequestHandlerBasicTest {
             }
 
             // 归档解冻
-            try{
+            try {
                 // invalid days
                 getHandler().restoreObject(new RestoreObjectInput().setBucket(bucket).setKey(key).setDays(366));
             } catch (TosServerException e) {
@@ -2027,14 +2064,14 @@ public class TosObjectRequestHandlerBasicTest {
             Assert.assertEquals(output.getRequestInfo().getStatusCode(), HttpStatus.ACCEPTED);
         } catch (Exception e) {
             testFailed(e);
-        } finally{
+        } finally {
             clearData(key);
         }
     }
 
     private List<String> generateDataAndGetKeyList(int num, String pre) {
         List<String> keys = new ArrayList<>(num);
-        for(int i = 0; i < num; i++) {
+        for (int i = 0; i < num; i++) {
             String keyWithIdx = pre + i;
             getHandler().putObject(PutObjectInput.builder()
                     .bucket(Consts.bucket)
@@ -2049,14 +2086,14 @@ public class TosObjectRequestHandlerBasicTest {
     private List<String> generateDataWithSameKey(int num, String key) {
         // 覆盖2次，删除1次
         List<String> versions = new ArrayList<>(3 * num);
-        for(int i = 0; i < num; i++) {
+        for (int i = 0; i < num; i++) {
             PutObjectOutput output = getHandler().putObject(PutObjectInput.builder()
                     .bucket(Consts.bucket)
                     .key(key)
                     .content(new ByteArrayInputStream(sampleData.getBytes()))
                     .build());
             versions.add(output.getVersionID());
-            output= getHandler().putObject(PutObjectInput.builder()
+            output = getHandler().putObject(PutObjectInput.builder()
                     .bucket(Consts.bucket)
                     .key(key)
                     .content(new ByteArrayInputStream(sampleData.getBytes()))
@@ -2071,10 +2108,10 @@ public class TosObjectRequestHandlerBasicTest {
     private String getUniqueObjectKey() {
         return StringUtils.randomString(10);
     }
-    
+
     protected static String getContentMD5(String data) {
         String md5 = null;
-        try{
+        try {
             MessageDigest md = MessageDigest.getInstance("MD5");
             byte[] bytes = md.digest(data.getBytes(StandardCharsets.UTF_8));
             md5 = new String(Base64.encodeBase64(bytes));
@@ -2104,7 +2141,7 @@ public class TosObjectRequestHandlerBasicTest {
             return sampleFileMD5;
         }
         synchronized (this) {
-            try(FileInputStream fileInputStream = new FileInputStream(sampleFilePath)) {
+            try (FileInputStream fileInputStream = new FileInputStream(sampleFilePath)) {
                 MessageDigest MD5 = MessageDigest.getInstance("MD5");
                 byte[] buffer = new byte[8192];
                 int length;

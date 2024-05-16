@@ -1,4 +1,7 @@
 ## Release Note
+### 2024.2.21 Version 2.6.7
+- add getFileStatus api
+- fix some bugs
 ### 2023.12.6 Version 2.6.6
 - add getBucketNotificationType2/putBucketNotificationType2 api
 - add STORAGE_CLASS_DEEP_COLD_ARCHIVE for StorageClassType
