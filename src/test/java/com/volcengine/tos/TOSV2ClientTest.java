@@ -4,12 +4,12 @@ import com.volcengine.tos.auth.StaticCredentials;
 import com.volcengine.tos.comm.Code;
 import com.volcengine.tos.comm.HttpMethod;
 import com.volcengine.tos.comm.HttpStatus;
+import com.volcengine.tos.comm.common.StorageClassType;
+import com.volcengine.tos.comm.common.TierType;
 import com.volcengine.tos.internal.util.StringUtils;
+import com.volcengine.tos.internal.util.TosUtils;
 import com.volcengine.tos.model.acl.*;
-import com.volcengine.tos.model.bucket.CreateBucketInput;
-import com.volcengine.tos.model.bucket.CreateBucketOutput;
-import com.volcengine.tos.model.bucket.ListBucketsInput;
-import com.volcengine.tos.model.bucket.ListBucketsOutput;
+import com.volcengine.tos.model.bucket.*;
 import com.volcengine.tos.model.object.*;
 import com.volcengine.tos.session.Session;
 import com.volcengine.tos.session.SessionOptions;
@@ -22,6 +22,10 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.zip.CRC32;
 
 public class TOSV2ClientTest {
@@ -795,6 +799,211 @@ public class TOSV2ClientTest {
                 Consts.LOG.error(e.toString(), e);
                 Assert.fail();
             }
+        }
+    }
+
+    @Test
+    void anonymousTest() {
+        TOSV2 cli = new TOSV2ClientBuilder().build(Consts.region, Consts.endpoint, "", "");
+        try {
+            ListBucketsV2Output output = cli.listBuckets(new ListBucketsV2Input());
+            Assert.assertTrue(false);
+        } catch (TosServerException ex) {
+            Assert.assertEquals(ex.getStatusCode(), 403);
+        }
+
+        PreSignedURLOutput output = cli.preSignedURL(PreSignedURLInput.builder().bucket(Consts.bucket).httpMethod("GET").build());
+        Assert.assertTrue(!output.getSignedUrl().contains("X-Tos-Signature"));
+
+        output = client.preSignedURL(PreSignedURLInput.builder().bucket(Consts.bucket).httpMethod("GET").build());
+        Assert.assertTrue(output.getSignedUrl().contains("X-Tos-Signature"));
+    }
+
+    @Test
+    void restoreInfoTest() {
+        String key = "restore-info-" + System.currentTimeMillis();
+        String data = StringUtils.randomString(1024);
+        PutObjectInput input = new PutObjectInput();
+        input.setBucket(Consts.bucket);
+        input.setKey(key);
+        input.setContent(new ByteArrayInputStream(data.getBytes()));
+        input.setOptions(new ObjectMetaRequestOptions().setStorageClass(StorageClassType.STORAGE_CLASS_ARCHIVE));
+        PutObjectOutput output = client.putObject(input);
+        Assert.assertTrue(output.getRequestInfo().getRequestId().length() > 0);
+
+        try {
+            client.getObject(new GetObjectV2Input().setBucket(Consts.bucket).setKey(key));
+            Assert.assertTrue(false);
+        } catch (TosServerException ex) {
+            Assert.assertEquals(ex.getStatusCode(), 403);
+            Assert.assertEquals(ex.getCode(), "InvalidObjectState");
+            Assert.assertTrue(StringUtils.isNotEmpty(ex.getEc()));
+            Assert.assertTrue(StringUtils.isNotEmpty(ex.getRequestUrl()));
+            System.out.println(ex.getRequestUrl());
+        }
+
+        HeadObjectV2Output houtput = client.headObject(HeadObjectV2Input.builder().bucket(Consts.bucket).key(key).build());
+        Assert.assertEquals(houtput.getStorageClass(), StorageClassType.STORAGE_CLASS_ARCHIVE);
+        Assert.assertNull(houtput.getRestoreInfo());
+
+        RestoreObjectOutput routput = client.restoreObject(RestoreObjectInput.builder().bucket(Consts.bucket).key(key)
+                .days(1).restoreJobParameters(RestoreJobParameters.builder().tier(TierType.TIER_STANDARD).build()).build());
+        Assert.assertTrue(routput.getRequestInfo().getRequestId().length() > 0);
+
+        houtput = client.headObject(HeadObjectV2Input.builder().bucket(Consts.bucket).key(key).build());
+        Assert.assertEquals(houtput.getStorageClass(), StorageClassType.STORAGE_CLASS_ARCHIVE);
+        Assert.assertNotNull(houtput.getRestoreInfo());
+        Assert.assertTrue(houtput.getRestoreInfo().getRestoreStatus().isOngoingRequest());
+    }
+
+    @Test
+    void bucketEncryptionTest() {
+        String ep = Consts.endpoint.toLowerCase();
+        if (ep.startsWith("http://")) {
+            ep = "https://" + ep.substring("http://".length());
+        } else if (!ep.startsWith("https://")) {
+            ep = "https://" + ep;
+        }
+        TOSV2 cli = new TOSV2ClientBuilder().build(TOSClientConfiguration.builder().region(Consts.region).endpoint(ep)
+                .credentials(new StaticCredentials(Consts.accessKey, Consts.secretKey)).build());
+        DeleteBucketEncryptionOutput doutput = cli.deleteBucketEncryption(new DeleteBucketEncryptionInput().setBucket(Consts.bucket));
+        Assert.assertTrue(doutput.getRequestInfo().getRequestId().length() > 0);
+
+        BucketEncryptionRule rule = new BucketEncryptionRule();
+        rule.setApplyServerSideEncryptionByDefault(new BucketEncryptionRule.ApplyServerSideEncryptionByDefault().setSseAlgorithm("AES256"));
+        PutBucketEncryptionOutput poutput = cli.putBucketEncryption(new PutBucketEncryptionInput().setBucket(Consts.bucket).setRule(rule));
+        Assert.assertTrue(poutput.getRequestInfo().getRequestId().length() > 0);
+
+        GetBucketEncryptionOutput goutput = cli.getBucketEncryption(new GetBucketEncryptionInput().setBucket(Consts.bucket));
+        Assert.assertTrue(goutput.getRequestInfo().getRequestId().length() > 0);
+        Assert.assertEquals(goutput.getRule().getApplyServerSideEncryptionByDefault().getSseAlgorithm(), "AES256");
+
+        doutput = cli.deleteBucketEncryption(new DeleteBucketEncryptionInput().setBucket(Consts.bucket));
+        Assert.assertTrue(doutput.getRequestInfo().getRequestId().length() > 0);
+        try {
+            cli.getBucketEncryption(new GetBucketEncryptionInput().setBucket(Consts.bucket));
+            Assert.assertTrue(false);
+        } catch (TosServerException ex) {
+            Assert.assertEquals(ex.getStatusCode(), 404);
+            Assert.assertTrue(ex.getEc().length() > 0);
+        }
+    }
+
+    @Test
+    void bucketTaggingTest() {
+        DeleteBucketTaggingOutput doutput = client.deleteBucketTagging(new DeleteBucketTaggingInput().setBucket(Consts.bucket));
+        Assert.assertTrue(doutput.getRequestInfo().getRequestId().length() > 0);
+
+        TagSet ts = new TagSet();
+        List<Tag> tags = new ArrayList<>();
+        tags.add(new Tag().setKey("key1").setValue("value1"));
+        tags.add(new Tag().setKey("中文键").setValue("中文值"));
+        ts.setTags(tags);
+        PutBucketTaggingOutput poutput = client.putBucketTagging(new PutBucketTaggingInput().setBucket(Consts.bucket).setTagSet(ts));
+        Assert.assertTrue(poutput.getRequestInfo().getRequestId().length() > 0);
+
+        GetBucketTaggingOutput goutput = client.getBucketTagging(new GetBucketTaggingInput().setBucket(Consts.bucket));
+        Assert.assertTrue(goutput.getRequestInfo().getRequestId().length() > 0);
+        Assert.assertEquals(goutput.getTagSet().getTags().size(), 2);
+        Assert.assertEquals(goutput.getTagSet().getTags().get(0).getKey(), "key1");
+        Assert.assertEquals(goutput.getTagSet().getTags().get(0).getValue(), "value1");
+        Assert.assertEquals(goutput.getTagSet().getTags().get(1).getKey(), "中文键");
+        Assert.assertEquals(goutput.getTagSet().getTags().get(1).getValue(), "中文值");
+
+        doutput = client.deleteBucketTagging(new DeleteBucketTaggingInput().setBucket(Consts.bucket));
+        Assert.assertTrue(doutput.getRequestInfo().getRequestId().length() > 0);
+        try {
+            client.getBucketTagging(new GetBucketTaggingInput().setBucket(Consts.bucket));
+            Assert.assertTrue(false);
+        } catch (TosServerException ex) {
+            Assert.assertEquals(ex.getStatusCode(), 404);
+            Assert.assertTrue(ex.getEc().length() > 0);
+        }
+    }
+
+    @Test
+    void expect100ContinueTest() {
+        String key = "expect-100-continue-" + System.currentTimeMillis();
+        String contentSha256 = "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9";
+        PutObjectOutput output = client.putObject(new PutObjectInput().setOptions(new ObjectMetaRequestOptions().setContentSHA256(contentSha256))
+                .setBucket(Consts.bucket).setKey(key).setContent(new ByteArrayInputStream("hello world".getBytes())));
+        Assert.assertTrue(output.getRequestInfo().getRequestId().length() > 0);
+
+
+        try (GetObjectV2Output goutput = client.getObject(new GetObjectV2Input().setBucket(Consts.bucket).setKey(key))) {
+            Assert.assertTrue(goutput.getRequestInfo().getRequestId().length() > 0);
+            StringUtils.toString(goutput.getContent(), "helloworld");
+        } catch (Exception ex) {
+            Assert.assertTrue(false);
+        }
+
+        TOSV2 cli = new TOSV2ClientBuilder().build(TOSClientConfiguration.builder().region(Consts.region).endpoint(Consts.endpoint)
+                .credentials(new StaticCredentials(Consts.accessKey, Consts.secretKey)).
+                transportConfig(new TransportConfig().setExcept100ContinueThreshold(1)).build());
+
+        output = cli.putObject(new PutObjectInput().setBucket(Consts.bucket).setKey(key).setContent(new ByteArrayInputStream("hiworld".getBytes())));
+        Assert.assertTrue(output.getRequestInfo().getRequestId().length() > 0);
+
+        try (GetObjectV2Output goutput = cli.getObject(new GetObjectV2Input().setBucket(Consts.bucket).setKey(key))) {
+            Assert.assertTrue(goutput.getRequestInfo().getRequestId().length() > 0);
+            StringUtils.toString(goutput.getContent(), "hiworld");
+        } catch (Exception ex) {
+            Assert.assertTrue(false);
+        }
+    }
+
+    @Test
+    void disableEncodingMetaTest() {
+        String key = "disable-encoding-meta-" + System.currentTimeMillis();
+        PutObjectInput input = new PutObjectInput().setBucket(Consts.bucket).setKey(key).setContent(new ByteArrayInputStream("helloworld".getBytes()));
+        Map<String, String> meta = new HashMap<>();
+        meta.put("key1", "value1");
+        meta.put("中文键", "中文值");
+        String contentDisposition = "attachment; filename=\"中文.pdf\"";
+        input.setOptions(new ObjectMetaRequestOptions().setCustomMetadata(meta).setContentDisposition(contentDisposition));
+        PutObjectOutput output = client.putObject(input);
+        Assert.assertTrue(output.getRequestInfo().getRequestId().length() > 0);
+
+        try (GetObjectV2Output goutput = client.getObject(new GetObjectV2Input().setBucket(Consts.bucket).setKey(key))) {
+            Assert.assertTrue(goutput.getRequestInfo().getRequestId().length() > 0);
+            Assert.assertEquals(goutput.getCustomMetadata().size(), 2);
+            Assert.assertEquals(goutput.getCustomMetadata().get("key1"), "value1");
+            Assert.assertEquals(goutput.getCustomMetadata().get("中文键"), "中文值");
+            Assert.assertEquals(goutput.getContentDisposition(), contentDisposition);
+            StringUtils.toString(goutput.getContent(), "helloworld");
+        } catch (Exception ex) {
+            Assert.assertTrue(false);
+        }
+
+        TOSV2 cli = new TOSV2ClientBuilder().build(TOSClientConfiguration.builder().region(Consts.region).endpoint(Consts.endpoint)
+                .credentials(new StaticCredentials(Consts.accessKey, Consts.secretKey)).
+                transportConfig(new TransportConfig()).disableEncodingMeta(true).build());
+
+        try {
+            cli.putObject(input);
+            Assert.assertTrue(false);
+        } catch (TosException ex) {
+            Assert.assertTrue(ex.getMessage().length() > 0);
+            System.out.println(ex.getCause());
+        }
+
+        Map<String, String> meta2 = new HashMap<>();
+        meta2.put("key1", "value1");
+        meta2.put(TosUtils.encodeHeader("中文键"), TosUtils.encodeHeader("中文值"));
+        String contentDisposition2 = "attachment; filename=\"" + TosUtils.encodeHeader("中文") + ".pdf\"";
+        input.setOptions(new ObjectMetaRequestOptions().setCustomMetadata(meta2).setContentDisposition(contentDisposition2));
+        output = cli.putObject(input);
+        Assert.assertTrue(output.getRequestInfo().getRequestId().length() > 0);
+
+        try (GetObjectV2Output goutput = cli.getObject(new GetObjectV2Input().setBucket(Consts.bucket).setKey(key))) {
+            Assert.assertTrue(goutput.getRequestInfo().getRequestId().length() > 0);
+            Assert.assertEquals(goutput.getCustomMetadata().size(), 2);
+            Assert.assertEquals(goutput.getCustomMetadata().get("key1"), "value1");
+            Assert.assertEquals(goutput.getCustomMetadata().get(TosUtils.encodeHeader("中文键").toLowerCase()), TosUtils.encodeHeader("中文值"));
+            Assert.assertEquals(goutput.getContentDisposition(), contentDisposition2);
+            StringUtils.toString(goutput.getContent(), "helloworld");
+        } catch (Exception ex) {
+            Assert.assertTrue(false);
         }
     }
 }

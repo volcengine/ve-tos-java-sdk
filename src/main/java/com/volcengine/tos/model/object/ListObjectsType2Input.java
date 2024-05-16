@@ -9,6 +9,7 @@ public class ListObjectsType2Input {
     private int maxKeys;
     private String encodingType;
     private boolean listOnlyOnce;
+    private boolean fetchMeta;
 
     public String getBucket() {
         return bucket;
@@ -82,6 +83,15 @@ public class ListObjectsType2Input {
         return this;
     }
 
+    public boolean isFetchMeta() {
+        return fetchMeta;
+    }
+
+    public ListObjectsType2Input setFetchMeta(boolean fetchMeta) {
+        this.fetchMeta = fetchMeta;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "ListObjectsType2Input{" +
@@ -109,6 +119,7 @@ public class ListObjectsType2Input {
         private int maxKeys;
         private String encodingType;
         private boolean listOnlyOnce;
+        private boolean fetchMeta;
 
         private ListObjectsType2InputBuilder() {
         }
@@ -153,6 +164,11 @@ public class ListObjectsType2Input {
             return this;
         }
 
+        public ListObjectsType2InputBuilder fetchMeta(boolean fetchMeta) {
+            this.fetchMeta = fetchMeta;
+            return this;
+        }
+
         public ListObjectsType2Input build() {
             ListObjectsType2Input listObjectsType2Input = new ListObjectsType2Input();
             listObjectsType2Input.setBucket(bucket);
@@ -163,6 +179,7 @@ public class ListObjectsType2Input {
             listObjectsType2Input.setMaxKeys(maxKeys);
             listObjectsType2Input.setEncodingType(encodingType);
             listObjectsType2Input.setListOnlyOnce(listOnlyOnce);
+            listObjectsType2Input.setFetchMeta(fetchMeta);
             return listObjectsType2Input;
         }
     }

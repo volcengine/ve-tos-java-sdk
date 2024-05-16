@@ -95,7 +95,7 @@ public class ConcurrentDataTransferListenInputStream extends DataTransferListenI
 
     private void onBytesRead(int bytesRead) {
         DataTransferStatus status = new DataTransferStatus().setType(DataTransferType.DATA_TRANSFER_RW)
-                .setTotalBytes(totalBytes).setConsumedBytes(consumedBytes.get()).setRwOnceBytes(bytesRead);
+                .setTotalBytes(totalBytes).setConsumedBytes(consumedBytes.get()).setRwOnceBytes(bytesRead).setRetryCount(this.retryCount);
         listener.dataTransferStatusChange(status);
     }
 
@@ -115,4 +115,5 @@ public class ConcurrentDataTransferListenInputStream extends DataTransferListenI
         unNotifiedBytes = 0;
         doneEOF = true;
     }
+
 }

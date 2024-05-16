@@ -5,7 +5,9 @@ import com.volcengine.tos.model.bucket.*;
 import com.volcengine.tos.model.object.*;
 import com.volcengine.tos.transport.TransportConfig;
 
-public interface TOSV2 extends TOS {
+import java.io.Closeable;
+
+public interface TOSV2 extends TOS, Closeable {
     /**
      * create a new bucket
      *
@@ -425,6 +427,18 @@ public interface TOSV2 extends TOS {
      */
     DeleteBucketRenameOutput deleteBucketRename(DeleteBucketRenameInput input) throws TosException;
 
+    PutBucketEncryptionOutput putBucketEncryption(PutBucketEncryptionInput input) throws TosException;
+
+    GetBucketEncryptionOutput getBucketEncryption(GetBucketEncryptionInput input) throws TosException;
+
+    DeleteBucketEncryptionOutput deleteBucketEncryption(DeleteBucketEncryptionInput input) throws TosException;
+
+    PutBucketTaggingOutput putBucketTagging(PutBucketTaggingInput input) throws TosException;
+
+    GetBucketTaggingOutput getBucketTagging(GetBucketTaggingInput input) throws TosException;
+
+    DeleteBucketTaggingOutput deleteBucketTagging(DeleteBucketTaggingInput input) throws TosException;
+
     /**
      * get data and metadata of an object
      *
@@ -749,9 +763,15 @@ public interface TOSV2 extends TOS {
      */
     PreSignedPolicyURLOutput preSignedPolicyURL(PreSignedPolicyURLInput input) throws TosException;
 
+    @Deprecated
     void changeCredentials(Credentials credentials);
 
+    @Deprecated
     void changeRegionAndEndpoint(String region, String endpoint);
 
     void changeTransportConfig(TransportConfig config);
+
+    boolean refreshEndpointRegion(String endpoint, String region);
+
+    boolean refreshCredentials(String accessKey, String secretKey, String securityToken);
 }

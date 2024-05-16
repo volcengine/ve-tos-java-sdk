@@ -1,10 +1,12 @@
 package com.volcengine.tos.model.object;
 
 import com.volcengine.tos.comm.TosHeader;
+import com.volcengine.tos.comm.common.ReplicationStatusType;
 import com.volcengine.tos.comm.common.StorageClassType;
+import com.volcengine.tos.comm.common.TierType;
 import com.volcengine.tos.internal.TosResponse;
 import com.volcengine.tos.internal.util.DateConverter;
-import com.volcengine.tos.internal.util.TosUtils;
+import com.volcengine.tos.internal.util.StringUtils;
 import com.volcengine.tos.internal.util.TypeConverter;
 import com.volcengine.tos.model.RequestInfo;
 
@@ -37,6 +39,8 @@ public class GetObjectBasicOutput {
     private String contentType;
     private String expires;
     private String contentMD5;
+    private RestoreInfo restoreInfo;
+    private ReplicationStatusType replicationStatus;
 
     public RequestInfo getRequestInfo() {
         return requestInfo;
@@ -135,6 +139,14 @@ public class GetObjectBasicOutput {
         return contentMD5;
     }
 
+    public RestoreInfo getRestoreInfo() {
+        return restoreInfo;
+    }
+
+    public ReplicationStatusType getReplicationStatus() {
+        return replicationStatus;
+    }
+
     public GetObjectBasicOutput parseFromTosResponse(TosResponse response) {
         this.contentLength = response.getContentLength();
         this.contentType = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_CONTENT_TYPE);
@@ -157,6 +169,39 @@ public class GetObjectBasicOutput {
         this.hashCrc64ecma = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_CRC64);
         this.storageClass = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_STORAGE_CLASS);
         this.contentRange = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_CONTENT_RANGE);
+        this.replicationStatus = ReplicationStatusType.parse(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_REPLICATION_STATUS));
+
+        String restore = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_RESTORE);
+        if (StringUtils.isNotEmpty(restore)) {
+            restore = restore.trim();
+            if (restore.equals("ongoing-request=\"true\"")) {
+                RestoreInfo restoreInfo = new RestoreInfo();
+                RestoreInfo.RestoreStatus status = new RestoreInfo.RestoreStatus();
+                status.setOngoingRequest(true);
+                restoreInfo.setRestoreStatus(status);
+                RestoreInfo.RestoreParam param = new RestoreInfo.RestoreParam();
+                param.setRequestDate(DateConverter.rfc1123StringToDate(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_RESTORE_EXPIRY_DATE)));
+                param.setExpiryDays(Integer.valueOf(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_RESTORE_EXPIRY_DAYS)));
+                param.setTier(TierType.parse(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_RESTORE_TIER)));
+                restoreInfo.setRestoreParam(param);
+                this.restoreInfo = restoreInfo;
+            } else {
+                String pattern = "ongoing-request=\"false\", expiry-date=\"";
+                int idx;
+                if ((idx = restore.indexOf(pattern)) >= 0) {
+                    String expiryDate = restore.substring(idx);
+                    if (expiryDate.length() > 0 && expiryDate.charAt(expiryDate.length() - 1) == '\\') {
+                        expiryDate = expiryDate.substring(0, expiryDate.length() - 1);
+                    }
+                    RestoreInfo restoreInfo = new RestoreInfo();
+                    RestoreInfo.RestoreStatus status = new RestoreInfo.RestoreStatus();
+                    status.setExpiryDate(DateConverter.rfc1123StringToDate(expiryDate));
+                    restoreInfo.setRestoreStatus(status);
+                    this.restoreInfo = restoreInfo;
+                }
+            }
+        }
+
         return this;
     }
 

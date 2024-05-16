@@ -18,6 +18,7 @@ public class TosRequestFactory {
     private int port;
     private int urlMode = URL_MODE_DEFAULT;
     private boolean isCustomDomain;
+    private boolean disableEncodingMeta;
 
     public TosRequestFactory(Signer signer, String endpoint) {
         this.signer = signer;
@@ -93,6 +94,11 @@ public class TosRequestFactory {
         return this;
     }
 
+    public TosRequestFactory setDisableEncodingMeta(boolean disableEncodingMeta) {
+        this.disableEncodingMeta = disableEncodingMeta;
+        return this;
+    }
+
     public RequestBuilder init(String bucket, String object, Map<String, String> headers) {
         return newBuilder(bucket, object, headers).setUrlMode(urlMode).setPort(port);
     }
@@ -110,7 +116,7 @@ public class TosRequestFactory {
     }
 
     private RequestBuilder newBuilder(String bucket, String object) {
-        RequestBuilder rb = new RequestBuilder(bucket, object, this.scheme, this.host, this.signer);
+        RequestBuilder rb = new RequestBuilder(bucket, object, this.scheme, this.host, this.signer).setDisableEncodingMeta(this.disableEncodingMeta);
         rb.withHeader(TosHeader.HEADER_USER_AGENT, TosUtils.getUserAgent());
         return rb;
     }

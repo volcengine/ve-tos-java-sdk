@@ -8,6 +8,7 @@ public class CreateMultipartUploadInput {
     private String encodingType;
 
     private ObjectMetaRequestOptions options;
+    private boolean forbidOverwrite;
 
     public String getBucket() {
         return bucket;
@@ -49,6 +50,15 @@ public class CreateMultipartUploadInput {
         return this;
     }
 
+    public boolean isForbidOverwrite() {
+        return forbidOverwrite;
+    }
+
+    public CreateMultipartUploadInput setForbidOverwrite(boolean forbidOverwrite) {
+        this.forbidOverwrite = forbidOverwrite;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "CreateMultipartUploadInput{" +
@@ -56,6 +66,7 @@ public class CreateMultipartUploadInput {
                 ", key='" + key + '\'' +
                 ", encodingType='" + encodingType + '\'' +
                 ", options=" + options +
+                ", forbidOverwrite=" + forbidOverwrite +
                 '}';
     }
 
@@ -68,6 +79,7 @@ public class CreateMultipartUploadInput {
         private String key;
         private String encodingType;
         private ObjectMetaRequestOptions options;
+        private boolean forbidOverwrite;
 
         private CreateMultipartUploadInputBuilder() {
         }
@@ -92,12 +104,18 @@ public class CreateMultipartUploadInput {
             return this;
         }
 
+        public CreateMultipartUploadInputBuilder forbidOverwrite(boolean forbidOverwrite) {
+            this.forbidOverwrite = forbidOverwrite;
+            return this;
+        }
+
         public CreateMultipartUploadInput build() {
             CreateMultipartUploadInput createMultipartUploadInput = new CreateMultipartUploadInput();
             createMultipartUploadInput.setBucket(bucket);
             createMultipartUploadInput.setKey(key);
             createMultipartUploadInput.setEncodingType(encodingType);
             createMultipartUploadInput.setOptions(options);
+            createMultipartUploadInput.setForbidOverwrite(forbidOverwrite);
             return createMultipartUploadInput;
         }
     }

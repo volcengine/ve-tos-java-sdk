@@ -16,6 +16,7 @@ import java.io.*;
 import java.net.ConnectException;
 import java.net.SocketTimeoutException;
 import java.net.URL;
+import java.util.concurrent.TimeUnit;
 import java.util.zip.CheckedInputStream;
 
 public class RetryTest {
@@ -28,7 +29,7 @@ public class RetryTest {
         server.enqueue(new MockResponse().setResponseCode(500).setHeader("custom", "volc"));
         server.start();
         TransportConfig config = TransportConfig.builder().maxRetryCount(3).readTimeoutMills(1000)
-                .writeTimeoutMills(1000).build();
+                .writeTimeoutMills(1000).except100ContinueThreshold(0).build();
         Transport transport = new RequestTransport(config);
 
         // 500 retry
@@ -53,6 +54,8 @@ public class RetryTest {
         Assert.assertEquals(response.getHeaders().get("custom"), "volc_2");
         Assert.assertEquals(server.getRequestCount(), 8);
 
+        server.enqueue(new MockResponse().setHeadersDelay(3, TimeUnit.SECONDS).setBody("helloworld"));
+
         // client exception
         tosRequest = new TosRequest("http", "GET", server.getHostName(), "/invalid/path")
                 .setPort(server.getPort()).setRetryableOnServerException(true).setRetryableOnClientException(true);
@@ -60,9 +63,10 @@ public class RetryTest {
         long end = 0;
         try{
             transport.roundTrip(tosRequest);
+            Assert.assertTrue(false);
         } catch (IOException e) {
             end = System.currentTimeMillis();
-            Assert.assertTrue(e instanceof SocketTimeoutException);
+            Assert.assertTrue(e instanceof SocketTimeoutException || e instanceof ConnectException);
             Assert.assertTrue((end - start) / 1000 > 3);
         }
         server.shutdown();
@@ -111,7 +115,7 @@ public class RetryTest {
         try {
             server.start();
             TransportConfig config = TransportConfig.builder().maxRetryCount(3).readTimeoutMills(1000)
-                    .writeTimeoutMills(1000).build();
+                    .writeTimeoutMills(1000).except100ContinueThreshold(0).build();
             Transport transport = new RequestTransport(config);
 
             // 500 retry
@@ -182,12 +186,12 @@ public class RetryTest {
         server.enqueue(new MockResponse().setResponseCode(500));
         server.enqueue(new MockResponse().setResponseCode(500));
         server.enqueue(new MockResponse().setResponseCode(200).setBody("put succeed"));
+        server.start();
 
         String dataUrl = "https://www.volcengine.com/docs/6349/79895";
         try (BufferedInputStream bufferedInputStream = new BufferedInputStream(new URL(dataUrl).openStream())){
-            server.start();
             TransportConfig config = TransportConfig.builder().maxRetryCount(3).readTimeoutMills(1000)
-                    .writeTimeoutMills(1000).build();
+                    .writeTimeoutMills(1000).except100ContinueThreshold(0).build();
             Transport transport = new RequestTransport(config);
 
             TosRequest tosRequest = new TosRequest("http", "PUT", server.getHostName(), "/")

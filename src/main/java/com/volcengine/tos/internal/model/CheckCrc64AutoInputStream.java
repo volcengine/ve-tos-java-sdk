@@ -9,7 +9,7 @@ import java.io.InputStream;
 import java.util.zip.CheckedInputStream;
 import java.util.zip.Checksum;
 
-public class CheckCrc64AutoInputStream extends CheckedInputStream {
+public class CheckCrc64AutoInputStream extends CheckedInputStream implements RetryCountNotifier {
     private final String serverCrc64;
     public CheckCrc64AutoInputStream(InputStream in, Checksum cksum, String serverCrc64) {
         super(in, cksum);
@@ -45,6 +45,13 @@ public class CheckCrc64AutoInputStream extends CheckedInputStream {
             String clientCrc64String = CRC64Utils.longToUnsignedLongString(clientCrc64);
             throw new TosClientException("tos: expect crc64 " + serverCrc64 +
                     ", actual crc64 " + clientCrc64String, null);
+        }
+    }
+
+    @Override
+    public void setRetryCount(int retryCount) {
+        if (this.in instanceof RetryCountNotifier) {
+            ((RetryCountNotifier) this.in).setRetryCount(retryCount);
         }
     }
 }

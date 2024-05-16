@@ -17,6 +17,8 @@ public class PutObjectBasicInput {
 
     private String callback;
     private String callbackVar;
+    private boolean forbidOverwrite;
+    private String ifMatch;
 
     /** 客户端限速，单位 Byte/s **/
     private RateLimiter rateLimiter;
@@ -106,6 +108,24 @@ public class PutObjectBasicInput {
         return this;
     }
 
+    public boolean isForbidOverwrite() {
+        return forbidOverwrite;
+    }
+
+    public PutObjectBasicInput setForbidOverwrite(boolean forbidOverwrite) {
+        this.forbidOverwrite = forbidOverwrite;
+        return this;
+    }
+
+    public String getIfMatch() {
+        return ifMatch;
+    }
+
+    public PutObjectBasicInput setIfMatch(String ifMatch) {
+        this.ifMatch = ifMatch;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "PutObjectBasicInput{" +
@@ -133,6 +153,8 @@ public class PutObjectBasicInput {
         private RateLimiter rateLimit;
         private String callback;
         private String callbackVar;
+        private boolean forbidOverwrite;
+        private String ifMatch;
 
         private PutObjectBasicInputBuilder() {
         }
@@ -177,6 +199,16 @@ public class PutObjectBasicInput {
             return this;
         }
 
+        public PutObjectBasicInputBuilder forbidOverwrite(boolean forbidOverwrite) {
+            this.forbidOverwrite = forbidOverwrite;
+            return this;
+        }
+
+        public PutObjectBasicInputBuilder ifMatch(String ifMatch) {
+            this.ifMatch = ifMatch;
+            return this;
+        }
+
         public PutObjectBasicInput build() {
             PutObjectBasicInput putObjectBasicInput = new PutObjectBasicInput();
             putObjectBasicInput.key = this.key;
@@ -187,6 +219,8 @@ public class PutObjectBasicInput {
             putObjectBasicInput.rateLimiter = this.rateLimit;
             putObjectBasicInput.callback = this.callback;
             putObjectBasicInput.callbackVar = this.callbackVar;
+            putObjectBasicInput.forbidOverwrite = this.forbidOverwrite;
+            putObjectBasicInput.ifMatch = this.ifMatch;
             return putObjectBasicInput;
         }
     }

@@ -8,7 +8,7 @@ import com.volcengine.tos.auth.StaticCredentials;
 import com.volcengine.tos.transport.TransportConfig;
 
 public class ClientInstance {
-    private static final TransportConfig config = TransportConfig.builder().dnsCacheTimeMinutes(1).build();
+    private static final TransportConfig config = TransportConfig.builder().build();
     private static Transport transport;
     private static Signer signer;
     private static TosRequestFactory factory;
@@ -71,7 +71,7 @@ public class ClientInstance {
 
     private static void init() {
         if (transport == null) {
-            transport = new RequestTransport(config.setEnableVerifySSL(true).setHttp(true));
+            transport = new RequestTransport(config.setEnableVerifySSL(true).setHttp(true).setDnsCacheTimeMinutes(1).setExcept100ContinueThreshold(0));
         }
         if (signer == null) {
             Credentials credentials = new StaticCredentials(Consts.accessKey, Consts.secretKey);

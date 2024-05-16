@@ -70,6 +70,8 @@ public class ObjectMetaRequestOptions {
      */
     private String contentMD5;
 
+    private String contentSHA256;
+
     /**
      * for http common header: "Range"
      */
@@ -177,6 +179,7 @@ public class ObjectMetaRequestOptions {
                 ", ifUnmodifiedSince=" + ifUnmodifiedSince +
                 ", contentLength=" + contentLength +
                 ", contentMD5='" + contentMD5 + '\'' +
+                ", contentSHA256='" + contentSHA256 + '\'' +
                 ", rangeStart=" + rangeStart +
                 ", rangeEnd=" + rangeEnd +
                 ", customMetadata=" + customMetadata +
@@ -193,6 +196,7 @@ public class ObjectMetaRequestOptions {
                 ", websiteRedirectLocation='" + websiteRedirectLocation + '\'' +
                 ", storageClass=" + storageClass +
                 ", trafficLimit=" + trafficLimit +
+                ", headers=" + headers +
                 '}';
     }
 
@@ -254,6 +258,10 @@ public class ObjectMetaRequestOptions {
 
     public String getContentMD5() {
         return headers.get(TosHeader.HEADER_CONTENT_MD5);
+    }
+
+    public String getContentSHA256() {
+        return headers.get(TosHeader.HEADER_CONTENT_SHA256);
     }
 
     public Map<String, String> getCustomMetadata() {
@@ -382,6 +390,11 @@ public class ObjectMetaRequestOptions {
 
     public ObjectMetaRequestOptions setContentMD5(String contentMD5) {
         withHeader(TosHeader.HEADER_CONTENT_MD5, contentMD5);
+        return this;
+    }
+
+    public ObjectMetaRequestOptions setContentSHA256(String contentSHA256) {
+        withHeader(TosHeader.HEADER_CONTENT_SHA256, contentSHA256);
         return this;
     }
 
@@ -554,6 +567,11 @@ public class ObjectMetaRequestOptions {
 
         public ObjectMetaRequestOptionsBuilder contentMD5(String contentMD5) {
             withHeader(TosHeader.HEADER_CONTENT_MD5, contentMD5);
+            return this;
+        }
+
+        public ObjectMetaRequestOptionsBuilder contentSHA256(String contentSHA256) {
+            withHeader(TosHeader.HEADER_CONTENT_SHA256, contentSHA256);
             return this;
         }
 

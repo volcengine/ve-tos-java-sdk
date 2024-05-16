@@ -9,6 +9,8 @@ public class TosServerException extends TosException implements Serializable {
     private String requestID;
     private String hostID;
 
+    private String ec;
+
     public TosServerException(int statusCode) {
         this.statusCode = statusCode;
     }
@@ -37,14 +39,20 @@ public class TosServerException extends TosException implements Serializable {
         return this;
     }
 
-    public String getRequestID() {
-        return requestID;
-    }
-
     public TosServerException setRequestID(String requestID) {
         this.requestID = requestID;
         return this;
     }
+
+    public TosServerException setEc(String ec) {
+        this.ec = ec;
+        return this;
+    }
+
+    public String getRequestID() {
+        return requestID;
+    }
+
 
     public String getHostID() {
         return hostID;
@@ -70,6 +78,10 @@ public class TosServerException extends TosException implements Serializable {
         return message;
     }
 
+    public String getEc() {
+        return ec;
+    }
+
     @Override
     public String toString() {
         return "TosServerException{" +
@@ -78,6 +90,7 @@ public class TosServerException extends TosException implements Serializable {
                 ", message='" + message + '\'' +
                 ", requestID='" + requestID + '\'' +
                 ", hostID='" + hostID + '\'' +
+                ", ec='" + ec + '\'' +
                 '}';
     }
 }

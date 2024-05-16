@@ -17,7 +17,7 @@ public class FetchObjectInput {
     @JsonProperty("IgnoreSameKey")
     private boolean ignoreSameKey;
     @JsonProperty("ContentMD5")
-    private String hexMD5;
+    private String contentMD5;
 
     public String getBucket() {
         return bucket;
@@ -68,12 +68,22 @@ public class FetchObjectInput {
         return this;
     }
 
+    @Deprecated
     public String getHexMD5() {
-        return hexMD5;
+        return "";
     }
 
+    @Deprecated
     public FetchObjectInput setHexMD5(String hexMD5) {
-        this.hexMD5 = hexMD5;
+        return this;
+    }
+
+    public String getContentMD5() {
+        return contentMD5;
+    }
+
+    public FetchObjectInput setContentMD5(String contentMD5) {
+        this.contentMD5 = this.contentMD5;
         return this;
     }
 
@@ -85,7 +95,7 @@ public class FetchObjectInput {
                 ", options=" + options +
                 ", url='" + url + '\'' +
                 ", ignoreSameKey=" + ignoreSameKey +
-                ", hexMD5='" + hexMD5 + '\'' +
+                ", contentMd5='" + contentMD5 + '\'' +
                 '}';
     }
 
@@ -99,7 +109,7 @@ public class FetchObjectInput {
         private ObjectMetaRequestOptions options;
         private String url;
         private boolean ignoreSameKey;
-        private String hexMD5;
+        private String contentMD5;
 
         private FetchObjectInputBuilder() {
         }
@@ -129,8 +139,13 @@ public class FetchObjectInput {
             return this;
         }
 
+        @Deprecated
         public FetchObjectInputBuilder hexMD5(String hexMD5) {
-            this.hexMD5 = hexMD5;
+            return this;
+        }
+
+        public FetchObjectInputBuilder contentMD5(String contentMD5) {
+            this.contentMD5 = contentMD5;
             return this;
         }
 
@@ -141,7 +156,7 @@ public class FetchObjectInput {
             fetchObjectInput.setOptions(options);
             fetchObjectInput.setUrl(url);
             fetchObjectInput.setIgnoreSameKey(ignoreSameKey);
-            fetchObjectInput.setHexMD5(hexMD5);
+            fetchObjectInput.setContentMD5(contentMD5);
             return fetchObjectInput;
         }
     }

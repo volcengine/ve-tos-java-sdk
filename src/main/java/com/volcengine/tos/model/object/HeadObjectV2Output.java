@@ -1,5 +1,6 @@
 package com.volcengine.tos.model.object;
 
+import com.volcengine.tos.comm.common.ReplicationStatusType;
 import com.volcengine.tos.comm.common.StorageClassType;
 import com.volcengine.tos.internal.util.ParamsChecker;
 import com.volcengine.tos.model.RequestInfo;
@@ -125,6 +126,14 @@ public class HeadObjectV2Output {
 
     public String getContentMD5() {
         return headObjectBasicOutput.getContentMD5();
+    }
+
+    public RestoreInfo getRestoreInfo() {
+        return headObjectBasicOutput.getRestoreInfo();
+    }
+
+    public ReplicationStatusType getReplicationStatus() {
+        return headObjectBasicOutput.getReplicationStatus();
     }
 
     @Override

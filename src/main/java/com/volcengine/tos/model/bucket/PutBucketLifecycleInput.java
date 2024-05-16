@@ -10,6 +10,8 @@ public class PutBucketLifecycleInput {
     private String bucket;
     @JsonProperty("Rules")
     private List<LifecycleRule> rules;
+    @JsonIgnore
+    private boolean allowSameActionOverlap;
 
     public String getBucket() {
         return bucket;
@@ -29,6 +31,15 @@ public class PutBucketLifecycleInput {
         return this;
     }
 
+    public boolean isAllowSameActionOverlap() {
+        return allowSameActionOverlap;
+    }
+
+    public PutBucketLifecycleInput setAllowSameActionOverlap(boolean allowSameActionOverlap) {
+        this.allowSameActionOverlap = allowSameActionOverlap;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "PutBucketLifecycleInput{" +
@@ -44,6 +55,7 @@ public class PutBucketLifecycleInput {
     public static final class PutBucketLifecycleInputBuilder {
         private String bucket;
         private List<LifecycleRule> rules;
+        private boolean allowSameActionOverlap;
 
         private PutBucketLifecycleInputBuilder() {
         }
@@ -58,10 +70,16 @@ public class PutBucketLifecycleInput {
             return this;
         }
 
+        public PutBucketLifecycleInputBuilder allowSameActionOverlap(boolean allowSameActionOverlap) {
+            this.allowSameActionOverlap = allowSameActionOverlap;
+            return this;
+        }
+
         public PutBucketLifecycleInput build() {
             PutBucketLifecycleInput putBucketLifecycleInput = new PutBucketLifecycleInput();
             putBucketLifecycleInput.setBucket(bucket);
             putBucketLifecycleInput.setRules(rules);
+            putBucketLifecycleInput.setAllowSameActionOverlap(allowSameActionOverlap);
             return putBucketLifecycleInput;
         }
     }

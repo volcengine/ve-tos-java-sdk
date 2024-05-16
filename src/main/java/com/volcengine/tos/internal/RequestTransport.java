@@ -6,21 +6,25 @@ import com.volcengine.tos.comm.HttpStatus;
 import com.volcengine.tos.comm.TosHeader;
 import com.volcengine.tos.comm.io.TosRepeatableFileInputStream;
 import com.volcengine.tos.internal.model.CRC64Checksum;
+import com.volcengine.tos.internal.model.RetryCountNotifier;
 import com.volcengine.tos.internal.model.SimpleDataTransferListenInputStream;
 import com.volcengine.tos.internal.model.TosCheckedInputStream;
 import com.volcengine.tos.internal.util.CRC64Utils;
 import com.volcengine.tos.internal.util.ParamsChecker;
 import com.volcengine.tos.internal.util.StringUtils;
 import com.volcengine.tos.internal.util.TosUtils;
-import com.volcengine.tos.internal.util.dnscache.DefaultDnsCacheService;
 import com.volcengine.tos.internal.util.dnscache.DnsCacheService;
+import com.volcengine.tos.internal.util.dnscache.DnsCacheServiceImpl;
 import com.volcengine.tos.internal.util.ratelimit.RateLimitedInputStream;
 import com.volcengine.tos.transport.TransportConfig;
 import okhttp3.Authenticator;
 import okhttp3.*;
 import okio.BufferedSink;
 
-import javax.net.ssl.*;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 import java.io.*;
 import java.net.*;
 import java.security.KeyManagementException;
@@ -42,10 +46,13 @@ import java.util.zip.CheckedInputStream;
  * 7. Rate limiter
  * 8. ...
  */
-public class RequestTransport implements Transport {
+public class RequestTransport implements Transport, Closeable {
     private static final MediaType DEFAULT_MEDIA_TYPE = null;
     private final OkHttpClient client;
     private int maxRetries;
+
+    private int except100ContinueThreshold;
+    private boolean disableEncodingMeta;
     private DnsCacheService dnsCacheService;
 
     public RequestTransport(TransportConfig config){
@@ -61,6 +68,7 @@ public class RequestTransport implements Transport {
         if (maxRetries < 0) {
             maxRetries = 0;
         }
+        this.except100ContinueThreshold = config.getExcept100ContinueThreshold();
 
         ConnectionPool connectionPool = new ConnectionPool(maxConnections,
                 maxIdleConnectionTimeMills, TimeUnit.MILLISECONDS);
@@ -80,9 +88,10 @@ public class RequestTransport implements Transport {
         }
 
         RequestEventListener.RequestEventListenerFactory eventListener = new
-                RequestEventListener.RequestEventListenerFactory(TosUtils.getLogger());
+                RequestEventListener.RequestEventListenerFactory(TosUtils.getLogger())
+                .setHighLatencyLogThreshold(config.getHighLatencyLogThreshold());
         if (config.getDnsCacheTimeMinutes() > 0) {
-            dnsCacheService = new DefaultDnsCacheService(config.getDnsCacheTimeMinutes());
+            dnsCacheService = new DnsCacheServiceImpl(config.getDnsCacheTimeMinutes(), 30);
             eventListener.setDnsCacheService(dnsCacheService);
             builder.dns(createDnsWithCache());
         }
@@ -113,19 +122,31 @@ public class RequestTransport implements Transport {
         }
     }
 
+    public RequestTransport setDisableEncodingMeta(boolean disableEncodingMeta) {
+        this.disableEncodingMeta = disableEncodingMeta;
+        return this;
+    }
+
     private Dns createDnsWithCache() {
         return new Dns() {
             @Override
             public List<InetAddress> lookup(String host) throws UnknownHostException {
-                if (host != null && dnsCacheService != null) {
-                    List<InetAddress> cache = dnsCacheService.getIpList(host);
-                    if (cache != null && cache.size() > 0) {
-                        return cache;
-                    }
-                }
                 try {
-                    return Arrays.asList(InetAddress.getAllByName(host));
-                } catch (NullPointerException e) {
+                    List<InetAddress> ipList = dnsCacheService.getIpList(host);
+                    if (ipList == null || ipList.size() == 0) {
+                        throw new UnknownHostException("Broken system behaviour for dns lookup of " + host);
+                    }
+                    if (ipList.size() == 1) {
+                        return ipList;
+                    }
+
+                    List<InetAddress> tempIpList = new ArrayList<>(ipList.size());
+                    for (InetAddress addr : ipList) {
+                        tempIpList.add(addr);
+                    }
+                    Collections.shuffle(tempIpList);
+                    return tempIpList;
+                } catch (RuntimeException e) {
                     UnknownHostException unknownHostException =
                             new UnknownHostException("Broken system behaviour for dns lookup of " + host);
                     unknownHostException.initCause(e);
@@ -153,18 +174,41 @@ public class RequestTransport implements Transport {
         Response response = null;
         long start = System.currentTimeMillis();
         int reqTimes = 1;
-        Request request = buildRequest(tosRequest);
+        wrapTosRequestContent(tosRequest);
+        Request lastRequest = null;
         for (int i = 0; i < maxRetries+1; i++, reqTimes++) {
             try{
-                response = client.newCall(request).execute();
+                if (tosRequest.getContent() != null && (tosRequest.getContent() instanceof RetryCountNotifier)) {
+                    ((RetryCountNotifier) tosRequest.getContent()).setRetryCount(i);
+                }
+                if (lastRequest != null && lastRequest.body() != null && (lastRequest.body() instanceof WrappedTransportRequestBody)) {
+                    ((WrappedTransportRequestBody) lastRequest.body()).reset();
+                }
+
+                Request.Builder builder = buildRequest(tosRequest);
+                if (i != 0) {
+                    builder.addHeader(TosHeader.HEADER_SDK_RETRY_COUNT, "attempt=" + i + "; max=" + maxRetries);
+                }
+                lastRequest = builder.build();
+                response = client.newCall(lastRequest).execute();
                 if (response.code() >= HttpStatus.INTERNAL_SERVER_ERROR
                 || response.code() == HttpStatus.TOO_MANY_REQUESTS) {
                     // retry on 5xx, 429
                     if (tosRequest.isRetryableOnServerException()) {
                         // the request can be retried.
                         if (i != maxRetries) {
+                            long sleepMs = TosUtils.backoff(i);
+                            if (response.code() == HttpStatus.SERVICE_UNAVAILABLE || response.code() == HttpStatus.TOO_MANY_REQUESTS) {
+                                String retryAfter = response.header(TosHeader.HEADER_RETRY_AFTER);
+                                if (StringUtils.isNotEmpty(retryAfter)) {
+                                    try {
+                                        sleepMs = Math.max(Integer.valueOf(retryAfter) * 1000, sleepMs);
+                                    } catch (Exception ex) {
+                                    }
+                                }
+                            }
                             // last time does not need to sleep
-                            Thread.sleep(TosUtils.backoff(i));
+                            Thread.sleep(sleepMs);
                             // close response body before retry
                             response.close();
                             continue;
@@ -178,28 +222,25 @@ public class RequestTransport implements Transport {
                 printAccessLogFailed(e);
                 throw new TosClientException("tos: request interrupted", e);
             } catch (IOException e) {
-                if (e instanceof SocketException || e instanceof UnknownHostException
-                        || e instanceof SSLException || e instanceof InterruptedIOException) {
-                    if (tosRequest.isRetryableOnClientException()) {
-                        try{
-                            if (i == maxRetries) {
-                                // last time does not need to sleep
-                                printAccessLogFailed(e);
-                                throw e;
-                            }
-                            Thread.sleep(TosUtils.backoff(i));
-                            if (response != null) {
-                                response.close();
-                            }
-                            continue;
-                        } catch (InterruptedException ie) {
-                            if (response != null) {
-                                response.close();
-                            }
-                            TosUtils.getLogger().debug("tos: request interrupted while sleeping in retry");
+                if (tosRequest.isRetryableOnClientException()) {
+                    try{
+                        if (i == maxRetries) {
+                            // last time does not need to sleep
                             printAccessLogFailed(e);
-                            throw new TosClientException("tos: request interrupted", e);
+                            throw e;
                         }
+                        Thread.sleep(TosUtils.backoff(i));
+                        if (response != null) {
+                            response.close();
+                        }
+                        continue;
+                    } catch (InterruptedException ie) {
+                        if (response != null) {
+                            response.close();
+                        }
+                        TosUtils.getLogger().debug("tos: request interrupted while sleeping in retry");
+                        printAccessLogFailed(e);
+                        throw new TosClientException("tos: request interrupted", e);
                     }
                 }
                 if (response != null) {
@@ -250,12 +291,10 @@ public class RequestTransport implements Transport {
         }
     }
 
-    private Request buildRequest(TosRequest request) throws IOException {
+    private Request.Builder buildRequest(TosRequest request) throws IOException {
         HttpUrl url = request.toURL();
         Request.Builder builder = new Request.Builder().url(url);
         addHeader(request, builder);
-        wrapTosRequestContent(request);
-
         switch (request.getMethod() == null ? "" : request.getMethod().toUpperCase()) {
             case HttpMethod.GET:
                 builder.get();
@@ -270,11 +309,18 @@ public class RequestTransport implements Transport {
                     }
                     builder.post(RequestBody.create(getMediaType(request), data));
                 } else if (request.getContent() != null){
+                    if (this.except100ContinueThreshold > 0 && (request.getContentLength() < 0
+                            || request.getContentLength() > this.except100ContinueThreshold)) {
+                        builder.addHeader(TosHeader.HEADER_EXPECT, "100-continue");
+                    }
                     // only appendObject use, not support chunk
                     // make sure the content length is set
                     builder.post(new WrappedTransportRequestBody(
                             getMediaType(request), request.getContent(), request.getContentLength()));
                 } else if (request.getData() != null){
+                    if (this.except100ContinueThreshold > 0 && request.getData().length > this.except100ContinueThreshold) {
+                        builder.addHeader(TosHeader.HEADER_EXPECT, "100-continue");
+                    }
                     builder.post(RequestBody.create(getMediaType(request), request.getData()));
                 } else {
                     builder.post(RequestBody.create(getMediaType(request), new byte[0]));
@@ -282,9 +328,16 @@ public class RequestTransport implements Transport {
                 break;
             case HttpMethod.PUT: {
                 if (request.getContent() != null) {
+                    if (this.except100ContinueThreshold > 0 && (request.getContentLength() < 0
+                            || request.getContentLength() > this.except100ContinueThreshold)) {
+                        builder.addHeader(TosHeader.HEADER_EXPECT, "100-continue");
+                    }
                     builder.put(new WrappedTransportRequestBody(
                             getMediaType(request), request.getContent(), request.getContentLength()));
                 } else if (request.getData() != null){
+                    if (this.except100ContinueThreshold > 0 && request.getData().length > this.except100ContinueThreshold) {
+                        builder.addHeader(TosHeader.HEADER_EXPECT, "100-continue");
+                    }
                     builder.put(RequestBody.create(getMediaType(request), request.getData()));
                 } else {
                     builder.put(RequestBody.create(getMediaType(request), new byte[0]));
@@ -300,7 +353,7 @@ public class RequestTransport implements Transport {
             default:
                 throw new TosClientException("Method is not supported: " + request.getMethod(), null);
         }
-        return builder.build();
+        return builder;
     }
 
     private void addHeader(TosRequest request, Request.Builder builder) {
@@ -410,17 +463,28 @@ public class RequestTransport implements Transport {
         // 原始的 key/value 值
         String key = name;
         String value = response.header(name);
-        // 在此统一处理 header 的解码
-        if (StringUtils.startWithIgnoreCase(key, TosHeader.HEADER_META_PREFIX)) {
-            // 对于自定义元数据，对 key/value 包含的中文汉字进行 URL 解码
-            key = TosUtils.decodeHeader(key);
-            value = TosUtils.decodeHeader(value);
-        }
-        if (StringUtils.equalsIgnoreCase(key, TosHeader.HEADER_CONTENT_DISPOSITION)) {
-            // 对于 Content-Disposition 头，对 value 包含的中文汉字进行 URL 解码
-            value = TosUtils.decodeHeader(value);
+        if (!this.disableEncodingMeta) {
+            // 在此统一处理 header 的解码
+            if (StringUtils.startWithIgnoreCase(key, TosHeader.HEADER_META_PREFIX)) {
+                // 对于自定义元数据，对 key/value 包含的中文汉字进行 URL 解码
+                key = TosUtils.decodeHeader(key);
+                value = TosUtils.decodeHeader(value);
+            } else if (StringUtils.equalsIgnoreCase(key, TosHeader.HEADER_CONTENT_DISPOSITION)) {
+                // 对于 Content-Disposition 头，对 value 包含的中文汉字进行 URL 解码
+                value = TosUtils.decodeHeader(value);
+            }
         }
         headers.put(key.toLowerCase(), value);
+    }
+
+    @Override
+    public void close() throws IOException {
+        if (this.dnsCacheService != null && this.dnsCacheService instanceof Closeable) {
+            ((Closeable) this.dnsCacheService).close();
+        }
+        if (this.client != null) {
+            this.client.connectionPool().evictAll();
+        }
     }
 }
 
@@ -453,15 +517,19 @@ class WrappedTransportRequestBody extends RequestBody implements Closeable {
 
     @Override
     public void writeTo(BufferedSink sink) throws IOException {
-        if (totalBytesRead > 0 && this.content != null && this.content.markSupported()) {
-            TosUtils.getLogger().debug("tos: okhttp writeTo call reset");
-            this.content.reset();
-            totalBytesRead = 0;
-        }
+        this.reset();
         if (this.contentLength < 0) {
             writeAllWithChunked(sink);
         } else {
             writeAll(sink);
+        }
+    }
+
+    void reset() throws IOException {
+        if (totalBytesRead > 0 && this.content != null && this.content.markSupported()) {
+            TosUtils.getLogger().debug("tos: okhttp writeTo call reset");
+            this.content.reset();
+            totalBytesRead = 0;
         }
     }
 
@@ -503,5 +571,9 @@ class WrappedTransportRequestBody extends RequestBody implements Closeable {
 
     protected InputStream getContent() {
         return this.content;
+    }
+
+    protected long getTotalBytesRead() {
+        return totalBytesRead;
     }
 }

@@ -12,6 +12,8 @@ public class GetBucketLifecycleOutput {
     @JsonProperty("Rules")
     private List<LifecycleRule> rules;
 
+    @JsonIgnore
+    private boolean allowSameActionOverlap;
     public RequestInfo getRequestInfo() {
         return requestInfo;
     }
@@ -30,11 +32,21 @@ public class GetBucketLifecycleOutput {
         return this;
     }
 
+    public boolean isAllowSameActionOverlap() {
+        return allowSameActionOverlap;
+    }
+
+    public GetBucketLifecycleOutput setAllowSameActionOverlap(boolean allowSameActionOverlap) {
+        this.allowSameActionOverlap = allowSameActionOverlap;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "GetBucketLifecycleOutput{" +
                 "requestInfo=" + requestInfo +
                 ", rules=" + rules +
+                ", allowSameActionOverlap=" + allowSameActionOverlap +
                 '}';
     }
 }

@@ -109,9 +109,24 @@ public class TosObjectRequestHandler {
                 .withQuery(TosHeader.QUERY_DATA_PROCESS, input.getProcess())
                 .withQuery(TosHeader.QUERY_SAVE_BUCKET, input.getSaveBucket())
                 .withQuery(TosHeader.QUERY_SAVE_OBJECT, input.getSaveObject());
+
+        if (input.getDocPage() > 0) {
+            builder = builder.withQuery(TosHeader.QUERY_DOC_PAGE, Integer.toString(input.getDocPage()));
+        }
+        if (input.getSrcType() != null) {
+            builder = builder.withQuery(TosHeader.QUERY_DOC_SRC_TYPE, input.getSrcType().toString());
+        }
+        if (input.getDstType() != null) {
+            builder = builder.withQuery(TosHeader.QUERY_DOC_DST_TYPE, input.getDstType().toString());
+        }
+
         TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
-        TosResponse response = objectHandler.doRequest(req, getExpectedCodes(input.getAllSettedHeaders()));
-        return buildGetObjectV2Output(response, input.getRateLimiter(), input.getDataTransferListener());
+        try {
+            TosResponse response = objectHandler.doRequest(req, getExpectedCodes(input.getAllSettedHeaders()));
+            return buildGetObjectV2Output(response, input.getRateLimiter(), input.getDataTransferListener());
+        } catch (TosException ex) {
+            throw ex.setRequestUrl(req.toURL().toString());
+        }
     }
 
     private static List<Integer> getExpectedCodes(Map<String, String> headers) {
@@ -202,7 +217,13 @@ public class TosObjectRequestHandler {
         RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), input.getAllSettedHeaders())
                 .withContentLength(input.getContentLength())
                 .withHeader(TosHeader.HEADER_CALLBACK, input.getCallback())
-                .withHeader(TosHeader.HEADER_CALLBACK_VAR, input.getCallbackVar());
+                .withHeader(TosHeader.HEADER_CALLBACK_VAR, input.getCallbackVar())
+                .withHeader(TosHeader.HEADER_X_IF_MATCH, input.getIfMatch());
+
+        if (input.isForbidOverwrite()) {
+            builder = builder.withHeader(TosHeader.HEADER_FORBID_OVERWRITE, "true");
+        }
+
         addContentType(builder, input.getKey());
         TosRequest req = this.factory.build(builder, HttpMethod.PUT, content)
                 .setEnableCrcCheck(this.enableCrcCheck)
@@ -257,7 +278,9 @@ public class TosObjectRequestHandler {
         RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), input.getAllSettedHeaders())
                 .withQuery("append", "")
                 .withQuery("offset", String.valueOf(input.getOffset()))
-                .withContentLength(input.getContentLength());
+                .withContentLength(input.getContentLength())
+                .withHeader(TosHeader.HEADER_X_IF_MATCH, input.getIfMatch());
+
         addContentType(builder, input.getKey());
         TosRequest req = this.factory.build(builder, HttpMethod.POST, input.getContent())
                 // appendObject should not retry
@@ -321,7 +344,11 @@ public class TosObjectRequestHandler {
                 .withQuery("start-after", input.getStartAfter())
                 .withQuery("continuation-token", input.getContinuationToken())
                 .withQuery("max-keys", TosUtils.convertInteger(input.getMaxKeys()))
-                .withQuery("encoding-type", input.getEncodingType());
+                .withQuery("encoding-type", input.getEncodingType())
+                .withQuery("fetch-owner", "true");
+        if (input.isFetchMeta()) {
+            builder = builder.withQuery("fetch-meta", "true");
+        }
         TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
         return objectHandler.doRequest(req, HttpStatus.OK, response -> PayloadConverter.parsePayload(response.getInputStream(),
                 new TypeReference<ListObjectsType2Output>() {
@@ -422,7 +449,7 @@ public class TosObjectRequestHandler {
                     new TypeReference<ServerExceptionJson>() {
                     });
             throw new TosServerException(response.getStatusCode(), errMsg.getCode(), errMsg.getMessage(),
-                    errMsg.getRequestID(), errMsg.getHostID());
+                    errMsg.getRequestID(), errMsg.getHostID()).setEc(errMsg.getEc());
         }
     }
 
@@ -456,7 +483,7 @@ public class TosObjectRequestHandler {
                     new TypeReference<ServerExceptionJson>() {
                     });
             throw new TosServerException(response.getStatusCode(), errMsg.getCode(), errMsg.getMessage(),
-                    errMsg.getRequestID(), errMsg.getHostID());
+                    errMsg.getRequestID(), errMsg.getHostID()).setEc(errMsg.getEc());
         }
     }
 
@@ -578,6 +605,9 @@ public class TosObjectRequestHandler {
         RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), input.getAllSettedHeaders())
                 .withQuery("uploads", "");
         addContentType(builder, input.getKey());
+        if (input.isForbidOverwrite()) {
+            builder = builder.withHeader(TosHeader.HEADER_FORBID_OVERWRITE, "true");
+        }
         TosRequest req = this.factory.build(builder, HttpMethod.POST, null).setRetryableOnClientException(false);
         return objectHandler.doRequest(req, HttpStatus.OK, this::buildCreateMultipartUploadOutput);
     }
@@ -635,7 +665,9 @@ public class TosObjectRequestHandler {
                 .withQuery("uploadId", input.getUploadID())
                 .withHeader(TosHeader.HEADER_CALLBACK, input.getCallback())
                 .withHeader(TosHeader.HEADER_CALLBACK_VAR, input.getCallbackVar());
-        ;
+        if (input.isForbidOverwrite()) {
+            builder = builder.withHeader(TosHeader.HEADER_FORBID_OVERWRITE, "true");
+        }
         String contentMd5 = null;
         byte[] data = new byte[0];
         if (!input.isCompleteAll()) {

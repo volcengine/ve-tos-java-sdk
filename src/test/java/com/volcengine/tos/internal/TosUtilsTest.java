@@ -9,9 +9,8 @@ import com.volcengine.tos.internal.util.DateConverter;
 import com.volcengine.tos.internal.util.ParamsChecker;
 import com.volcengine.tos.internal.util.TosUtils;
 import com.volcengine.tos.model.object.ListPartsOutput;
-import org.testng.annotations.Test;
-
 import org.testng.Assert;
+import org.testng.annotations.Test;
 
 import java.util.Date;
 import java.util.List;
@@ -60,10 +59,11 @@ public class TosUtilsTest {
     @Test
     void supportedRegionTest() {
         Map<String, List<String>> supportedRegion = TosUtils.getSupportedRegion();
-        Assert.assertEquals(supportedRegion.size(), 3);
+        Assert.assertEquals(supportedRegion.size(), 4);
         Assert.assertEquals(supportedRegion.get("cn-beijing").get(0), "tos-cn-beijing.volces.com");
         Assert.assertEquals(supportedRegion.get("cn-shanghai").get(0), "tos-cn-shanghai.volces.com");
         Assert.assertEquals(supportedRegion.get("cn-guangzhou").get(0), "tos-cn-guangzhou.volces.com");
+        Assert.assertEquals(supportedRegion.get("ap-southeast-1").get(0), "tos-ap-southeast-1.volces.com");
     }
 
     @Test

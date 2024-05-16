@@ -6,8 +6,8 @@
         </Console>
     </Appenders>
     <Loggers>
-        <Logger name="com.volcengine.tos" level="debug"/>
-        <Root level="debug">
+        <Logger name="com.volcengine.tos" level="info"/>
+        <Root level="info">
             <AppenderRef ref="Console"/>
         </Root>
     </Loggers>

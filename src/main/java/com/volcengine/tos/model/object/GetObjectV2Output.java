@@ -1,5 +1,6 @@
 package com.volcengine.tos.model.object;
 
+import com.volcengine.tos.comm.common.ReplicationStatusType;
 import com.volcengine.tos.comm.common.StorageClassType;
 import com.volcengine.tos.internal.util.ParamsChecker;
 import com.volcengine.tos.internal.util.aborthook.AbortInputStreamHook;
@@ -142,6 +143,14 @@ public class GetObjectV2Output implements Closeable {
 
     public String getContentMD5() {
         return getObjectBasicOutput.getContentMD5();
+    }
+
+    public RestoreInfo getRestoreInfo() {
+        return getObjectBasicOutput.getRestoreInfo();
+    }
+
+    public ReplicationStatusType getReplicationStatus() {
+        return getObjectBasicOutput.getReplicationStatus();
     }
 
     @Override

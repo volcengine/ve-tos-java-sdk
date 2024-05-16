@@ -37,6 +37,8 @@ public class RequestEventListener extends EventListener {
         private final Logger log;
         private DnsCacheService dnsCacheService;
 
+        private int highLatencyLogThreshold;
+
         public RequestEventListenerFactory(Logger log) {
             this.log = log;
         }
@@ -46,14 +48,21 @@ public class RequestEventListener extends EventListener {
             return this;
         }
 
+        public RequestEventListenerFactory setHighLatencyLogThreshold(int highLatencyLogThreshold) {
+            this.highLatencyLogThreshold = highLatencyLogThreshold;
+            return this;
+        }
+
         @Override
         public EventListener create(Call call) {
-            return new RequestEventListener(log).setDnsCacheService(dnsCacheService);
+            return new RequestEventListener(log).setDnsCacheService(dnsCacheService).setHighLatencyLogThreshold(highLatencyLogThreshold);
         }
     }
 
     private Logger log;
     private DnsCacheService dnsCacheService;
+
+    private int highLatencyLogThreshold;
 
     public RequestEventListener(Logger log) {
         callStart = -1;
@@ -76,6 +85,11 @@ public class RequestEventListener extends EventListener {
 
     public RequestEventListener setDnsCacheService(DnsCacheService dnsCacheService) {
         this.dnsCacheService = dnsCacheService;
+        return this;
+    }
+
+    public RequestEventListener setHighLatencyLogThreshold(int highLatencyLogThreshold) {
+        this.highLatencyLogThreshold = highLatencyLogThreshold;
         return this;
     }
 
@@ -170,23 +184,54 @@ public class RequestEventListener extends EventListener {
     @Override
     public void callEnd(Call call) {
         callEnd = System.currentTimeMillis();
+        long cost = callEnd - callStart;
         log.debug("requestId: {}, method: {}, host: {}, request uri: {}, " +
                 "dns cost: {} ms, connect cost: {} ms, tls handshake cost: {} ms, " +
                 "send headers and body cost: {} ms, wait response cost: {} ms, request cost: {} ms\n",
                 reqId, method, host, path,
                 (dnsEnd-dnsStart), (connectEnd-connectStart), (secureConnectEnd-secureConnectStart),
-                (requestEnd-requestStart), (responseEnd-responseStart), (callEnd-callStart));
+                (requestEnd - requestStart), (responseEnd - responseStart), cost);
+        this.printHighLatencyLog(call, cost, null);
     }
 
     @Override
     public void callFailed(Call call, IOException ioe) {
         callEnd = System.currentTimeMillis();
-        callEnd = System.currentTimeMillis();
+        long cost = callEnd - callStart;
         log.debug("requestId: {}, method: {}, host: {}, request uri: {}, " +
                         "dns cost: {} ms, connect cost: {} ms, tls handshake cost: {} ms, " +
                         "send headers and body cost: {} ms, wait response cost: {} ms, request cost: {} ms\n",
                 reqId, method, host, path,
                 (dnsEnd-dnsStart), (connectEnd-connectStart), (secureConnectEnd-secureConnectStart),
-                (requestEnd-requestStart), (responseEnd-responseStart), (callEnd-callStart));
+                (requestEnd - requestStart), (responseEnd - responseStart), cost);
+        this.printHighLatencyLog(call, cost, null);
+    }
+
+    private void printHighLatencyLog(Call call, long cost, IOException ioe) {
+        if (this.highLatencyLogThreshold > 0 && call.request().body() != null && cost > 500) {
+            long dataSize = 1024;
+            if (call.request().body() instanceof WrappedTransportRequestBody) {
+                dataSize = Math.max(dataSize, ((WrappedTransportRequestBody) call.request().body()).getTotalBytesRead());
+            }
+
+            float costSecond = (float) cost / 1000;
+            if ((float) dataSize / 1024 / costSecond < this.highLatencyLogThreshold) {
+                if (ioe != null) {
+                    log.warn("[high latency request] requestId: {}, method: {}, host: {}, request uri: {}, " +
+                                    "dns cost: {} ms, connect cost: {} ms, tls handshake cost: {} ms, " +
+                                    "send headers and body cost: {} ms, wait response cost: {} ms, request cost: {} ms, exception: {}\n",
+                            reqId, method, host, path,
+                            (dnsEnd - dnsStart), (connectEnd - connectStart), (secureConnectEnd - secureConnectStart),
+                            (requestEnd - requestStart), (responseEnd - responseStart), cost, ioe.getMessage());
+                } else {
+                    log.warn("[high latency request] requestId: {}, method: {}, host: {}, request uri: {}, " +
+                                    "dns cost: {} ms, connect cost: {} ms, tls handshake cost: {} ms, " +
+                                    "send headers and body cost: {} ms, wait response cost: {} ms, request cost: {} ms\n",
+                            reqId, method, host, path,
+                            (dnsEnd - dnsStart), (connectEnd - connectStart), (secureConnectEnd - secureConnectStart),
+                            (requestEnd - requestStart), (responseEnd - responseStart), cost);
+                }
+            }
+        }
     }
 }

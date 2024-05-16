@@ -95,6 +95,20 @@ public class TosPreSignedRequestHandlerTest {
             testFailed(e);
         }
 
+        // put object with sha256
+        Map<String, String> header = new HashMap<>();
+        header.put(TosHeader.HEADER_CONTENT_SHA256, "b94d27b9934d3e08a52e52d7da7dabfac484efe37a5380ee9088f7ace2efcde9");
+        input = new PreSignedURLInput().setHttpMethod(HttpMethod.PUT).setBucket(Consts.bucket)
+                .setKey(key).setExpires(3600).setHeader(header);
+        url = handler.preSignedURL(input);
+        try {
+            InputStream content = new ByteArrayInputStream("hello world".getBytes());
+            Response resp = doReqWithHeaders(HttpMethod.PUT, url.getSignedUrl(), content, "hello world".length(), "", header);
+            Assert.assertEquals(resp.code(), HttpStatus.OK);
+        } catch (IOException e) {
+            testFailed(e);
+        }
+
         // head object
         input = new PreSignedURLInput().setHttpMethod(HttpMethod.PUT).setBucket(Consts.bucket)
                 .setKey(key).setExpires(60);
@@ -368,7 +382,6 @@ public class TosPreSignedRequestHandlerTest {
             String body = null;
             if (response.body() != null) {
                 body = StringUtils.toString(response.body().byteStream(), "content");
-//                Consts.LOG.debug(body);
                 response.close();
             }
             Assert.assertEquals(response.code(), HttpStatus.OK);
@@ -451,6 +464,10 @@ public class TosPreSignedRequestHandlerTest {
     }
 
     private Response doReq(String method, String url, InputStream content, long contentLength, String contentType) throws IOException {
+        return this.doReqWithHeaders(method, url, content, contentLength, contentType, null);
+    }
+
+    private Response doReqWithHeaders(String method, String url, InputStream content, long contentLength, String contentType, Map<String, String> headers) throws IOException {
         Request.Builder builder = new Request.Builder().url(url);
         if (StringUtils.isEmpty(contentType)) {
             contentType = "binary/octet-stream";
@@ -484,6 +501,11 @@ public class TosPreSignedRequestHandlerTest {
                 break;
             default:
                 throw new UnsupportedOperationException("Method is not supported: " + method);
+        }
+        if (headers != null) {
+            for (Map.Entry<String, String> entry : headers.entrySet()) {
+                builder.addHeader(entry.getKey(), entry.getValue());
+            }
         }
         return client.newCall(builder.build()).execute();
     }

@@ -15,6 +15,8 @@ public class CORSRule {
     private List<String> exposeHeaders;
     @JsonProperty("MaxAgeSeconds")
     private int maxAgeSeconds;
+    @JsonProperty("ResponseVary")
+    private boolean responseVary;
 
     public List<String> getAllowedOrigins() {
         return allowedOrigins;
@@ -61,14 +63,24 @@ public class CORSRule {
         return this;
     }
 
+    public boolean isResponseVary() {
+        return responseVary;
+    }
+
+    public CORSRule setResponseVary(boolean responseVary) {
+        this.responseVary = responseVary;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "CORSRule{" +
-                ", allowedOrigins=" + allowedOrigins +
+                "allowedOrigins=" + allowedOrigins +
                 ", allowedMethods=" + allowedMethods +
                 ", allowedHeaders=" + allowedHeaders +
                 ", exposeHeaders=" + exposeHeaders +
                 ", maxAgeSeconds=" + maxAgeSeconds +
+                ", responseVary=" + responseVary +
                 '}';
     }
 
@@ -82,6 +94,7 @@ public class CORSRule {
         private List<String> allowedHeaders;
         private List<String> exposeHeaders;
         private int maxAgeSeconds;
+        private boolean responseVary;
 
         private CORSRuleBuilder() {
         }
@@ -111,6 +124,11 @@ public class CORSRule {
             return this;
         }
 
+        public CORSRuleBuilder responseVary(boolean responseVary) {
+            this.responseVary = responseVary;
+            return this;
+        }
+
         public CORSRule build() {
             CORSRule cORSRule = new CORSRule();
             cORSRule.setAllowedOrigins(allowedOrigins);
@@ -118,6 +136,7 @@ public class CORSRule {
             cORSRule.setAllowedHeaders(allowedHeaders);
             cORSRule.setExposeHeaders(exposeHeaders);
             cORSRule.setMaxAgeSeconds(maxAgeSeconds);
+            cORSRule.setResponseVary(responseVary);
             return cORSRule;
         }
     }

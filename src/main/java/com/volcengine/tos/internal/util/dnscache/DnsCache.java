@@ -5,7 +5,6 @@ import com.volcengine.tos.internal.util.StringUtils;
 import com.volcengine.tos.internal.util.TosUtils;
 
 import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -13,8 +12,8 @@ import java.util.concurrent.atomic.AtomicReference;
 
 class DnsCache {
     private String host;
-    private List<InetAddress> ipList;
-    private long lastUpdateTimeNanos;
+    private volatile List<InetAddress> ipList;
+    private volatile long lastUpdateTimeNanos;
     private AtomicReference<Integer> refreshing;
 
     DnsCache(String host, int timeoutMinutes) {
@@ -71,9 +70,8 @@ class DnsCache {
                 TosUtils.getLogger().debug("tos: host {} look up 0 address.", this.host);
             }
             lastUpdateTimeNanos = System.nanoTime();
-        } catch (UnknownHostException e) {
+        } catch (Exception e) {
             // 0 length means cannot look up any addresses.
-            ipList = new ArrayList<>();
             TosUtils.getLogger().debug("tos: host {} look up address failed, exception is {}.", this.host, e.toString());
         } finally {
             refreshing.set(0);

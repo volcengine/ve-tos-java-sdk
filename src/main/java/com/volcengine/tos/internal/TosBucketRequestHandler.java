@@ -5,7 +5,11 @@ import com.volcengine.tos.TosException;
 import com.volcengine.tos.comm.HttpMethod;
 import com.volcengine.tos.comm.HttpStatus;
 import com.volcengine.tos.comm.TosHeader;
-import com.volcengine.tos.internal.util.*;
+import com.volcengine.tos.comm.common.AzRedundancyType;
+import com.volcengine.tos.internal.util.ParamsChecker;
+import com.volcengine.tos.internal.util.PayloadConverter;
+import com.volcengine.tos.internal.util.StringUtils;
+import com.volcengine.tos.internal.util.TypeConverter;
 import com.volcengine.tos.model.bucket.*;
 
 import java.io.ByteArrayInputStream;
@@ -31,7 +35,9 @@ public class TosBucketRequestHandler {
                 .withHeader(TosHeader.HEADER_GRANT_WRITE, input.getGrantWrite())
                 .withHeader(TosHeader.HEADER_GRANT_WRITE_ACP, input.getGrantWriteAcp())
                 .withHeader(TosHeader.HEADER_STORAGE_CLASS, input.getStorageClass() == null ? null : input.getStorageClass().toString())
-                .withHeader(TosHeader.HEADER_AZ_REDUNDANCY, input.getAzRedundancy() == null ? null : input.getAzRedundancy().toString());
+                .withHeader(TosHeader.HEADER_AZ_REDUNDANCY, input.getAzRedundancy() == null ? null : input.getAzRedundancy().toString())
+                .withHeader(TosHeader.HEADER_PROJECT_NAME, input.getProjectName());
+
         TosRequest req = this.factory.build(builder, HttpMethod.PUT, null).setRetryableOnClientException(false);
         return bucketHandler.doRequest(req, HttpStatus.OK, res -> new CreateBucketV2Output(res.RequestInfo(),
                 res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_LOCATION)));
@@ -45,6 +51,8 @@ public class TosBucketRequestHandler {
         return bucketHandler.doRequest(req, HttpStatus.OK, res -> new HeadBucketV2Output(res.RequestInfo(),
                 res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_BUCKET_REGION),
                 TypeConverter.convertStorageClassType(res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_STORAGE_CLASS)))
+                .setProjectName(res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_PROJECT_NAME))
+                .setAzRedundancy(AzRedundancyType.parse(res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_AZ_REDUNDANCY)))
         );
     }
 
@@ -59,7 +67,8 @@ public class TosBucketRequestHandler {
 
     public ListBucketsV2Output listBuckets(ListBucketsV2Input input) throws TosException {
         ParamsChecker.ensureNotNull(input, "ListBucketsV2Input");
-        RequestBuilder builder = this.factory.init("", "", null);
+        RequestBuilder builder = this.factory.init("", "", null)
+                .withHeader(TosHeader.HEADER_PROJECT_NAME, input.getProjectName());
         TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
         return bucketHandler.doRequest(req, HttpStatus.OK,
                 res -> PayloadConverter.parsePayload(res.getInputStream(),
@@ -156,6 +165,9 @@ public class TosBucketRequestHandler {
         TosMarshalResult marshalResult = PayloadConverter.serializePayloadAndComputeMD5(input);
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("lifecycle", "")
                 .withHeader(TosHeader.HEADER_CONTENT_MD5, marshalResult.getContentMD5());
+        if (input.isAllowSameActionOverlap()) {
+            builder = builder.withHeader(TosHeader.HEADER_ALLOW_SAME_ACTION_OVERLAP, "true");
+        }
         TosRequest req = this.factory.build(builder, HttpMethod.PUT, new ByteArrayInputStream(marshalResult.getData()))
                 .setContentLength(marshalResult.getData().length);
         return bucketHandler.doRequest(req, HttpStatus.OK, res -> new PutBucketLifecycleOutput()
@@ -169,7 +181,7 @@ public class TosBucketRequestHandler {
         TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
         return bucketHandler.doRequest(req, HttpStatus.OK, res -> PayloadConverter.parsePayload(res.getInputStream(),
                 new TypeReference<GetBucketLifecycleOutput>() {
-                }).setRequestInfo(res.RequestInfo()));
+                }).setRequestInfo(res.RequestInfo()).setAllowSameActionOverlap(Boolean.valueOf(res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_ALLOW_SAME_ACTION_OVERLAP))));
     }
 
     public DeleteBucketLifecycleOutput deleteBucketLifecycle(DeleteBucketLifecycleInput input) throws TosException {
@@ -464,12 +476,75 @@ public class TosBucketRequestHandler {
                 }).setRequestInfo(res.RequestInfo()));
     }
 
+
     public DeleteBucketRenameOutput deleteBucketRename(DeleteBucketRenameInput input) throws TosException {
         ParamsChecker.ensureNotNull(input, "DeleteBucketRenameInput");
         ensureValidBucketName(input.getBucket());
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("rename", "");
         TosRequest req = this.factory.build(builder, HttpMethod.DELETE, null);
         return bucketHandler.doRequest(req, HttpStatus.NO_CONTENT, res -> new DeleteBucketRenameOutput()
+                .setRequestInfo(res.RequestInfo()));
+    }
+
+    public PutBucketEncryptionOutput putBucketEncryption(PutBucketEncryptionInput input) throws TosException {
+        ParamsChecker.ensureNotNull(input, "PutBucketEncryptionInput");
+        ensureValidBucketName(input.getBucket());
+        RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("encryption", "");
+        TosMarshalResult marshalResult = PayloadConverter.serializePayloadAndComputeMD5(input);
+        builder.withHeader(TosHeader.HEADER_CONTENT_MD5, marshalResult.getContentMD5());
+        TosRequest req = this.factory.build(builder, HttpMethod.PUT, new ByteArrayInputStream(marshalResult.getData()))
+                .setContentLength(marshalResult.getData().length);
+        return bucketHandler.doRequest(req, HttpStatus.OK, res -> new PutBucketEncryptionOutput()
+                .setRequestInfo(res.RequestInfo()));
+    }
+
+    public GetBucketEncryptionOutput getBucketEncryption(GetBucketEncryptionInput input) throws TosException {
+        ParamsChecker.ensureNotNull(input, "GetBucketEncryptionInput");
+        ensureValidBucketName(input.getBucket());
+        RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("encryption", "");
+        TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
+        return bucketHandler.doRequest(req, HttpStatus.OK, res -> PayloadConverter.parsePayload(res.getInputStream(),
+                new TypeReference<GetBucketEncryptionOutput>() {
+                }).setRequestInfo(res.RequestInfo()));
+    }
+
+    public DeleteBucketEncryptionOutput deleteBucketEncryption(DeleteBucketEncryptionInput input) throws TosException {
+        ParamsChecker.ensureNotNull(input, "DeleteBucketEncryptionInput");
+        ensureValidBucketName(input.getBucket());
+        RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("encryption", "");
+        TosRequest req = this.factory.build(builder, HttpMethod.DELETE, null);
+        return bucketHandler.doRequest(req, HttpStatus.NO_CONTENT, res -> new DeleteBucketEncryptionOutput()
+                .setRequestInfo(res.RequestInfo()));
+    }
+
+    public PutBucketTaggingOutput putBucketTagging(PutBucketTaggingInput input) throws TosException {
+        ParamsChecker.ensureNotNull(input, "PutBucketTaggingInput");
+        ensureValidBucketName(input.getBucket());
+        RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("tagging", "");
+        TosMarshalResult marshalResult = PayloadConverter.serializePayloadAndComputeMD5(input);
+        builder.withHeader(TosHeader.HEADER_CONTENT_MD5, marshalResult.getContentMD5());
+        TosRequest req = this.factory.build(builder, HttpMethod.PUT, new ByteArrayInputStream(marshalResult.getData()))
+                .setContentLength(marshalResult.getData().length);
+        return bucketHandler.doRequest(req, HttpStatus.OK, res -> new PutBucketTaggingOutput()
+                .setRequestInfo(res.RequestInfo()));
+    }
+
+    public GetBucketTaggingOutput getBucketTagging(GetBucketTaggingInput input) throws TosException {
+        ParamsChecker.ensureNotNull(input, "GetBucketTaggingInput");
+        ensureValidBucketName(input.getBucket());
+        RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("tagging", "");
+        TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
+        return bucketHandler.doRequest(req, HttpStatus.OK, res -> PayloadConverter.parsePayload(res.getInputStream(),
+                new TypeReference<GetBucketTaggingOutput>() {
+                }).setRequestInfo(res.RequestInfo()));
+    }
+
+    public DeleteBucketTaggingOutput deleteBucketTagging(DeleteBucketTaggingInput input) throws TosException {
+        ParamsChecker.ensureNotNull(input, "DeleteBucketTaggingInput");
+        ensureValidBucketName(input.getBucket());
+        RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("tagging", "");
+        TosRequest req = this.factory.build(builder, HttpMethod.DELETE, null);
+        return bucketHandler.doRequest(req, HttpStatus.NO_CONTENT, res -> new DeleteBucketTaggingOutput()
                 .setRequestInfo(res.RequestInfo()));
     }
 

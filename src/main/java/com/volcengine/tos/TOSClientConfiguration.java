@@ -1,7 +1,6 @@
 package com.volcengine.tos;
 
 import com.volcengine.tos.auth.Credentials;
-import com.volcengine.tos.auth.StaticCredentials;
 import com.volcengine.tos.internal.Consts;
 import com.volcengine.tos.transport.TransportConfig;
 
@@ -26,6 +25,7 @@ public class TOSClientConfiguration {
      * 是否是自定义域名
      */
     private boolean isCustomDomain = false;
+    private boolean disableEncodingMeta;
 
     public boolean isClientAutoRecognizeContentType() {
         return clientAutoRecognizeContentType;
@@ -89,6 +89,15 @@ public class TOSClientConfiguration {
         return this;
     }
 
+    public boolean isDisableEncodingMeta() {
+        return disableEncodingMeta;
+    }
+
+    public TOSClientConfiguration setDisableEncodingMeta(boolean disableEncodingMeta) {
+        this.disableEncodingMeta = disableEncodingMeta;
+        return this;
+    }
+
     public static TosClientConfigurationBuilder builder() {
         return new TosClientConfigurationBuilder();
     }
@@ -101,6 +110,8 @@ public class TOSClientConfiguration {
         private boolean clientAutoRecognizeContentType = Consts.DEFAULT_AUTO_RECOGNIZE_CONTENT_TYPE;
         private boolean enableCrc = Consts.DEFAULT_ENABLE_CRC;
         private boolean isCustomDomain = false;
+        private int highLatencyLogThreshold;
+        private boolean disableEncodingMeta;
 
         private TosClientConfigurationBuilder() {
         }
@@ -140,6 +151,11 @@ public class TOSClientConfiguration {
             return this;
         }
 
+        public TosClientConfigurationBuilder disableEncodingMeta(boolean disableEncodingMeta) {
+            this.disableEncodingMeta = disableEncodingMeta;
+            return this;
+        }
+
         public TOSClientConfiguration build() {
             TOSClientConfiguration tosClientConfiguration = new TOSClientConfiguration();
             tosClientConfiguration.enableCrc = this.enableCrc;
@@ -149,6 +165,7 @@ public class TOSClientConfiguration {
             tosClientConfiguration.region = this.region;
             tosClientConfiguration.clientAutoRecognizeContentType = this.clientAutoRecognizeContentType;
             tosClientConfiguration.isCustomDomain = this.isCustomDomain;
+            tosClientConfiguration.disableEncodingMeta = this.disableEncodingMeta;
             return tosClientConfiguration;
         }
     }

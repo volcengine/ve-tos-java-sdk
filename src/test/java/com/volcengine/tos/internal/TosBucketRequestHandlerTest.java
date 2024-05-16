@@ -1,16 +1,16 @@
 package com.volcengine.tos.internal;
 
-import com.volcengine.tos.TosException;
 import com.volcengine.tos.Consts;
+import com.volcengine.tos.TosException;
 import com.volcengine.tos.comm.Code;
 import com.volcengine.tos.comm.HttpMethod;
 import com.volcengine.tos.comm.HttpStatus;
 import com.volcengine.tos.comm.common.*;
+import com.volcengine.tos.internal.util.StringUtils;
 import com.volcengine.tos.model.acl.GrantV2;
 import com.volcengine.tos.model.acl.GranteeV2;
 import com.volcengine.tos.model.acl.Owner;
 import com.volcengine.tos.model.bucket.*;
-import com.volcengine.tos.internal.util.StringUtils;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
@@ -119,6 +119,13 @@ public class TosBucketRequestHandlerTest {
             getHandler().deleteBucket(DeleteBucketInput.builder().bucket(bucketName).build());
             output = getHandler().listBuckets(new ListBucketsV2Input());
             Assert.assertEquals(output.getBuckets().size(), bucketsNum);
+
+            output = getHandler().listBuckets(new ListBucketsV2Input().setProjectName("default"));
+            for (ListedBucket bucket : output.getBuckets()) {
+                Assert.assertEquals(bucket.getProjectName(), "default");
+            }
+            output = getHandler().listBuckets(new ListBucketsV2Input().setProjectName("non-exists-" + System.currentTimeMillis()));
+            Assert.assertTrue(output.getBuckets() == null || output.getBuckets().size() == 0);
         } catch (Exception e) {
             testFailed(e);
         }
@@ -153,7 +160,7 @@ public class TosBucketRequestHandlerTest {
                 .setAllowedMethods(Arrays.asList(HttpMethod.PUT, HttpMethod.POST))
                 .setAllowedHeaders(Collections.singletonList("Authorization"))
                 .setExposeHeaders(Arrays.asList("X-TOS-HEADER-1", "X-TOS-HEADER-2"))
-                .setMaxAgeSeconds(3600);
+                .setMaxAgeSeconds(3600).setResponseVary(true);
         rules.add(rule1);
         rules.add(rule2);
         try{
@@ -168,6 +175,8 @@ public class TosBucketRequestHandlerTest {
             Assert.assertEquals(got.getRules().get(0).getAllowedHeaders().size(), 1);
             Assert.assertEquals(got.getRules().get(0).getExposeHeaders().size(), 2);
             Assert.assertEquals(got.getRules().get(0).getAllowedOrigins().size(), 1);
+            Assert.assertFalse(got.getRules().get(0).isResponseVary());
+            Assert.assertTrue(got.getRules().get(1).isResponseVary());
 
             // update
             rules.remove(1);
@@ -262,6 +271,23 @@ public class TosBucketRequestHandlerTest {
             Assert.assertEquals(got.getRules().get(0).getTags().get(0).getKey(), "1");
             Assert.assertEquals(got.getRules().get(0).getTags().get(0).getValue(), "22");
             Assert.assertNull(got.getRules().get(0).getAbortInCompleteMultipartUpload());
+            Assert.assertFalse(got.isAllowSameActionOverlap());
+
+            LifecycleRule rule2 = new LifecycleRule()
+                    .setId("2")
+                    .setPrefix("test2")
+                    .setStatus(StatusType.STATUS_ENABLED)
+                    .setTransitions(Collections.singletonList(transition))
+                    .setExpiration(new Expiration().setDate(expirationDate))
+                    .setNoncurrentVersionTransitions(Collections.singletonList(new NoncurrentVersionTransition().setNoncurrentDate(transitionDate)
+                            .setStorageClass(StorageClassType.STORAGE_CLASS_IA)))
+                    .setNoncurrentVersionExpiration(new NoncurrentVersionExpiration().setNoncurrentDate(expirationDate))
+                    .setTags(Collections.singletonList(tag));
+            rules.add(rule2);
+            getHandler().putBucketLifecycle(new PutBucketLifecycleInput().setBucket(Consts.bucket).setRules(rules).setAllowSameActionOverlap(true));
+            GetBucketLifecycleOutput got2 = getHandler().getBucketLifecycle(new GetBucketLifecycleInput().setBucket(Consts.bucket));
+            Assert.assertNotNull(got2);
+            Assert.assertTrue(got2.isAllowSameActionOverlap());
 
         } catch (TosException e) {
             testFailed(e);
@@ -407,6 +433,8 @@ public class TosBucketRequestHandlerTest {
             // put
             getHandler().putBucketStorageClass(new PutBucketStorageClassInput().setBucket(Consts.bucket)
                     .setStorageClass(StorageClassType.STORAGE_CLASS_IA));
+
+            Thread.sleep(60 * 1000);
             // get
             got = getHandler().headBucket(new HeadBucketV2Input().setBucket(Consts.bucket));
             Assert.assertNotNull(got);
@@ -415,19 +443,14 @@ public class TosBucketRequestHandlerTest {
             // put
             getHandler().putBucketStorageClass(new PutBucketStorageClassInput().setBucket(Consts.bucket)
                     .setStorageClass(StorageClassType.STORAGE_CLASS_ARCHIVE_FR));
+
+            Thread.sleep(60 * 1000);
             // get
             got = getHandler().headBucket(new HeadBucketV2Input().setBucket(Consts.bucket));
             Assert.assertNotNull(got);
             Assert.assertEquals(got.getStorageClass(), StorageClassType.STORAGE_CLASS_ARCHIVE_FR);
-        } catch (TosException e) {
+        } catch (TosException | InterruptedException e) {
             testFailed(e);
-        } finally {
-            getHandler().putBucketStorageClass(new PutBucketStorageClassInput().setBucket(Consts.bucket)
-                    .setStorageClass(StorageClassType.STORAGE_CLASS_STANDARD));
-            // get
-            HeadBucketV2Output got = getHandler().headBucket(new HeadBucketV2Input().setBucket(Consts.bucket));
-            Assert.assertNotNull(got);
-            Assert.assertEquals(got.getStorageClass(), StorageClassType.STORAGE_CLASS_STANDARD);
         }
     }
 

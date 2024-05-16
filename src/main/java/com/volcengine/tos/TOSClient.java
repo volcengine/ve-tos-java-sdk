@@ -150,7 +150,7 @@ public class TOSClient implements TOS{
             if (s.length() > 0) {
                 try{
                     ServerExceptionJson se = TosUtils.getJsonMapper().readValue(s, new TypeReference<ServerExceptionJson>(){});
-                    throw new TosServerException(res.getStatusCode(), se.getCode(), se.getMessage(), se.getRequestID(), se.getHostID());
+                    throw new TosServerException(res.getStatusCode(), se.getCode(), se.getMessage(), se.getRequestID(), se.getHostID()).setEc(se.getEc());
                 } catch (JsonProcessingException e) {
                     if (res.getStatusCode() == HttpStatus.BAD_REQUEST) {
                         throw new TosClientException("bad request, " + s, null);

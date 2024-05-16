@@ -14,6 +14,7 @@ public class CreateBucketV2Input {
     private String grantWriteAcp;
     private StorageClassType storageClass;
     private AzRedundancyType azRedundancy;
+    private String projectName;
 
     public CreateBucketV2Input() {
     }
@@ -103,6 +104,15 @@ public class CreateBucketV2Input {
         return this;
     }
 
+    public String getProjectName() {
+        return projectName;
+    }
+
+    public CreateBucketV2Input setProjectName(String projectName) {
+        this.projectName = projectName;
+        return this;
+    }
+
     public static CreateBucketInputV2Builder builder() {
         return new CreateBucketInputV2Builder();
     }
@@ -119,6 +129,7 @@ public class CreateBucketV2Input {
                 ", grantWriteAcp='" + grantWriteAcp + '\'' +
                 ", storageClass=" + storageClass +
                 ", azRedundancy=" + azRedundancy +
+                ", projectName='" + projectName + '\'' +
                 '}';
     }
 
@@ -132,6 +143,7 @@ public class CreateBucketV2Input {
         private String grantWriteAcp;
         private StorageClassType storageClass;
         private AzRedundancyType azRedundancy;
+        private String projectName;
 
         private CreateBucketInputV2Builder() {
         }
@@ -181,6 +193,10 @@ public class CreateBucketV2Input {
             return this;
         }
 
+        public CreateBucketInputV2Builder projectName(String projectName) {
+            this.projectName = projectName;
+            return this;
+        }
         public CreateBucketV2Input build() {
             CreateBucketV2Input createBucketInputV2 = new CreateBucketV2Input();
             createBucketInputV2.bucket = this.bucket;
@@ -192,6 +208,7 @@ public class CreateBucketV2Input {
             createBucketInputV2.grantWrite = this.grantWrite;
             createBucketInputV2.storageClass = this.storageClass;
             createBucketInputV2.azRedundancy = this.azRedundancy;
+            createBucketInputV2.projectName = this.projectName;
             return createBucketInputV2;
         }
     }
