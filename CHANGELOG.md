@@ -1,4 +1,9 @@
 ## Release Note
+### 2024.5.16 Version 2.7.1
+
+- fix getFileStatus bug
+- list object output add crc32
+
 ### 2024.3.31 Version 2.7.0
 
 - 支持匿名用户

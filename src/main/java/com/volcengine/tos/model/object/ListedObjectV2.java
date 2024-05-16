@@ -1,9 +1,13 @@
 package com.volcengine.tos.model.object;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.volcengine.tos.internal.util.TosUtils;
 import com.volcengine.tos.model.acl.Owner;
 
-import java.util.*;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
 
 public class ListedObjectV2 {
     @JsonProperty("Key")
@@ -22,8 +26,12 @@ public class ListedObjectV2 {
     private String type;
     @JsonProperty("HashCrc64ecma")
     private String hashCrc64ecma;
+    @JsonProperty("HashCrc32c")
+    private String hashCrc32c;
     @JsonProperty("UserMeta")
     private List<Map<String, String>> userMeta;
+    @JsonIgnore
+    private boolean disableEncodingMeta;
 
     public String getKey() {
         return key;
@@ -97,16 +105,17 @@ public class ListedObjectV2 {
         return this;
     }
 
-    public Map<String, String> getMeta() {
-        if (this.userMeta == null || this.userMeta.isEmpty()) {
-            return Collections.emptyMap();
-        }
+    public String getHashCrc32c() {
+        return hashCrc32c;
+    }
 
-        Map<String, String> meta = new HashMap<>(this.userMeta.size());
-        for (Map<String, String> item : this.userMeta) {
-            meta.put(item.get("Key"), item.get("Value"));
-        }
-        return meta;
+    public ListedObjectV2 setHashCrc32c(String hashCrc32c) {
+        this.hashCrc32c = hashCrc32c;
+        return this;
+    }
+
+    public Map<String, String> getMeta() {
+        return TosUtils.parseMeta(this.userMeta, disableEncodingMeta);
     }
 
     @Override
@@ -120,6 +129,7 @@ public class ListedObjectV2 {
                 ", storageClass='" + storageClass + '\'' +
                 ", type='" + type + '\'' +
                 ", hashCrc64ecma='" + hashCrc64ecma + '\'' +
+                ", hashCrc32c='" + hashCrc32c + '\'' +
                 ", meta=" + getMeta() +
                 '}';
     }
