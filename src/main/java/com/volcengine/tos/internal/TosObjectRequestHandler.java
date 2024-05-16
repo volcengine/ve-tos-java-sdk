@@ -77,6 +77,23 @@ public class TosObjectRequestHandler {
         return this;
     }
 
+    public GetFileStatusOutput getFileStatus(GetFileStatusInput input) throws TosException {
+        ParamsChecker.ensureNotNull(input, "GetFileStatusInput");
+        ensureValidBucketName(input.getBucket());
+        ensureValidKey(input.getKey());
+
+        RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), null)
+                .withQuery("stat", "");
+        TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
+        return objectHandler.doRequest(req, HttpStatus.OK, this::buildGetFileStatusOutput);
+    }
+
+    private GetFileStatusOutput buildGetFileStatusOutput(TosResponse response) {
+        return PayloadConverter.parsePayload(response.getInputStream(), new TypeReference<GetFileStatusOutput>() {
+                })
+                .setRequestInfo(response.RequestInfo());
+    }
+
     public GetObjectV2Output getObject(GetObjectV2Input input) throws TosException {
         ParamsChecker.ensureNotNull(input, "GetObjectV2Input");
         ensureValidBucketName(input.getBucket());
@@ -137,7 +154,8 @@ public class TosObjectRequestHandler {
         ParamsChecker.ensureNotNull(input, "HeadObjectV2Input");
         ensureValidBucketName(input.getBucket());
         ensureValidKey(input.getKey());
-        RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), input.getAllSettedHeaders());
+        RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), input.getAllSettedHeaders())
+                .withQuery("versionId", input.getVersionID());
         TosRequest req = this.factory.build(builder, HttpMethod.HEAD, null);
         return objectHandler.doRequest(req, getExpectedCodes(input.getAllSettedHeaders()),
                 response -> new HeadObjectV2Output(new GetObjectBasicOutput()
@@ -269,7 +287,7 @@ public class TosObjectRequestHandler {
         ensureValidBucketName(input.getBucket());
         ensureValidKey(input.getKey());
         RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(),
-                input.getAllSettedHeaders()).withQuery("metadata", "");
+                input.getAllSettedHeaders()).withQuery("metadata", "").withQuery("versionId", input.getVersionID());
         addContentType(builder, input.getKey());
         TosRequest req = this.factory.build(builder, HttpMethod.POST, null);
         return objectHandler.doRequest(req, HttpStatus.OK,
@@ -447,7 +465,7 @@ public class TosObjectRequestHandler {
         ensureValidBucketName(input.getBucket());
         ensureValidKey(input.getKey());
         RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), null)
-                .withQuery("acl", "")
+                .withQuery("acl", "").withQuery("versionId", input.getVersionID())
                 .withHeader(TosHeader.HEADER_ACL, input.getAcl() == null ? null : input.getAcl().toString())
                 .withHeader(TosHeader.HEADER_GRANT_FULL_CONTROL, input.getGrantFullControl())
                 .withHeader(TosHeader.HEADER_GRANT_READ, input.getGrantRead())
@@ -468,7 +486,7 @@ public class TosObjectRequestHandler {
         ensureValidBucketName(input.getBucket());
         ensureValidKey(input.getKey());
         RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), null)
-                .withQuery("acl", "");
+                .withQuery("acl", "").withQuery("versionId", input.getVersionID());
         TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
         return objectHandler.doRequest(req, HttpStatus.OK, this::buildGetObjectACLV2Output);
     }
@@ -512,7 +530,8 @@ public class TosObjectRequestHandler {
         ParamsChecker.ensureNotNull(input, "DeleteObjectTaggingInput");
         ensureValidBucketName(input.getBucket());
         ensureValidKey(input.getKey());
-        RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), null).withQuery("tagging", "");
+        RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), null)
+                .withQuery("tagging", "").withQuery("versionId", input.getVersionID());
         TosRequest req = this.factory.build(builder, HttpMethod.DELETE, null);
         return objectHandler.doRequest(req, HttpStatus.NO_CONTENT, res -> new DeleteObjectTaggingOutput()
                 .setRequestInfo(res.RequestInfo()).setVersionID(res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_VERSIONID)));

@@ -380,6 +380,10 @@ public class TOSV2Client implements TOSV2 {
         return fileRequestHandler.getObjectToFile(input);
     }
 
+    public GetFileStatusOutput getFileStatus(GetFileStatusInput input) throws TosException {
+        return objectRequestHandler.getFileStatus(input);
+    }
+
     @Override
     public UploadFileV2Output uploadFile(UploadFileV2Input input) throws TosException {
         return fileRequestHandler.uploadFile(input);

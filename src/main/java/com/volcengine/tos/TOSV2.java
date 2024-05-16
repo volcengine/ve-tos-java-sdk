@@ -443,6 +443,16 @@ public interface TOSV2 extends TOS {
      */
     GetObjectToFileOutput getObjectToFile(GetObjectToFileInput input) throws TosException;
 
+    /**
+     * If the key exists, return the metadata of the key,
+     * otherwise return the first object information under the directory with the key.
+     *
+     * @param input get file status options
+     * @return {@link GetFileStatusOutput}
+     * @throws TosException
+     */
+    GetFileStatusOutput getFileStatus(GetFileStatusInput input) throws TosException;
+
     UploadFileV2Output uploadFile(UploadFileV2Input input) throws TosException;
 
     DownloadFileOutput downloadFile(DownloadFileInput input) throws TosException;
