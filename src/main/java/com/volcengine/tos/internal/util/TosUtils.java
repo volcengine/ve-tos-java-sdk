@@ -10,8 +10,12 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.regex.Pattern;
 
 import static com.volcengine.tos.internal.Consts.*;
 
@@ -21,6 +25,8 @@ public class TosUtils {
     private static final ObjectMapper JSON = new ObjectMapper()
             .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
             .enable(DeserializationFeature.READ_UNKNOWN_ENUM_VALUES_USING_DEFAULT_VALUE);
+
+    private static final Pattern chinesePattern = Pattern.compile("[\\x{4e00}-\\x{9fa5}]");
 
     @Deprecated
     private static final long MAX_PRE_SIGNED_TTL = 604800;
@@ -62,12 +68,35 @@ public class TosUtils {
             SUPPORTED_REGION.put("cn-beijing", Arrays.asList("tos-cn-beijing.volces.com"));
             SUPPORTED_REGION.put("cn-guangzhou", Arrays.asList("tos-cn-guangzhou.volces.com"));
             SUPPORTED_REGION.put("cn-shanghai", Arrays.asList("tos-cn-shanghai.volces.com"));
+            SUPPORTED_REGION.put("ap-southeast-1", Arrays.asList("tos-ap-southeast-1.volces.com"));
             return SUPPORTED_REGION;
         }
     }
 
     public static String encodeHeader(String str) {
         return tryEncodeValue("", str);
+    }
+
+    public static String encodeChinese(String value) {
+        if (value == null || value.length() == 0) {
+            return value;
+        }
+        StringBuilder sb = new StringBuilder();
+        String target;
+        for (int i = 0; i < value.length(); i++) {
+            char c = value.charAt(i);
+            target = String.valueOf(value.charAt(i));
+            if (chinesePattern.matcher(target).matches()) {
+                try {
+                    sb.append(URLEncoder.encode(target, "UTF-8"));
+                } catch (UnsupportedEncodingException e) {
+                    throw new TosClientException("tos: encode chinese failed", e);
+                }
+            } else {
+                sb.append(c);
+            }
+        }
+        return sb.toString();
     }
 
     public static String decodeHeader(String str) {

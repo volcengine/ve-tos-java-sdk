@@ -35,6 +35,7 @@ public class RequestBuilder {
     private Map<String, String> query;
     private boolean autoRecognizeContentType = true;
     private String preHashCrc64ecma;
+    private boolean disableEncodingMeta;
 
     public RequestBuilder(){}
 
@@ -158,6 +159,11 @@ public class RequestBuilder {
         return this;
     }
 
+    public RequestBuilder setDisableEncodingMeta(boolean disableEncodingMeta) {
+        this.disableEncodingMeta = disableEncodingMeta;
+        return this;
+    }
+
     private TosRequest build(String method, InputStream stream) throws IOException {
         TosRequest request = genTosRequest(method, stream);
         if (request.getContent() != null){
@@ -205,12 +211,20 @@ public class RequestBuilder {
             String value = entry.getValue();
             // 在此统一处理 header 的编码
             if (StringUtils.isNotEmpty(key) && key.startsWith(TosHeader.HEADER_META_PREFIX)) {
-                // 对于自定义元数据，对 key/value 包含的中文汉字进行 URL 编码
-                encodedHeaders.put(TosUtils.encodeHeader(key), TosUtils.encodeHeader(value));
+                if (this.disableEncodingMeta) {
+                    encodedHeaders.put(key, value);
+                } else {
+                    // 对于自定义元数据，对 key/value 包含的中文汉字进行 URL 编码
+                    encodedHeaders.put(TosUtils.encodeHeader(key), TosUtils.encodeHeader(value));
+                }
                 iterator.remove();
             } else if (StringUtils.equals(key, TosHeader.HEADER_CONTENT_DISPOSITION)) {
-                // 对于 Content-Disposition 头，对 value 包含的中文汉字进行 URL 编码
-                encodedHeaders.put(key, TosUtils.encodeHeader(value));
+                if (this.disableEncodingMeta) {
+                    encodedHeaders.put(key, value);
+                } else {
+                    // 对于 Content-Disposition 头，对 value 包含的中文汉字进行 URL 编码
+                    encodedHeaders.put(key, TosUtils.encodeChinese(value));
+                }
                 iterator.remove();
             }
         }

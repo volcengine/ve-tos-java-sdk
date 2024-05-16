@@ -105,6 +105,24 @@ public class PutObjectFromFileInput {
         return this;
     }
 
+    public boolean isForbidOverwrite() {
+        return this.putObjectBasicInput.isForbidOverwrite();
+    }
+
+    public PutObjectFromFileInput setForbidOverwrite(boolean forbidOverwrite) {
+        this.putObjectBasicInput.setForbidOverwrite(forbidOverwrite);
+        return this;
+    }
+
+    public String getIfMatch() {
+        return this.putObjectBasicInput.getIfMatch();
+    }
+
+    public PutObjectFromFileInput setIfMatch(String ifMatch) {
+        this.putObjectBasicInput.setIfMatch(ifMatch);
+        return this;
+    }
+
     public static PutObjectFromFileInputBuilder builder() {
         return new PutObjectFromFileInputBuilder();
     }
@@ -184,6 +202,16 @@ public class PutObjectFromFileInput {
 
         public PutObjectFromFileInputBuilder callbackVar(String callbackVar) {
             this.putObjectBasicInput.setCallbackVar(callbackVar);
+            return this;
+        }
+
+        public PutObjectFromFileInputBuilder forbidOverwrite(boolean forbidOverwrite) {
+            this.putObjectBasicInput.setForbidOverwrite(forbidOverwrite);
+            return this;
+        }
+
+        public PutObjectFromFileInputBuilder ifMatch(String ifMatch) {
+            this.putObjectBasicInput.setIfMatch(ifMatch);
             return this;
         }
 

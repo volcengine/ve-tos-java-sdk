@@ -14,6 +14,8 @@ public class ListedBucket implements Serializable {
     private String extranetEndpoint;
     @JsonProperty("IntranetEndpoint")
     private String intranetEndpoint;
+    @JsonProperty("ProjectName")
+    private String projectName;
 
     public String getCreationDate() {
         return creationDate;
@@ -60,6 +62,15 @@ public class ListedBucket implements Serializable {
         return this;
     }
 
+    public String getProjectName() {
+        return projectName;
+    }
+
+    public ListedBucket setProjectName(String projectName) {
+        this.projectName = projectName;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "ListedBucket{" +
@@ -68,6 +79,7 @@ public class ListedBucket implements Serializable {
                 ", location='" + location + '\'' +
                 ", extranetEndpoint='" + extranetEndpoint + '\'' +
                 ", intranetEndpoint='" + intranetEndpoint + '\'' +
+                ", projectName='" + projectName + '\'' +
                 '}';
     }
 }

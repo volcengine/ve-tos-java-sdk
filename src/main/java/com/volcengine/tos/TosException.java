@@ -2,6 +2,8 @@ package com.volcengine.tos;
 
 public class TosException extends RuntimeException {
 
+    private String requestUrl;
+
     public TosException() {
     }
 
@@ -19,5 +21,14 @@ public class TosException extends RuntimeException {
 
     public int getStatusCode(){
         return 0;
+    }
+
+    public String getRequestUrl() {
+        return requestUrl;
+    }
+
+    public TosException setRequestUrl(String requestUrl) {
+        this.requestUrl = requestUrl;
+        return this;
     }
 }

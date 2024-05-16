@@ -11,7 +11,10 @@ import com.volcengine.tos.internal.util.ParamsChecker;
 import com.volcengine.tos.internal.util.StringUtils;
 import com.volcengine.tos.model.object.*;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.util.zip.CheckedInputStream;
 
 public class TosFileRequestHandler {
@@ -129,6 +132,10 @@ public class TosFileRequestHandler {
                 .bucket(input.getBucket())
                 .key(input.getKey())
                 .options(input.getOptions())
+                .callback(input.getCallback())
+                .callbackVar(input.getCallbackVar())
+                .forbidOverwrite(input.isForbidOverwrite())
+                .ifMatch(input.getIfMatch())
                 .dataTransferListener(input.getDataTransferListener())
                 .rateLimiter(input.getRateLimiter())
                 .contentLength(FileUtils.getFileLength(input.getFile(), input.getFilePath()))

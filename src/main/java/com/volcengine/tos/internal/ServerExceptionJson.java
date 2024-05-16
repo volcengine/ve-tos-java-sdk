@@ -13,6 +13,9 @@ public class ServerExceptionJson{
     @JsonProperty("HostId")
     private String hostID;
 
+    @JsonProperty("EC")
+    private String ec;
+
     public int getStatusCode() {
         return statusCode;
     }
@@ -31,6 +34,10 @@ public class ServerExceptionJson{
 
     public String getHostID() {
         return hostID;
+    }
+
+    public String getEc() {
+        return ec;
     }
 }
 

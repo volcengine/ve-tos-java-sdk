@@ -1,4 +1,12 @@
 ## Release Note
+### 2024.3.31 Version 2.7.0
+
+- 支持匿名用户
+- 支持 PutBucketEncryption/GetBucketEncryption/DeleteBucketEncryption
+- 支持 PutBucketTagging/GetBucketTagging/DeleteBucketTagging
+- 上传对象支持 100-continue 机制
+- 适配服务端 Retry-After 重试策略
+
 ### 2024.2.21 Version 2.6.7
 - add getFileStatus api
 - fix some bugs

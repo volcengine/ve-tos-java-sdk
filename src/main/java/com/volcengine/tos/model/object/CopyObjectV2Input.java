@@ -70,6 +70,9 @@ public class CopyObjectV2Input {
 
     private ObjectMetaRequestOptions options;
 
+    private boolean forbidOverwrite;
+    private String ifMatch;
+
     private Map<String, String> headers;
 
     public String getBucket() {
@@ -118,6 +121,10 @@ public class CopyObjectV2Input {
         }
         if (options != null) {
             headers.putAll(options.headers());
+        }
+        withHeader(TosHeader.HEADER_X_IF_MATCH, ifMatch);
+        if (forbidOverwrite) {
+            withHeader(TosHeader.HEADER_FORBID_OVERWRITE, "true");
         }
         return headers;
     }
@@ -233,6 +240,24 @@ public class CopyObjectV2Input {
         return this;
     }
 
+    public boolean isForbidOverwrite() {
+        return forbidOverwrite;
+    }
+
+    public CopyObjectV2Input setForbidOverwrite(boolean forbidOverwrite) {
+        this.forbidOverwrite = forbidOverwrite;
+        return this;
+    }
+
+    public String getIfMatch() {
+        return ifMatch;
+    }
+
+    public CopyObjectV2Input setIfMatch(String ifMatch) {
+        this.ifMatch = ifMatch;
+        return this;
+    }
+
     public static CopyObjectV2InputBuilder builder() {
         return new CopyObjectV2InputBuilder();
     }
@@ -272,6 +297,8 @@ public class CopyObjectV2Input {
         private String copySourceSSECKeyMD5;
         private MetadataDirectiveType metadataDirective;
         private ObjectMetaRequestOptions options;
+        private boolean forbidOverwrite;
+        private String ifMatch;
 
         private CopyObjectV2InputBuilder() {
         }
@@ -346,6 +373,16 @@ public class CopyObjectV2Input {
             return this;
         }
 
+        public CopyObjectV2InputBuilder forbidOverwrite(boolean forbidOverwrite) {
+            this.forbidOverwrite = forbidOverwrite;
+            return this;
+        }
+
+        public CopyObjectV2InputBuilder ifMatch(String ifMatch) {
+            this.ifMatch = ifMatch;
+            return this;
+        }
+
         public CopyObjectV2Input build() {
             CopyObjectV2Input copyObjectV2Input = new CopyObjectV2Input();
             copyObjectV2Input.setBucket(bucket);
@@ -362,6 +399,8 @@ public class CopyObjectV2Input {
             copyObjectV2Input.setCopySourceSSECKeyMD5(copySourceSSECKeyMD5);
             copyObjectV2Input.setMetadataDirective(metadataDirective);
             copyObjectV2Input.setOptions(options);
+            copyObjectV2Input.setIfMatch(ifMatch);
+            copyObjectV2Input.setForbidOverwrite(forbidOverwrite);
             return copyObjectV2Input;
         }
     }

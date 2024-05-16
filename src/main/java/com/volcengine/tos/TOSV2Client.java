@@ -3,19 +3,21 @@ package com.volcengine.tos;
 import com.volcengine.tos.auth.Credentials;
 import com.volcengine.tos.auth.SignV4;
 import com.volcengine.tos.auth.Signer;
+import com.volcengine.tos.auth.StaticCredentials;
 import com.volcengine.tos.internal.*;
 import com.volcengine.tos.internal.util.ParamsChecker;
+import com.volcengine.tos.internal.util.StringUtils;
 import com.volcengine.tos.internal.util.TosUtils;
 import com.volcengine.tos.model.acl.GetObjectAclOutput;
 import com.volcengine.tos.model.acl.PutObjectAclInput;
 import com.volcengine.tos.model.acl.PutObjectAclOutput;
 import com.volcengine.tos.model.bucket.*;
 import com.volcengine.tos.model.object.*;
-import com.volcengine.tos.internal.Transport;
-import com.volcengine.tos.internal.util.StringUtils;
 import com.volcengine.tos.transport.TransportConfig;
 
-import java.io.*;
+import java.io.Closeable;
+import java.io.IOException;
+import java.io.InputStream;
 import java.time.Duration;
 
 public class TOSV2Client implements TOSV2 {
@@ -40,30 +42,31 @@ public class TOSV2Client implements TOSV2 {
         ParamsChecker.ensureNotNull(conf, "TOSClientConfiguration");
         ParamsChecker.ensureNotNull(conf.getRegion(), "region");
         this.config = conf;
-        validateEndpoint();
+        this.config.setEndpoint(validateEndpoint(this.config.getEndpoint(), this.config.getRegion()));
     }
 
-    private void validateEndpoint() {
-        if (StringUtils.isEmpty(this.config.getEndpoint())) {
-            if (TosUtils.getSupportedRegion().containsKey(this.config.getRegion())) {
-                this.config.setEndpoint(TosUtils.getSupportedRegion().get(this.config.getRegion()).get(0));
-            } else {
-                throw new TosClientException("endpoint is null and region is invalid", null);
+    private String validateEndpoint(String endpoint, String region) {
+        if (StringUtils.isEmpty(endpoint)) {
+            if (TosUtils.getSupportedRegion().containsKey(region)) {
+                return TosUtils.getSupportedRegion().get(region).get(0);
             }
+            throw new TosClientException("endpoint is null and region is invalid", null);
         }
+        return endpoint;
     }
 
     private void initRequestHandler() {
         if (this.factory == null) {
             if (this.transport == null) {
                 setIsHttpByEndpoint(this.config.getEndpoint());
-                this.transport = new RequestTransport(this.config.getTransportConfig());
+                this.transport = new RequestTransport(this.config.getTransportConfig()).setDisableEncodingMeta(this.config.isDisableEncodingMeta());
             }
             if (this.signer == null && this.config.getCredentials() != null) {
                 // 允许 signer 为空，匿名访问
                 this.signer = new SignV4(this.config.getCredentials(), this.config.getRegion());
             }
-            this.factory = new TosRequestFactory(this.signer, this.config.getEndpoint()).setIsCustomDomain(config.isCustomDomain());
+            this.factory = new TosRequestFactory(this.signer, this.config.getEndpoint())
+                    .setIsCustomDomain(config.isCustomDomain()).setDisableEncodingMeta(this.config.isDisableEncodingMeta());
         }
         this.bucketRequestHandler = new TosBucketRequestHandler(this.transport, this.factory);
         this.objectRequestHandler = new TosObjectRequestHandler(this.transport, this.factory)
@@ -100,6 +103,27 @@ public class TOSV2Client implements TOSV2 {
         cascadeUpdateRequestFactory();
     }
 
+    @Override
+    public boolean refreshCredentials(String accessKey, String secretKey, String securityToken) {
+        Credentials cred = null;
+        if (StringUtils.isNotEmpty(accessKey) && StringUtils.isNotEmpty(secretKey)) {
+            if (StringUtils.isEmpty(securityToken)) {
+                cred = new StaticCredentials(accessKey, secretKey);
+            } else {
+                cred = new StaticCredentials(accessKey, secretKey).withSecurityToken(securityToken);
+            }
+        }
+        this.config.setCredentials(cred);
+        if (cred == null) {
+            this.signer = null;
+        } else {
+            this.signer = new SignV4(cred, this.config.getRegion());
+        }
+        this.factory.setSigner(this.signer);
+        cascadeUpdateRequestFactory();
+        return true;
+    }
+
     private void cascadeUpdateRequestFactory() {
         this.bucketRequestHandler.setFactory(this.factory);
         this.objectRequestHandler.setFactory(this.factory);
@@ -126,11 +150,25 @@ public class TOSV2Client implements TOSV2 {
 
     @Override
     public void changeRegionAndEndpoint(String region, String endpoint) {
+        endpoint = validateEndpoint(endpoint, region);
         this.config.setRegion(region);
         this.config.setEndpoint(endpoint);
-        validateEndpoint();
         this.factory.setEndpoint(endpoint);
         cascadeUpdateRequestFactory();
+    }
+
+    @Override
+    public boolean refreshEndpointRegion(String endpoint, String region) {
+        try {
+            endpoint = validateEndpoint(endpoint, region);
+        } catch (Exception ex) {
+            return false;
+        }
+        this.config.setRegion(region);
+        this.config.setEndpoint(endpoint);
+        this.factory.setEndpoint(endpoint);
+        cascadeUpdateRequestFactory();
+        return true;
     }
 
     @Override
@@ -371,6 +409,36 @@ public class TOSV2Client implements TOSV2 {
     }
 
     @Override
+    public PutBucketEncryptionOutput putBucketEncryption(PutBucketEncryptionInput input) throws TosException {
+        return bucketRequestHandler.putBucketEncryption(input);
+    }
+
+    @Override
+    public GetBucketEncryptionOutput getBucketEncryption(GetBucketEncryptionInput input) throws TosException {
+        return bucketRequestHandler.getBucketEncryption(input);
+    }
+
+    @Override
+    public DeleteBucketEncryptionOutput deleteBucketEncryption(DeleteBucketEncryptionInput input) throws TosException {
+        return bucketRequestHandler.deleteBucketEncryption(input);
+    }
+
+    @Override
+    public PutBucketTaggingOutput putBucketTagging(PutBucketTaggingInput input) throws TosException {
+        return bucketRequestHandler.putBucketTagging(input);
+    }
+
+    @Override
+    public GetBucketTaggingOutput getBucketTagging(GetBucketTaggingInput input) throws TosException {
+        return bucketRequestHandler.getBucketTagging(input);
+    }
+
+    @Override
+    public DeleteBucketTaggingOutput deleteBucketTagging(DeleteBucketTaggingInput input) throws TosException {
+        return bucketRequestHandler.deleteBucketTagging(input);
+    }
+
+    @Override
     public GetObjectV2Output getObject(GetObjectV2Input input) throws TosException {
         return objectRequestHandler.getObject(input);
     }
@@ -542,7 +610,6 @@ public class TOSV2Client implements TOSV2 {
     public RestoreObjectOutput restoreObject(RestoreObjectInput input) throws TosException {
         return objectRequestHandler.restoreObject(input);
     }
-
     @Override
     public PreSignedURLOutput preSignedURL(PreSignedURLInput input) throws TosException {
         return preSignedRequestHandler.preSignedURL(input);
@@ -697,5 +764,12 @@ public class TOSV2Client implements TOSV2 {
     @Override
     public String preSignedURL(String httpMethod, String bucket, String objectKey, Duration ttl, RequestOptionsBuilder... builders) throws TosException {
         return clientV1Adapter.preSignedURL(httpMethod, bucket, objectKey, ttl, builders);
+    }
+
+    @Override
+    public void close() throws IOException {
+        if (this.transport != null && this.transport instanceof Closeable) {
+            ((Closeable) this.transport).close();
+        }
     }
 }

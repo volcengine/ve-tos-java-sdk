@@ -3,6 +3,8 @@ package com.volcengine.tos.model.bucket;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.volcengine.tos.comm.common.RedirectType;
 
+import java.util.List;
+
 public class Redirect {
     @JsonProperty("RedirectType")
     private RedirectType redirectType;
@@ -18,6 +20,8 @@ public class Redirect {
     private PublicSource publicSource;
     @JsonProperty("Transform")
     private Transform transform;
+    @JsonProperty("FetchHeaderToMetaDataRules")
+    private List<FetchHeaderToMetaDataRules> fetchHeaderToMetaDataRules;
 
     public RedirectType getRedirectType() {
         return redirectType;
@@ -82,6 +86,15 @@ public class Redirect {
         return this;
     }
 
+    public List<FetchHeaderToMetaDataRules> getFetchHeaderToMetaDataRules() {
+        return fetchHeaderToMetaDataRules;
+    }
+
+    public Redirect setFetchHeaderToMetaDataRules(List<FetchHeaderToMetaDataRules> fetchHeaderToMetaDataRules) {
+        this.fetchHeaderToMetaDataRules = fetchHeaderToMetaDataRules;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "Redirect{" +
@@ -107,6 +120,7 @@ public class Redirect {
         private MirrorHeader mirrorHeader;
         private PublicSource publicSource;
         private Transform transform;
+        private List<FetchHeaderToMetaDataRules> fetchHeaderToMetaDataRules;
 
         private RedirectBuilder() {
         }
@@ -146,6 +160,11 @@ public class Redirect {
             return this;
         }
 
+        public RedirectBuilder fetchHeaderToMetaDataRules(List<FetchHeaderToMetaDataRules> fetchHeaderToMetaDataRules) {
+            this.fetchHeaderToMetaDataRules = fetchHeaderToMetaDataRules;
+            return this;
+        }
+
         public Redirect build() {
             Redirect redirect = new Redirect();
             redirect.setRedirectType(redirectType);
@@ -155,6 +174,7 @@ public class Redirect {
             redirect.setMirrorHeader(mirrorHeader);
             redirect.setPublicSource(publicSource);
             redirect.setTransform(transform);
+            redirect.setFetchHeaderToMetaDataRules(fetchHeaderToMetaDataRules);
             return redirect;
         }
     }

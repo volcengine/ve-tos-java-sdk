@@ -74,7 +74,7 @@ public class SignV4 implements Signer {
         String contentSha256 = req.getHeaders().get(SigningUtils.v4ContentSHA256);
 
         Map<String, String> header = req.getHeaders();
-        List<Map.Entry<String, String>> signedHeader = this.signedHeader(header, false);
+        List<Map.Entry<String, String>> signedHeader = this.signedHeader(header, false, null);
         signedHeader.add(new SimpleEntry<>(SigningUtils.v4Date.toLowerCase(), date));
         signedHeader.add(new SimpleEntry<>("date", date));
         signedHeader.add(new SimpleEntry<>("host", req.getHost()));
@@ -119,8 +119,8 @@ public class SignV4 implements Signer {
             extra.put(SigningUtils.v4SecurityToken, cred.getSecurityToken());
         }
 //        extra.put(v4SignedHeaders, "host"); // 目前只有host
-
-        List<Map.Entry<String, String>> signedHeader = this.signedHeader(req.getHeaders(), true);
+        List<String> contentSha256Container = new ArrayList<>(1);
+        List<Map.Entry<String, String>> signedHeader = this.signedHeader(req.getHeaders(), true, contentSha256Container);
 
         String host = req.getHost();
         if (StringUtils.isEmpty(host)) {
@@ -137,7 +137,12 @@ public class SignV4 implements Signer {
         String keys = signedHeader.stream().map(Map.Entry::getKey).sorted().collect(Collectors.joining(";"));
         extra.put(SigningUtils.v4SignedHeaders, keys);
         List<Map.Entry<String, String>> signedQuery = this.signedQuery(query, extra);
-        String sign = this.doSign(req.getMethod(), req.getPath(), SigningUtils.unsignedPayload, signedHeader, signedQuery, now, cred);
+        String contentSha256 = SigningUtils.unsignedPayload;
+        if (contentSha256Container.size() > 0) {
+            contentSha256 = contentSha256Container.get(0);
+        }
+
+        String sign = this.doSign(req.getMethod(), req.getPath(), contentSha256, signedHeader, signedQuery, now, cred);
         extra.put(SigningUtils.v4Signature, sign);
 
         return extra;
@@ -174,7 +179,7 @@ public class SignV4 implements Signer {
     /**
      * 返回的数据没有排序
      */
-    private List<Map.Entry<String, String>> signedHeader(Map<String, String> header, boolean isSignedQuery) {
+    private List<Map.Entry<String, String>> signedHeader(Map<String, String> header, boolean isSignedQuery, List<String> contentSha256) {
         ArrayList<Map.Entry<String, String>> signed = new ArrayList<>(10);
         if (header == null || header.isEmpty()) {
             return signed;
@@ -184,6 +189,9 @@ public class SignV4 implements Signer {
             String value = entry.getValue();
             if (StringUtils.isNotEmpty(key)) {
                 String kk = key.toLowerCase();
+                if (contentSha256 != null && kk.equalsIgnoreCase(SigningUtils.v4ContentSHA256) && StringUtils.isNotEmpty(value)) {
+                    contentSha256.add(value);
+                }
                 if (this.signingHeader.isSigningHeader(kk, isSignedQuery)) {
                     value = value == null ? "" : value;
                     signed.add(new SimpleEntry<>(kk, value));

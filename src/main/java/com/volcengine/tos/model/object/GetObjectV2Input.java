@@ -1,6 +1,8 @@
 package com.volcengine.tos.model.object;
 
 import com.volcengine.tos.comm.TosHeader;
+import com.volcengine.tos.comm.common.DocPreviewDstType;
+import com.volcengine.tos.comm.common.DocPreviewSrcType;
 import com.volcengine.tos.comm.event.DataTransferListener;
 import com.volcengine.tos.comm.ratelimit.RateLimiter;
 import com.volcengine.tos.internal.util.StringUtils;
@@ -36,6 +38,12 @@ public class GetObjectV2Input {
     private RateLimiter rateLimiter;
 
     private String process;
+
+    private int docPage;
+
+    private DocPreviewSrcType srcType;
+
+    private DocPreviewDstType dstType;
 
     /**
      * 图片另存为参数
@@ -174,6 +182,33 @@ public class GetObjectV2Input {
         return this;
     }
 
+    public int getDocPage() {
+        return docPage;
+    }
+
+    public GetObjectV2Input setDocPage(int docPage) {
+        this.docPage = docPage;
+        return this;
+    }
+
+    public DocPreviewSrcType getSrcType() {
+        return srcType;
+    }
+
+    public GetObjectV2Input setSrcType(DocPreviewSrcType srcType) {
+        this.srcType = srcType;
+        return this;
+    }
+
+    public DocPreviewDstType getDstType() {
+        return dstType;
+    }
+
+    public GetObjectV2Input setDstType(DocPreviewDstType dstType) {
+        this.dstType = dstType;
+        return this;
+    }
+
     public String getSaveBucket() {
         return saveBucket;
     }
@@ -242,6 +277,9 @@ public class GetObjectV2Input {
         private DataTransferListener dataTransferListener;
         private RateLimiter rateLimiter;
         private String process;
+        private int docPage;
+        private DocPreviewSrcType srcType;
+        private DocPreviewDstType dstType;
         private String saveBucket;
         private String saveObject;
 
@@ -318,6 +356,21 @@ public class GetObjectV2Input {
             return this;
         }
 
+        public GetObjectV2InputBuilder docPage(int docPage) {
+            this.docPage = docPage;
+            return this;
+        }
+
+        public GetObjectV2InputBuilder srcType(DocPreviewSrcType srcType) {
+            this.srcType = srcType;
+            return this;
+        }
+
+        public GetObjectV2InputBuilder dstType(DocPreviewDstType dstType) {
+            this.dstType = dstType;
+            return this;
+        }
+
         public GetObjectV2InputBuilder saveBucket(String saveBucket) {
             this.saveBucket = saveBucket;
             return this;
@@ -344,6 +397,9 @@ public class GetObjectV2Input {
             getObjectV2Input.responseExpires = this.responseExpires;
             getObjectV2Input.rateLimiter = this.rateLimiter;
             getObjectV2Input.process = this.process;
+            getObjectV2Input.docPage = this.docPage;
+            getObjectV2Input.srcType = this.srcType;
+            getObjectV2Input.dstType = this.dstType;
             getObjectV2Input.saveBucket = this.saveBucket;
             getObjectV2Input.saveObject = this.saveObject;
             return getObjectV2Input;

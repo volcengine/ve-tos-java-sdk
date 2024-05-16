@@ -3,6 +3,7 @@ package com.volcengine.tos.internal;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.volcengine.tos.TosClientException;
+import com.volcengine.tos.TosException;
 import com.volcengine.tos.TosServerException;
 import com.volcengine.tos.UnexpectedStatusCodeException;
 import com.volcengine.tos.comm.Code;
@@ -72,7 +73,9 @@ class RequestHandler {
         try (TosResponse res = doRequest(request, expectedCodes)) {
             return action.apply(res);
         } catch (IOException e) {
-            throw new TosClientException("tos: close body failed", e);
+            throw new TosClientException("tos: close body failed", e).setRequestUrl(request.toURL().toString());
+        } catch (TosException e) {
+            throw e.setRequestUrl(request.toURL().toString());
         }
     }
 
@@ -83,15 +86,23 @@ class RequestHandler {
                 return response;
             }
         }
-        checkException(response);
-        throw new UnexpectedStatusCodeException(response.getStatusCode(), expectedCodes, response.getRequesID());
+        try{
+            checkException(response);
+            throw new UnexpectedStatusCodeException(response.getStatusCode(), expectedCodes, response.getRequesID());
+        }finally {
+            try {
+                response.close();
+            } catch (IOException e) {}
+        }
     }
 
     private TosResponse doRequest(TosRequest request) {
         TosResponse res;
         try{
             res = transport.roundTrip(request);
-        } catch (IOException e){
+        } catch (IOException e) {
+            throw new TosClientException("tos: request exception", e);
+        } catch (IllegalArgumentException e) {
             throw new TosClientException("tos: request exception", e);
         } finally {
             if (request.getContent() != null) {
@@ -134,7 +145,7 @@ class RequestHandler {
                 }
                 throw new TosClientException("tos: parse server exception failed"+ rspBody, null);
             }
-            throw new TosServerException(statusCode, se.getCode(), se.getMessage(), se.getRequestID(), se.getHostID());
+            throw new TosServerException(statusCode, se.getCode(), se.getMessage(), se.getRequestID(), se.getHostID()).setEc(se.getEc());
         }
         // head请求服务端报错时不返回body，以下特殊处理
         // 404、403场景给 message 赋值，这两种场景比较常见

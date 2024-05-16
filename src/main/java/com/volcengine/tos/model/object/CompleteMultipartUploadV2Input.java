@@ -16,8 +16,12 @@ public class CompleteMultipartUploadV2Input {
     private boolean completeAll;
     @JsonProperty("Parts")
     private List<UploadedPartV2> uploadedParts;
+    @JsonIgnore
     private String callback;
+    @JsonIgnore
     private String callbackVar;
+    @JsonIgnore
+    private boolean forbidOverwrite;
 
     public CompleteMultipartUploadV2Input setBucket(String bucket) {
         this.bucket = bucket;
@@ -86,6 +90,15 @@ public class CompleteMultipartUploadV2Input {
         return new CompleteMultipartUploadV2InputBuilder();
     }
 
+    public boolean isForbidOverwrite() {
+        return forbidOverwrite;
+    }
+
+    public CompleteMultipartUploadV2Input setForbidOverwrite(boolean forbidOverwrite) {
+        this.forbidOverwrite = forbidOverwrite;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "CompleteMultipartUploadV2Input{" +
@@ -96,6 +109,7 @@ public class CompleteMultipartUploadV2Input {
                 ", uploadedParts=" + uploadedParts +
                 ", callback='" + callback + '\'' +
                 ", callbackVar='" + callbackVar + '\'' +
+                ", forbidOverwrite=" + forbidOverwrite +
                 '}';
     }
 
@@ -107,6 +121,7 @@ public class CompleteMultipartUploadV2Input {
         private List<UploadedPartV2> uploadedParts;
         private String callback;
         private String callbackVar;
+        private boolean forbidOverwrite;
 
         private CompleteMultipartUploadV2InputBuilder() {
         }
@@ -146,6 +161,11 @@ public class CompleteMultipartUploadV2Input {
             return this;
         }
 
+        public CompleteMultipartUploadV2InputBuilder forbidOverwrite(boolean forbidOverwrite) {
+            this.forbidOverwrite = forbidOverwrite;
+            return this;
+        }
+
         public CompleteMultipartUploadV2Input build() {
             CompleteMultipartUploadV2Input completeMultipartUploadV2Input = new CompleteMultipartUploadV2Input();
             completeMultipartUploadV2Input.setBucket(bucket);
@@ -155,6 +175,7 @@ public class CompleteMultipartUploadV2Input {
             completeMultipartUploadV2Input.setCompleteAll(completeAll);
             completeMultipartUploadV2Input.setCallback(callback);
             completeMultipartUploadV2Input.setCallbackVar(callbackVar);
+            completeMultipartUploadV2Input.setForbidOverwrite(forbidOverwrite);
             return completeMultipartUploadV2Input;
         }
     }

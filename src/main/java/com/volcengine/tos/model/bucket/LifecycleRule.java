@@ -24,6 +24,8 @@ public class LifecycleRule {
     private List<Tag> tags;
     @JsonProperty("AbortIncompleteMultipartUpload")
     private AbortInCompleteMultipartUpload abortInCompleteMultipartUpload;
+    @JsonProperty("Filter")
+    private LifecycleRuleFilter filter;
 
     public String getId() {
         return id;
@@ -106,6 +108,15 @@ public class LifecycleRule {
         return this;
     }
 
+    public LifecycleRuleFilter getFilter() {
+        return filter;
+    }
+
+    public LifecycleRule setFilter(LifecycleRuleFilter filter) {
+        this.filter = filter;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "LifecycleRule{" +
@@ -118,6 +129,7 @@ public class LifecycleRule {
                 ", noncurrentVersionExpiration=" + noncurrentVersionExpiration +
                 ", tags=" + tags +
                 ", abortInCompleteMultipartUpload=" + abortInCompleteMultipartUpload +
+                ", filter=" + filter +
                 '}';
     }
 
@@ -135,6 +147,7 @@ public class LifecycleRule {
         private NoncurrentVersionExpiration noncurrentVersionExpiration;
         private List<Tag> tags;
         private AbortInCompleteMultipartUpload abortInCompleteMultipartUpload;
+        private LifecycleRuleFilter filter;
 
         private LifecycleRuleBuilder() {
         }
@@ -184,6 +197,11 @@ public class LifecycleRule {
             return this;
         }
 
+        public LifecycleRuleBuilder filter(LifecycleRuleFilter filter) {
+            this.filter = filter;
+            return this;
+        }
+
         public LifecycleRule build() {
             LifecycleRule lifecycleRule = new LifecycleRule();
             lifecycleRule.setId(id);
@@ -195,6 +213,7 @@ public class LifecycleRule {
             lifecycleRule.setNoncurrentVersionExpiration(noncurrentVersionExpiration);
             lifecycleRule.setTags(tags);
             lifecycleRule.setAbortInCompleteMultipartUpload(abortInCompleteMultipartUpload);
+            lifecycleRule.setFilter(filter);
             return lifecycleRule;
         }
     }

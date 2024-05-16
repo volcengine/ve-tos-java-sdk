@@ -24,6 +24,8 @@ public class AppendObjectInput {
     /** 客户端限速，单位 Byte/s **/
     private RateLimiter rateLimiter;
 
+    private String ifMatch;
+
     public Map<String, String> getAllSettedHeaders() {
         return Objects.isNull(options) ? null : options.headers();
     }
@@ -109,6 +111,15 @@ public class AppendObjectInput {
         return this;
     }
 
+    public String getIfMatch() {
+        return ifMatch;
+    }
+
+    public AppendObjectInput setIfMatch(String ifMatch) {
+        this.ifMatch = ifMatch;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "AppendObjectInput{" +
@@ -138,6 +149,7 @@ public class AppendObjectInput {
         private DataTransferListener dataTransferListener;
         private String preHashCrc64ecma;
         private RateLimiter rateLimiter;
+        private String ifMatch;
 
         private AppendObjectInputBuilder() {
         }
@@ -187,6 +199,11 @@ public class AppendObjectInput {
             return this;
         }
 
+        public AppendObjectInputBuilder ifMatch(String ifMatch) {
+            this.ifMatch = ifMatch;
+            return this;
+        }
+
         public AppendObjectInput build() {
             AppendObjectInput appendObjectInput = new AppendObjectInput();
             appendObjectInput.key = this.key;
@@ -198,6 +215,7 @@ public class AppendObjectInput {
             appendObjectInput.dataTransferListener = this.dataTransferListener;
             appendObjectInput.rateLimiter = this.rateLimiter;
             appendObjectInput.options = this.options;
+            appendObjectInput.ifMatch = this.ifMatch;
             return appendObjectInput;
         }
     }

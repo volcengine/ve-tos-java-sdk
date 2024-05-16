@@ -17,7 +17,15 @@ public class PutFetchTaskInput {
     @JsonProperty("IgnoreSameKey")
     private boolean ignoreSameKey;
     @JsonProperty("ContentMD5")
-    private String hexMD5;
+    private String contentMD5;
+    @JsonProperty("CallbackUrl")
+    private String callbackUrl;
+    @JsonProperty("CallbackHost")
+    private String callbackHost;
+    @JsonProperty("CallbackBodyType")
+    private String callbackBodyType;
+    @JsonProperty("CallbackBody")
+    private String callbackBody;
 
     public String getBucket() {
         return bucket;
@@ -68,13 +76,58 @@ public class PutFetchTaskInput {
         return this;
     }
 
+    @Deprecated
     public String getHexMD5() {
-        return hexMD5;
+        return "";
     }
 
+    @Deprecated
     public PutFetchTaskInput setHexMD5(String hexMD5) {
-        this.hexMD5 = hexMD5;
         return this;
+    }
+
+    public String getContentMD5() {
+        return contentMD5;
+    }
+
+    public PutFetchTaskInput setContentMD5(String contentMD5) {
+        this.contentMD5 = this.contentMD5;
+        return this;
+    }
+
+    public String getCallbackUrl() {
+        return callbackUrl;
+    }
+
+    public PutFetchTaskInput setCallbackUrl(String callbackUrl) {
+        this.callbackUrl = callbackUrl;
+        return this;
+    }
+
+    public String getCallbackHost() {
+        return callbackHost;
+    }
+
+    public PutFetchTaskInput setCallbackHost(String callbackHost) {
+        this.callbackHost = callbackHost;
+        return this;
+    }
+
+    public String getCallbackBodyType() {
+        return callbackBodyType;
+    }
+
+    public PutFetchTaskInput setCallbackBodyType(String callbackBodyType) {
+        this.callbackBodyType = callbackBodyType;
+        return this;
+    }
+
+    public String getCallbackBody() {
+        return callbackBody;
+    }
+
+    public void setCallbackBody(String callbackBody) {
+        this.callbackBody = callbackBody;
     }
 
     @Override
@@ -85,7 +138,11 @@ public class PutFetchTaskInput {
                 ", options=" + options +
                 ", url='" + url + '\'' +
                 ", ignoreSameKey=" + ignoreSameKey +
-                ", hexMD5='" + hexMD5 + '\'' +
+                ", contentMD5='" + contentMD5 + '\'' +
+                ", callbackUrl='" + callbackUrl + '\'' +
+                ", callbackHost='" + callbackHost + '\'' +
+                ", callbackBodyType='" + callbackBodyType + '\'' +
+                ", callbackBody='" + callbackBody + '\'' +
                 '}';
     }
 
@@ -99,7 +156,11 @@ public class PutFetchTaskInput {
         private ObjectMetaRequestOptions options;
         private String url;
         private boolean ignoreSameKey;
-        private String hexMD5;
+        private String contentMD5;
+        private String callbackUrl;
+        private String callbackHost;
+        private String callbackBodyType;
+        private String callbackBody;
 
         private PutFetchTaskInputBuilder() {
         }
@@ -129,8 +190,32 @@ public class PutFetchTaskInput {
             return this;
         }
 
+        @Deprecated
         public PutFetchTaskInputBuilder hexMD5(String hexMD5) {
-            this.hexMD5 = hexMD5;
+            return this;
+        }
+        public PutFetchTaskInputBuilder contentMD5(String contentMD5) {
+            this.contentMD5 = contentMD5;
+            return this;
+        }
+
+        public PutFetchTaskInputBuilder callbackUrl(String callbackUrl) {
+            this.callbackUrl = callbackUrl;
+            return this;
+        }
+
+        public PutFetchTaskInputBuilder callbackHost(String callbackHost) {
+            this.callbackHost = callbackHost;
+            return this;
+        }
+
+        public PutFetchTaskInputBuilder callbackBodyType(String callbackBodyType) {
+            this.callbackBodyType = callbackBodyType;
+            return this;
+        }
+
+        public PutFetchTaskInputBuilder callbackBody(String callbackBody) {
+            this.callbackBody = callbackBody;
             return this;
         }
 
@@ -141,7 +226,11 @@ public class PutFetchTaskInput {
             putFetchTaskInput.setOptions(options);
             putFetchTaskInput.setUrl(url);
             putFetchTaskInput.setIgnoreSameKey(ignoreSameKey);
-            putFetchTaskInput.setHexMD5(hexMD5);
+            putFetchTaskInput.setContentMD5(contentMD5);
+            putFetchTaskInput.setCallbackUrl(callbackUrl);
+            putFetchTaskInput.setCallbackHost(callbackHost);
+            putFetchTaskInput.setCallbackBody(callbackBody);
+            putFetchTaskInput.setCallbackBodyType(callbackBodyType);
             return putFetchTaskInput;
         }
     }

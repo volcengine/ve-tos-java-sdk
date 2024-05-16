@@ -19,6 +19,7 @@ public class SimpleDataTransferListenInputStream extends DataTransferListenInput
     private long markedConsumedBytes;
     private int markedUnNotifiedBytes;
 
+
     public SimpleDataTransferListenInputStream(InputStream is, DataTransferListener listener, long total) {
         super(is);
         if (is == null || listener == null) {
@@ -95,7 +96,7 @@ public class SimpleDataTransferListenInputStream extends DataTransferListenInput
 
     private void onFirstRead() {
         DataTransferStatus status = new DataTransferStatus().setType(DataTransferType.DATA_TRANSFER_STARTED)
-                .setTotalBytes(totalBytes).setConsumedBytes(consumedBytes);
+                .setTotalBytes(totalBytes).setConsumedBytes(consumedBytes).setRetryCount(this.retryCount);
         listener.dataTransferStatusChange(status);
     }
 
@@ -107,7 +108,7 @@ public class SimpleDataTransferListenInputStream extends DataTransferListenInput
             unNotifiedBytes = 0;
         }
         // post event
-        DataTransferStatus status = new DataTransferStatus().setTotalBytes(totalBytes).setConsumedBytes(consumedBytes);
+        DataTransferStatus status = new DataTransferStatus().setTotalBytes(totalBytes).setConsumedBytes(consumedBytes).setRetryCount(this.retryCount);
         if (consumedBytes < totalBytes) {
             // unexpected eof
             status = status.setType(DataTransferType.DATA_TRANSFER_FAILED);
@@ -119,13 +120,13 @@ public class SimpleDataTransferListenInputStream extends DataTransferListenInput
 
     private void onFailed() {
         DataTransferStatus status = new DataTransferStatus().setType(DataTransferType.DATA_TRANSFER_FAILED)
-                .setTotalBytes(totalBytes).setConsumedBytes(consumedBytes);
+                .setTotalBytes(totalBytes).setConsumedBytes(consumedBytes).setRetryCount(this.retryCount);
         listener.dataTransferStatusChange(status);
     }
 
     private void onBytesRead(int bytesRead) {
         DataTransferStatus status = new DataTransferStatus().setType(DataTransferType.DATA_TRANSFER_RW)
-                .setTotalBytes(totalBytes).setConsumedBytes(consumedBytes).setRwOnceBytes(bytesRead);
+                .setTotalBytes(totalBytes).setConsumedBytes(consumedBytes).setRwOnceBytes(bytesRead).setRetryCount(this.retryCount);
         listener.dataTransferStatusChange(status);
     }
 
@@ -147,4 +148,5 @@ public class SimpleDataTransferListenInputStream extends DataTransferListenInput
         unNotifiedBytes = 0;
         doneEOF = true;
     }
+
 }

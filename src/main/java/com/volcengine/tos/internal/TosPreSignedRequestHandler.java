@@ -7,11 +7,7 @@ import com.volcengine.tos.auth.SignKeyInfo;
 import com.volcengine.tos.auth.Signer;
 import com.volcengine.tos.internal.model.PostPolicyJson;
 import com.volcengine.tos.internal.model.PreSignedPolicyJson;
-import com.volcengine.tos.internal.util.ParamsChecker;
-import com.volcengine.tos.internal.util.PayloadConverter;
-import com.volcengine.tos.internal.util.SigningUtils;
-import com.volcengine.tos.internal.util.StringUtils;
-import com.volcengine.tos.internal.util.TosUtils;
+import com.volcengine.tos.internal.util.*;
 import com.volcengine.tos.internal.util.base64.Base64;
 import com.volcengine.tos.model.object.*;
 
@@ -30,7 +26,6 @@ public class TosPreSignedRequestHandler {
 
     public TosPreSignedRequestHandler(TosRequestFactory factory, Signer signer) {
         ParamsChecker.ensureNotNull(factory, "TosRequestFactory");
-        ParamsChecker.ensureNotNull(signer, "Signer");
         this.factory = factory;
         this.signer = signer;
     }

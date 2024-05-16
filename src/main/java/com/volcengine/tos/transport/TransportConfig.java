@@ -63,7 +63,11 @@ public class TransportConfig {
      */
     private int maxRetryCount = Consts.DEFAULT_MAX_RETRY_COUNT;
 
+    private int except100ContinueThreshold = Consts.DEFAULT_EXPECT_100_CONTINUE_THRESHOLD;
+
     private boolean isHttp;
+
+    private int highLatencyLogThreshold = Consts.DEFAULT_HIGH_LATENCY_LOG_THRESHOLD;
 
     public int getMaxConnections() {
         return maxConnections;
@@ -184,12 +188,30 @@ public class TransportConfig {
         return this;
     }
 
+    public int getExcept100ContinueThreshold() {
+        return except100ContinueThreshold;
+    }
+
+    public TransportConfig setExcept100ContinueThreshold(int except100ContinueThreshold) {
+        this.except100ContinueThreshold = except100ContinueThreshold;
+        return this;
+    }
+
     public boolean isHttp() {
         return isHttp;
     }
 
     public TransportConfig setHttp(boolean http) {
         isHttp = http;
+        return this;
+    }
+
+    public int getHighLatencyLogThreshold() {
+        return highLatencyLogThreshold;
+    }
+
+    public TransportConfig setHighLatencyLogThreshold(int highLatencyLogThreshold) {
+        this.highLatencyLogThreshold = highLatencyLogThreshold;
         return this;
     }
 
@@ -212,6 +234,10 @@ public class TransportConfig {
         private int dnsCacheTimeMills;
         private int dnsCacheTimeMinutes;
         private int maxRetryCount = Consts.DEFAULT_MAX_RETRY_COUNT;
+
+        private int except100ContinueThreshold = Consts.DEFAULT_EXPECT_100_CONTINUE_THRESHOLD;
+
+        private int highLatencyLogThreshold = Consts.DEFAULT_HIGH_LATENCY_LOG_THRESHOLD;
 
         private TransportConfigBuilder() {
         }
@@ -282,6 +308,16 @@ public class TransportConfig {
             return this;
         }
 
+        public TransportConfigBuilder except100ContinueThreshold(int except100ContinueThreshold) {
+            this.except100ContinueThreshold = except100ContinueThreshold;
+            return this;
+        }
+
+        public TransportConfigBuilder highLatencyLogThreshold(int highLatencyLogThreshold) {
+            this.highLatencyLogThreshold = highLatencyLogThreshold;
+            return this;
+        }
+
         public TransportConfig build() {
             TransportConfig transportConfig = new TransportConfig();
             transportConfig.setMaxConnections(maxConnections);
@@ -296,6 +332,8 @@ public class TransportConfig {
             transportConfig.setEnableVerifySSL(enableVerifySSL);
             transportConfig.setDnsCacheTimeMinutes(dnsCacheTimeMinutes);
             transportConfig.setMaxRetryCount(maxRetryCount);
+            transportConfig.setExcept100ContinueThreshold(except100ContinueThreshold);
+            transportConfig.setHighLatencyLogThreshold(highLatencyLogThreshold);
             return transportConfig;
         }
     }
@@ -315,6 +353,7 @@ public class TransportConfig {
                 ", enableVerifySSL=" + enableVerifySSL +
                 ", dnsCacheTimeMinutes=" + dnsCacheTimeMinutes +
                 ", maxRetryCount=" + maxRetryCount +
+                ", except100ContinueThreshold=" + except100ContinueThreshold +
                 '}';
     }
 

@@ -1,13 +1,20 @@
 package com.volcengine.tos.model.bucket;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.volcengine.tos.comm.common.StorageClassType;
+import com.volcengine.tos.internal.model.LifecycleDateSerializer;
+
+import java.util.Date;
 
 public class NoncurrentVersionTransition {
     @JsonProperty("NoncurrentDays")
     private int noncurrentDays;
     @JsonProperty("StorageClass")
     private StorageClassType storageClass;
+    @JsonProperty("NoncurrentDate")
+    @JsonSerialize(using = LifecycleDateSerializer.class)
+    private Date noncurrentDate;
 
     public int getNoncurrentDays() {
         return noncurrentDays;
@@ -27,11 +34,21 @@ public class NoncurrentVersionTransition {
         return this;
     }
 
+    public Date getNoncurrentDate() {
+        return noncurrentDate;
+    }
+
+    public NoncurrentVersionTransition setNoncurrentDate(Date noncurrentDate) {
+        this.noncurrentDate = noncurrentDate;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "NoncurrentVersionTransition{" +
                 "noncurrentDays=" + noncurrentDays +
                 ", storageClass=" + storageClass +
+                ", noncurrentDate=" + noncurrentDate +
                 '}';
     }
 
@@ -42,6 +59,7 @@ public class NoncurrentVersionTransition {
     public static final class NoncurrentVersionTransitionBuilder {
         private int noncurrentDays;
         private StorageClassType storageClass;
+        private Date noncurrentDate;
 
         private NoncurrentVersionTransitionBuilder() {
         }
@@ -56,10 +74,16 @@ public class NoncurrentVersionTransition {
             return this;
         }
 
+        public NoncurrentVersionTransitionBuilder noncurrentDate(Date noncurrentDate) {
+            this.noncurrentDate = noncurrentDate;
+            return this;
+        }
+
         public NoncurrentVersionTransition build() {
             NoncurrentVersionTransition noncurrentVersionTransition = new NoncurrentVersionTransition();
             noncurrentVersionTransition.setNoncurrentDays(noncurrentDays);
             noncurrentVersionTransition.setStorageClass(storageClass);
+            noncurrentVersionTransition.setNoncurrentDate(noncurrentDate);
             return noncurrentVersionTransition;
         }
     }

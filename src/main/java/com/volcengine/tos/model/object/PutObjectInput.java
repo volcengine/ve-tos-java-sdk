@@ -113,6 +113,24 @@ public class PutObjectInput {
         return this;
     }
 
+    public boolean isForbidOverwrite() {
+        return this.putObjectBasicInput.isForbidOverwrite();
+    }
+
+    public PutObjectInput setForbidOverwrite(boolean forbidOverwrite) {
+        this.putObjectBasicInput.setForbidOverwrite(forbidOverwrite);
+        return this;
+    }
+
+    public String getIfMatch() {
+        return this.putObjectBasicInput.getIfMatch();
+    }
+
+    public PutObjectInput setIfMatch(String ifMatch) {
+        this.putObjectBasicInput.setIfMatch(ifMatch);
+        return this;
+    }
+
     @Override
     public String toString() {
         return "PutObjectInput{" +
@@ -191,6 +209,16 @@ public class PutObjectInput {
 
         public PutObjectInputBuilder readLimit(int readLimit) {
             this.putObjectBasicInput.setReadLimit(readLimit);
+            return this;
+        }
+
+        public PutObjectInputBuilder forbidOverwrite(boolean forbidOverwrite) {
+            this.putObjectBasicInput.setForbidOverwrite(forbidOverwrite);
+            return this;
+        }
+
+        public PutObjectInputBuilder ifMatch(String ifMatch) {
+            this.putObjectBasicInput.setIfMatch(ifMatch);
             return this;
         }
 

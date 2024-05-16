@@ -9,6 +9,8 @@ public class DataTransferStatus {
     private long rwOnceBytes;
     private DataTransferType type;
 
+    private int retryCount = -1;
+
     public long getConsumedBytes() {
         return consumedBytes;
     }
@@ -45,6 +47,15 @@ public class DataTransferStatus {
         return this;
     }
 
+    public int getRetryCount() {
+        return retryCount;
+    }
+
+    public DataTransferStatus setRetryCount(int retryCount) {
+        this.retryCount = retryCount;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "DataTransferStatus{" +
@@ -52,6 +63,7 @@ public class DataTransferStatus {
                 ", totalBytes=" + totalBytes +
                 ", rwOnceBytes=" + rwOnceBytes +
                 ", type=" + type +
+                ", retryCount=" + retryCount +
                 '}';
     }
 }

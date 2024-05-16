@@ -22,6 +22,8 @@ public interface TosHeader {
     String HEADER_RANGE = "Range";
     String HEADER_CONTENT_RANGE = "Content-Range";
     String HEADER_LOCATION = "Location";
+    String HEADER_RETRY_AFTER = "Retry-After";
+    String HEADER_EXPECT = "Expect";
 
     /**
      * TOS Header
@@ -66,6 +68,7 @@ public interface TosHeader {
     String HEADER_CALLBACK_VAR = "x-tos-callback-var";
     String HEADER_RESTORE_REQUEST_DATERequestDate = "x-tos-restore-request-date";
     String HEADER_RESTORE_EXPIRY_DATE = "x-tos-restore-expiry-date";
+    String HEADER_RESTORE_EXPIRY_DAYS = "x-tos-restore-expiry-days";
     String HEADER_RESTORE_TIER = "x-tos-restore-tier";
 
     /**
@@ -78,10 +81,18 @@ public interface TosHeader {
     String QUERY_RESPONSE_CACHE_CONTROL = "response-cache-control";
     String QUERY_RESPONSE_EXPIRES = "response-expires";
     String QUERY_DATA_PROCESS = "x-tos-process";
+    String QUERY_DOC_PAGE = "x-tos-doc-page";
+    String QUERY_DOC_SRC_TYPE = "x-tos-doc-src-type";
+    String QUERY_DOC_DST_TYPE = "x-tos-doc-dst-type";
     String QUERY_SAVE_BUCKET = "x-tos-save-bucket";
     String QUERY_SAVE_OBJECT = "x-tos-save-object";
-
     String HEADER_WEBSITE_REDIRECT_LOCATION = "X-Tos-Website-Redirect-Location";
     String HEADER_CS_TYPE = "X-Tos-Cs-Type";
     String HEADER_META_PREFIX = "X-Tos-Meta-";
+    String HEADER_SDK_RETRY_COUNT = "x-sdk-retry-count";
+    String HEADER_PROJECT_NAME = "x-tos-project-name";
+    String HEADER_REPLICATION_STATUS = "x-tos-replication-status";
+    String HEADER_FORBID_OVERWRITE = "x-tos-forbid-overwrite";
+    String HEADER_X_IF_MATCH = "x-tos-if-match";
+    String HEADER_ALLOW_SAME_ACTION_OVERLAP = "x-tos-allow-same-action-overlap";
 }

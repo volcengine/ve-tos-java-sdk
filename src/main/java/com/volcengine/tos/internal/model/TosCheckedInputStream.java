@@ -6,7 +6,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.zip.CheckedInputStream;
 
-public class TosCheckedInputStream extends CheckedInputStream {
+public class TosCheckedInputStream extends CheckedInputStream implements RetryCountNotifier {
     /**
      * Creates an input stream using the specified Checksum.
      *
@@ -31,6 +31,13 @@ public class TosCheckedInputStream extends CheckedInputStream {
         if (this.checksum != null) {
             TosUtils.getLogger().debug("tos: call TosCheckedInputStream reset");
             this.checksum.reset();
+        }
+    }
+
+    @Override
+    public void setRetryCount(int retryCount) {
+        if (this.in instanceof RetryCountNotifier) {
+            ((RetryCountNotifier) this.in).setRetryCount(retryCount);
         }
     }
 }

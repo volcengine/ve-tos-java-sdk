@@ -1,19 +1,24 @@
 package com.volcengine.tos.internal;
 
 import com.volcengine.tos.Consts;
-import com.volcengine.tos.*;
+import com.volcengine.tos.TosClientException;
+import com.volcengine.tos.TosException;
+import com.volcengine.tos.TosServerException;
 import com.volcengine.tos.comm.Code;
 import com.volcengine.tos.comm.HttpStatus;
 import com.volcengine.tos.comm.TosHeader;
 import com.volcengine.tos.comm.common.*;
-import com.volcengine.tos.internal.util.base64.Base64;
 import com.volcengine.tos.internal.util.DateConverter;
 import com.volcengine.tos.internal.util.StringUtils;
+import com.volcengine.tos.internal.util.base64.Base64;
 import com.volcengine.tos.internal.util.ratelimit.DefaultRateLimiter;
 import com.volcengine.tos.model.acl.GrantV2;
 import com.volcengine.tos.model.acl.GranteeV2;
 import com.volcengine.tos.model.acl.Owner;
-import com.volcengine.tos.model.bucket.*;
+import com.volcengine.tos.model.bucket.CreateBucketV2Input;
+import com.volcengine.tos.model.bucket.HeadBucketV2Input;
+import com.volcengine.tos.model.bucket.HeadBucketV2Output;
+import com.volcengine.tos.model.bucket.Tag;
 import com.volcengine.tos.model.object.*;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
@@ -882,6 +887,7 @@ public class TosObjectRequestHandlerBasicTest {
                         .prefix(uniquePrefix)
                         .startAfter(startAfter)
                         .continuationToken(continuationToken)
+                        .fetchMeta(true)
                         .build();
                 ListObjectsType2Output output = getHandler().listObjectsType2(input);
                 Assert.assertNotNull(output.getContents());
@@ -889,6 +895,9 @@ public class TosObjectRequestHandlerBasicTest {
                     Assert.assertEquals(output.getContents().size(), 5);
                 } else {
                     Assert.assertEquals(output.getContents().size(), 2);
+                }
+                for (ListedObjectV2 item : output.getContents()) {
+                    Assert.assertTrue(item.getMeta().size() > 0);
                 }
                 isTruncated = output.isTruncated();
                 continuationToken = output.getNextContinuationToken();
@@ -1726,7 +1735,7 @@ public class TosObjectRequestHandlerBasicTest {
             PutObjectOutput putRes = getHandler().putObject(PutObjectInput.builder()
                     .bucket(Consts.bucket)
                     .key(key)
-                    .options(new ObjectMetaRequestOptions().setTrafficLimit(800 * 1024))
+                    .options(new ObjectMetaRequestOptions().setTrafficLimit(800 * 1024 * 8))
                     .content(content)
                     .build());
             long end = System.currentTimeMillis();
@@ -1745,7 +1754,7 @@ public class TosObjectRequestHandlerBasicTest {
             try (GetObjectV2Output getRes = getHandler().getObject(GetObjectV2Input.builder()
                     .bucket(Consts.bucket)
                     .key(key)
-                    .options(new ObjectMetaRequestOptions().setTrafficLimit(800 * 1024))
+                    .options(new ObjectMetaRequestOptions().setTrafficLimit(800 * 1024 * 8))
                     .build());
                  InputStream stream = getRes.getContent()) {
                 Assert.assertEquals(getRes.getContentLength(), new File(sampleFilePath).length());
@@ -2071,13 +2080,17 @@ public class TosObjectRequestHandlerBasicTest {
 
     private List<String> generateDataAndGetKeyList(int num, String pre) {
         List<String> keys = new ArrayList<>(num);
+        Map<String, String> meta = new HashMap<>();
+        meta.put("key1", "value1");
         for (int i = 0; i < num; i++) {
             String keyWithIdx = pre + i;
-            getHandler().putObject(PutObjectInput.builder()
+            PutObjectInput input = PutObjectInput.builder()
                     .bucket(Consts.bucket)
                     .key(keyWithIdx)
                     .content(new ByteArrayInputStream(sampleData.getBytes()))
-                    .build());
+                    .options(new ObjectMetaRequestOptions().setCustomMetadata(meta))
+                    .build();
+            getHandler().putObject(input);
             keys.add(keyWithIdx);
         }
         return keys;
