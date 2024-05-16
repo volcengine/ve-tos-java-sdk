@@ -13,7 +13,7 @@ public class GetFileStatusOutput {
     @JsonProperty("Key")
     private String key;
     @JsonProperty("Size")
-    private Integer size;
+    private long size;
     @JsonProperty("LastModified")
     private String lastModified;
     @JsonProperty("CRC32")
@@ -39,11 +39,11 @@ public class GetFileStatusOutput {
         return this;
     }
 
-    public Integer getSize() {
+    public long getSize() {
         return size;
     }
 
-    public GetFileStatusOutput setSize(Integer size) {
+    public GetFileStatusOutput setSize(long size) {
         this.size = size;
         return this;
     }
@@ -53,7 +53,7 @@ public class GetFileStatusOutput {
     }
 
     public Date getLastModifiedInDate() {
-        return DateConverter.rfc1123StringToDate(lastModified);
+        return DateConverter.iso8601StringToDate(lastModified);
     }
 
     public GetFileStatusOutput setLastModified(String lastModified) {

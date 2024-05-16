@@ -10,10 +10,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.regex.Pattern;
 
@@ -266,5 +263,25 @@ public class TosUtils {
             throw new TosClientException("tos: invalid preSignedUrl expires, should be larger than 0.", null);
         }
         return ttl;
+    }
+
+    public static Map<String, String> parseMeta(List<Map<String, String>> userMeta, boolean disableEncodingMeta) {
+        if (userMeta == null || userMeta.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        Map<String, String> meta = new HashMap<>(userMeta.size());
+        String key;
+        String value;
+        for (Map<String, String> item : userMeta) {
+            key = item.get("Key");
+            value = item.get("Value");
+            if (!disableEncodingMeta) {
+                key = TosUtils.decodeHeader(key);
+                value = TosUtils.decodeHeader(value);
+            }
+            meta.put(key, value);
+        }
+        return meta;
     }
 }
