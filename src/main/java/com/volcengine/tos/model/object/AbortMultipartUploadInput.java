@@ -1,7 +1,9 @@
 package com.volcengine.tos.model.object;
 
 
-public class AbortMultipartUploadInput {
+import com.volcengine.tos.model.GenericInput;
+
+public class AbortMultipartUploadInput extends GenericInput {
     private String bucket;
     private String key;
     private String uploadID;

@@ -11,6 +11,8 @@ public class MirrorHeader {
     private List<String> pass;
     @JsonProperty("Remove")
     private List<String> remove;
+    @JsonProperty("Set")
+    private List<MirrorHeaderKeyValue> set;
 
     public boolean isPassAll() {
         return passAll;
@@ -39,12 +41,22 @@ public class MirrorHeader {
         return this;
     }
 
+    public List<MirrorHeaderKeyValue> getSet() {
+        return set;
+    }
+
+    public MirrorHeader setSet(List<MirrorHeaderKeyValue> set) {
+        this.set = set;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "MirrorHeader{" +
                 "passAll=" + passAll +
                 ", pass=" + pass +
                 ", remove=" + remove +
+                ", set=" + set +
                 '}';
     }
 
@@ -56,6 +68,7 @@ public class MirrorHeader {
         private boolean passAll;
         private List<String> pass;
         private List<String> remove;
+        private List<MirrorHeaderKeyValue> set;
 
         private MirrorHeaderBuilder() {
         }
@@ -75,11 +88,17 @@ public class MirrorHeader {
             return this;
         }
 
+        public MirrorHeaderBuilder set(List<MirrorHeaderKeyValue> set) {
+            this.set = set;
+            return this;
+        }
+
         public MirrorHeader build() {
             MirrorHeader mirrorHeader = new MirrorHeader();
             mirrorHeader.setPassAll(passAll);
             mirrorHeader.setPass(pass);
             mirrorHeader.setRemove(remove);
+            mirrorHeader.setSet(set);
             return mirrorHeader;
         }
     }

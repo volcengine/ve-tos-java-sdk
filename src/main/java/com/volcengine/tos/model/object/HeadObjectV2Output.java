@@ -11,6 +11,8 @@ import java.util.Map;
 public class HeadObjectV2Output {
     private GetObjectBasicOutput headObjectBasicOutput = new GetObjectBasicOutput();
 
+    private long symlinkTargetSize;
+
     public HeadObjectV2Output() {
     }
 
@@ -136,6 +138,23 @@ public class HeadObjectV2Output {
         return headObjectBasicOutput.getReplicationStatus();
     }
 
+    public long getSymlinkTargetSize() {
+        return symlinkTargetSize;
+    }
+
+    public HeadObjectV2Output setSymlinkTargetSize(long symlinkTargetSize) {
+        this.symlinkTargetSize = symlinkTargetSize;
+        return this;
+    }
+
+    public boolean isDirectory() {
+        return headObjectBasicOutput.isDirectory();
+    }
+
+    public int getTaggingCount() {
+        return headObjectBasicOutput.getTaggingCount();
+    }
+
     @Override
     public String toString() {
         return "HeadObjectOutputV2{" +
@@ -158,6 +177,9 @@ public class HeadObjectV2Output {
                 ", contentLanguage='" + getContentLanguage() + '\'' +
                 ", contentType='" + getContentType() + '\'' +
                 ", expires=" + getExpires() + '\'' +
+                ", symlinkTargetSize=" + symlinkTargetSize +
+                ", isDirectory=" + isDirectory() + '\'' +
+                ", taggingCount=" + getTaggingCount() + '\'' +
                 '}';
     }
 }

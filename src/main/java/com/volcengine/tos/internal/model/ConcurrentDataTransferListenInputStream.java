@@ -93,9 +93,10 @@ public class ConcurrentDataTransferListenInputStream extends DataTransferListenI
         unNotifiedBytes = 0;
     }
 
+    // 断点续传场景，RetryCount 字段无实际意义
     private void onBytesRead(int bytesRead) {
         DataTransferStatus status = new DataTransferStatus().setType(DataTransferType.DATA_TRANSFER_RW)
-                .setTotalBytes(totalBytes).setConsumedBytes(consumedBytes.get()).setRwOnceBytes(bytesRead).setRetryCount(this.retryCount);
+                .setTotalBytes(totalBytes).setConsumedBytes(consumedBytes.get()).setRwOnceBytes(bytesRead).setRetryCount(-1);
         listener.dataTransferStatusChange(status);
     }
 

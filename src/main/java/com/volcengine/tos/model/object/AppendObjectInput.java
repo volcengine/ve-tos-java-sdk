@@ -2,16 +2,17 @@ package com.volcengine.tos.model.object;
 
 import com.volcengine.tos.comm.event.DataTransferListener;
 import com.volcengine.tos.comm.ratelimit.RateLimiter;
+import com.volcengine.tos.model.GenericInput;
 
 import java.io.InputStream;
 import java.util.Map;
 import java.util.Objects;
 
-public class AppendObjectInput {
+public class AppendObjectInput extends GenericInput {
     private String bucket;
     private String key;
     private long offset;
-    private long contentLength;
+    private long contentLength = -1;
 
     private transient InputStream content;
 
@@ -143,7 +144,7 @@ public class AppendObjectInput {
         private String bucket;
         private String key;
         private long offset;
-        private long contentLength;
+        private long contentLength = -1;
         private transient InputStream content;
         private ObjectMetaRequestOptions options;
         private DataTransferListener dataTransferListener;

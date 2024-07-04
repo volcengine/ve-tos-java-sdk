@@ -6,12 +6,13 @@ import com.volcengine.tos.internal.Consts;
 import com.volcengine.tos.internal.model.HttpRange;
 import com.volcengine.tos.internal.util.DateConverter;
 import com.volcengine.tos.internal.util.StringUtils;
+import com.volcengine.tos.model.GenericInput;
 
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
-public class UploadPartCopyV2Input {
+public class UploadPartCopyV2Input extends GenericInput {
     private String bucket;
     private String key;
     private String uploadID;

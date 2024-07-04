@@ -1,6 +1,7 @@
 package com.volcengine.tos.model.bucket;
 
 import com.volcengine.tos.comm.common.AzRedundancyType;
+import com.volcengine.tos.comm.common.BucketType;
 import com.volcengine.tos.comm.common.StorageClassType;
 import com.volcengine.tos.model.RequestInfo;
 
@@ -12,6 +13,7 @@ public class HeadBucketV2Output implements Serializable {
     private StorageClassType storageClass;
     private AzRedundancyType azRedundancy;
     private String projectName;
+    private BucketType bucketType;
 
     public HeadBucketV2Output() {
     }
@@ -67,6 +69,15 @@ public class HeadBucketV2Output implements Serializable {
         return this;
     }
 
+    public BucketType getBucketType() {
+        return bucketType;
+    }
+
+    public HeadBucketV2Output setBucketType(BucketType bucketType) {
+        this.bucketType = bucketType;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "HeadBucketV2Output{" +
@@ -75,6 +86,7 @@ public class HeadBucketV2Output implements Serializable {
                 ", storageClass=" + storageClass +
                 ", azRedundancy=" + azRedundancy +
                 ", projectName='" + projectName + '\'' +
+                ", bucketType=" + bucketType +
                 '}';
     }
 }

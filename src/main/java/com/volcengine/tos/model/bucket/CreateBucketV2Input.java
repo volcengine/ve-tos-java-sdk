@@ -2,9 +2,11 @@ package com.volcengine.tos.model.bucket;
 
 import com.volcengine.tos.comm.common.ACLType;
 import com.volcengine.tos.comm.common.AzRedundancyType;
+import com.volcengine.tos.comm.common.BucketType;
 import com.volcengine.tos.comm.common.StorageClassType;
+import com.volcengine.tos.model.GenericInput;
 
-public class CreateBucketV2Input {
+public class CreateBucketV2Input extends GenericInput {
     private String bucket;
     private ACLType acl;
     private String grantFullControl;
@@ -15,6 +17,7 @@ public class CreateBucketV2Input {
     private StorageClassType storageClass;
     private AzRedundancyType azRedundancy;
     private String projectName;
+    private BucketType bucketType;
 
     public CreateBucketV2Input() {
     }
@@ -113,8 +116,13 @@ public class CreateBucketV2Input {
         return this;
     }
 
-    public static CreateBucketInputV2Builder builder() {
-        return new CreateBucketInputV2Builder();
+    public BucketType getBucketType() {
+        return bucketType;
+    }
+
+    public CreateBucketV2Input setBucketType(BucketType bucketType) {
+        this.bucketType = bucketType;
+        return this;
     }
 
     @Override
@@ -130,7 +138,12 @@ public class CreateBucketV2Input {
                 ", storageClass=" + storageClass +
                 ", azRedundancy=" + azRedundancy +
                 ", projectName='" + projectName + '\'' +
+                ", bucketType=" + bucketType +
                 '}';
+    }
+
+    public static CreateBucketInputV2Builder builder() {
+        return new CreateBucketInputV2Builder();
     }
 
     public static final class CreateBucketInputV2Builder {
@@ -144,6 +157,7 @@ public class CreateBucketV2Input {
         private StorageClassType storageClass;
         private AzRedundancyType azRedundancy;
         private String projectName;
+        private BucketType bucketType;
 
         private CreateBucketInputV2Builder() {
         }
@@ -197,6 +211,11 @@ public class CreateBucketV2Input {
             this.projectName = projectName;
             return this;
         }
+
+        public CreateBucketInputV2Builder bucketType(BucketType bucketType) {
+            this.bucketType = bucketType;
+            return this;
+        }
         public CreateBucketV2Input build() {
             CreateBucketV2Input createBucketInputV2 = new CreateBucketV2Input();
             createBucketInputV2.bucket = this.bucket;
@@ -209,6 +228,7 @@ public class CreateBucketV2Input {
             createBucketInputV2.storageClass = this.storageClass;
             createBucketInputV2.azRedundancy = this.azRedundancy;
             createBucketInputV2.projectName = this.projectName;
+            createBucketInputV2.bucketType = this.bucketType;
             return createBucketInputV2;
         }
     }

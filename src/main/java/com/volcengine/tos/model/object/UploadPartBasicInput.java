@@ -2,10 +2,11 @@ package com.volcengine.tos.model.object;
 
 import com.volcengine.tos.comm.event.DataTransferListener;
 import com.volcengine.tos.comm.ratelimit.RateLimiter;
+import com.volcengine.tos.model.GenericInput;
 
 import java.util.Map;
 
-public class UploadPartBasicInput {
+public class UploadPartBasicInput extends GenericInput {
     private String bucket;
     private String key;
     private String uploadID;

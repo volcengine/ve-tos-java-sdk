@@ -1,17 +1,19 @@
 package com.volcengine.tos;
 
 import com.volcengine.tos.auth.Credentials;
+import com.volcengine.tos.credential.CredentialsProvider;
 import com.volcengine.tos.internal.Consts;
 import com.volcengine.tos.transport.TransportConfig;
 
+import java.util.HashMap;
+import java.util.Map;
+
 public class TOSClientConfiguration {
     private Credentials credentials;
+    private CredentialsProvider credentialsProvider;
     private String endpoint;
     private String region;
     private TransportConfig transportConfig;
-
-    private TOSClientConfiguration(){}
-
     /**
      * 客户端根据对象名后缀自动识别 Content-Type
      */
@@ -26,6 +28,13 @@ public class TOSClientConfiguration {
      */
     private boolean isCustomDomain = false;
     private boolean disableEncodingMeta;
+    private String userAgentProductName;
+    private String userAgentSoftName;
+    private String userAgentSoftVersion;
+    private Map<String, String> userAgentCustomizedKeyValues;
+
+    private TOSClientConfiguration() {
+    }
 
     public boolean isClientAutoRecognizeContentType() {
         return clientAutoRecognizeContentType;
@@ -47,16 +56,27 @@ public class TOSClientConfiguration {
         return this.region;
     }
 
+    @Deprecated
     public Credentials getCredentials() {
-        return credentials;
+        return this.credentials;
+    }
+
+    public CredentialsProvider getCredentialsProvider() {
+        return this.credentialsProvider;
     }
 
     public void setEndpoint(String endpoint) {
         this.endpoint = endpoint;
     }
 
+    @Deprecated
     public TOSClientConfiguration setCredentials(Credentials credentials) {
         this.credentials = credentials;
+        return this;
+    }
+
+    public TOSClientConfiguration setCredentialsProvider(CredentialsProvider credentialsProvider) {
+        this.credentialsProvider = credentialsProvider;
         return this;
     }
 
@@ -98,26 +118,77 @@ public class TOSClientConfiguration {
         return this;
     }
 
+    public String getUserAgentProductName() {
+        return this.userAgentProductName;
+    }
+
+    public TOSClientConfiguration setUserAgentProductName(String userAgentProductName) {
+        this.userAgentProductName = userAgentProductName;
+        return this;
+    }
+
+    public String getUserAgentSoftName() {
+        return this.userAgentSoftName;
+    }
+
+    public TOSClientConfiguration setUserAgentSoftName(String userAgentSoftName) {
+        this.userAgentSoftName = userAgentSoftName;
+        return this;
+    }
+
+    public String getUserAgentSoftVersion() {
+        return this.userAgentSoftVersion;
+    }
+
+    public TOSClientConfiguration setUserAgentSoftVersion(String userAgentSoftVersion) {
+        this.userAgentSoftVersion = userAgentSoftVersion;
+        return this;
+    }
+
+    public Map<String, String> getUserAgentCustomizedKeyValues() {
+        return this.userAgentCustomizedKeyValues;
+    }
+
+    public TOSClientConfiguration setUserAgentCustomizedKeyValues(Map<String, String> userAgentCustomizedKeyValues) {
+        if (userAgentCustomizedKeyValues != null) {
+            this.userAgentCustomizedKeyValues = new HashMap<>(userAgentCustomizedKeyValues.size());
+            for (Map.Entry<String, String> e : userAgentCustomizedKeyValues.entrySet()) {
+                this.userAgentCustomizedKeyValues.put(e.getKey(), e.getValue());
+            }
+        }
+        return this;
+    }
+
     public static TosClientConfigurationBuilder builder() {
         return new TosClientConfigurationBuilder();
     }
 
     public static final class TosClientConfigurationBuilder {
         private Credentials credentials;
+        private CredentialsProvider credentialsProvider;
         private String endpoint;
         private String region;
         private TransportConfig transportConfig = TransportConfig.builder().build();
         private boolean clientAutoRecognizeContentType = Consts.DEFAULT_AUTO_RECOGNIZE_CONTENT_TYPE;
         private boolean enableCrc = Consts.DEFAULT_ENABLE_CRC;
         private boolean isCustomDomain = false;
-        private int highLatencyLogThreshold;
         private boolean disableEncodingMeta;
+        private String userAgentProductName;
+        private String userAgentSoftName;
+        private String userAgentSoftVersion;
+        private Map<String, String> userAgentCustomizedKeyValues;
 
         private TosClientConfigurationBuilder() {
         }
 
+        @Deprecated
         public TosClientConfigurationBuilder credentials(Credentials credentials) {
             this.credentials = credentials;
+            return this;
+        }
+
+        public TosClientConfigurationBuilder credentialsProvider(CredentialsProvider credentialsProvider) {
+            this.credentialsProvider = credentialsProvider;
             return this;
         }
 
@@ -156,16 +227,41 @@ public class TOSClientConfiguration {
             return this;
         }
 
+        public TosClientConfigurationBuilder userAgentProductName(String userAgentProductName) {
+            this.userAgentProductName = userAgentProductName;
+            return this;
+        }
+
+        public TosClientConfigurationBuilder userAgentSoftName(String userAgentSoftName) {
+            this.userAgentSoftName = userAgentSoftName;
+            return this;
+        }
+
+        public TosClientConfigurationBuilder userAgentSoftVersion(String userAgentSoftVersion) {
+            this.userAgentSoftVersion = userAgentSoftVersion;
+            return this;
+        }
+
+        public TosClientConfigurationBuilder userAgentCustomizedKeyValues(Map<String, String> userAgentCustomizedKeyValues) {
+            this.userAgentCustomizedKeyValues = userAgentCustomizedKeyValues;
+            return this;
+        }
+
         public TOSClientConfiguration build() {
             TOSClientConfiguration tosClientConfiguration = new TOSClientConfiguration();
             tosClientConfiguration.enableCrc = this.enableCrc;
             tosClientConfiguration.endpoint = this.endpoint;
             tosClientConfiguration.transportConfig = this.transportConfig;
             tosClientConfiguration.credentials = this.credentials;
+            tosClientConfiguration.credentialsProvider = this.credentialsProvider;
             tosClientConfiguration.region = this.region;
             tosClientConfiguration.clientAutoRecognizeContentType = this.clientAutoRecognizeContentType;
             tosClientConfiguration.isCustomDomain = this.isCustomDomain;
             tosClientConfiguration.disableEncodingMeta = this.disableEncodingMeta;
+            tosClientConfiguration.setUserAgentProductName(this.userAgentProductName);
+            tosClientConfiguration.setUserAgentSoftName(this.userAgentSoftName);
+            tosClientConfiguration.setUserAgentSoftVersion(this.userAgentSoftVersion);
+            tosClientConfiguration.setUserAgentCustomizedKeyValues(this.userAgentCustomizedKeyValues);
             return tosClientConfiguration;
         }
     }

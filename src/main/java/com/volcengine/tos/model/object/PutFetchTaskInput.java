@@ -2,10 +2,11 @@ package com.volcengine.tos.model.object;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.volcengine.tos.model.GenericInput;
 
 import java.util.Map;
 
-public class PutFetchTaskInput {
+public class PutFetchTaskInput extends GenericInput {
     @JsonIgnore
     private String bucket;
     @JsonProperty("Object")
@@ -45,6 +46,7 @@ public class PutFetchTaskInput {
         return this;
     }
 
+    @JsonIgnore
     public Map<String, String> getAllSettedHeaders() {
         return options == null ? null : options.headers();
     }
@@ -77,6 +79,7 @@ public class PutFetchTaskInput {
     }
 
     @Deprecated
+    @JsonIgnore
     public String getHexMD5() {
         return "";
     }

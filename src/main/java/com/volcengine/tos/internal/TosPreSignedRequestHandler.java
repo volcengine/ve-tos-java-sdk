@@ -78,7 +78,7 @@ public class TosPreSignedRequestHandler {
             input.getQuery().forEach(builder::withQuery);
         }
         TosRequest request = this.factory.build(builder, input.getHttpMethod(), ttl);
-        return new PreSignedURLOutput(request.toURL().toString(), request.getHeaders());
+        return new PreSignedURLOutput(request.toEscapeURL().toString(), request.getHeaders());
     }
 
     public PreSignedPostSignatureOutput preSignedPostSignature(PreSignedPostSignatureInput input) throws TosException {
@@ -90,9 +90,21 @@ public class TosPreSignedRequestHandler {
         String dateDay = now.format(SigningUtils.yyyyMMdd);
 
         String region = null;
-        Credential cred = null;
-        if (this.signer != null && this.signer.getCredential() != null) {
-            cred = this.signer.getCredential().credential();
+        String ak = null;
+        String sk = null;
+        String securityToken = null;
+        if (this.signer != null) {
+            if (this.signer.getCredentialsProvider() != null) {
+                com.volcengine.tos.credential.Credentials cred = this.signer.getCredentialsProvider().getCredentials();
+                ak = cred.getAk();
+                sk = cred.getSk();
+                securityToken = cred.getSecurityToken();
+            } else if (this.signer.getCredential() != null) {
+                Credential cred = this.signer.getCredential().credential();
+                ak = cred.getAccessKeyId();
+                sk = cred.getAccessKeySecret();
+                securityToken = cred.getSecurityToken();
+            }
             region = this.signer.getRegion();
         }
 
@@ -103,11 +115,11 @@ public class TosPreSignedRequestHandler {
         conditions.add(new PostSignatureCondition(SigningUtils.v4Date, date8601));
         // credential
         String credential = null;
-        if (cred != null && region != null) {
-            credential = String.format("%s/%s/%s/tos/request", cred.getAccessKeyId(), dateDay, region);
+        if (ak != null && sk != null && region != null) {
+            credential = String.format("%s/%s/%s/tos/request", ak, dateDay, region);
             conditions.add(new PostSignatureCondition(SigningUtils.v4Credential, credential));
-            if (StringUtils.isNotEmpty(cred.getSecurityToken())) {
-                conditions.add(new PostSignatureCondition(SigningUtils.v4SecurityToken, cred.getSecurityToken()));
+            if (StringUtils.isNotEmpty(securityToken)) {
+                conditions.add(new PostSignatureCondition(SigningUtils.v4SecurityToken, securityToken));
             }
         }
         // bucket
@@ -148,8 +160,8 @@ public class TosPreSignedRequestHandler {
 
         // sign key
         byte[] signK = null;
-        if (cred != null && region != null) {
-            signK = SigningUtils.signKey(new SignKeyInfo().setCredential(cred).setDate(dateDay).setRegion(region));
+        if (ak != null && sk != null && region != null) {
+            signK = SigningUtils.signKey(new SignKeyInfo().setSk(sk).setDate(dateDay).setRegion(region));
         }
 
         // base64 encode policy
@@ -187,18 +199,30 @@ public class TosPreSignedRequestHandler {
         query.add(new AbstractMap.SimpleEntry<>(SigningUtils.v4Expires, String.valueOf(ttl)));
 
         String region = null;
-        Credential cred = null;
-        if (this.signer != null && this.signer.getCredential() != null) {
-            cred = this.signer.getCredential().credential();
+        String ak = null;
+        String sk = null;
+        String securityToken = null;
+        if (this.signer != null) {
+            if (this.signer.getCredentialsProvider() != null) {
+                com.volcengine.tos.credential.Credentials cred = this.signer.getCredentialsProvider().getCredentials();
+                ak = cred.getAk();
+                sk = cred.getSk();
+                securityToken = cred.getSecurityToken();
+            } else if (this.signer.getCredential() != null) {
+                Credential cred = this.signer.getCredential().credential();
+                ak = cred.getAccessKeyId();
+                sk = cred.getAccessKeySecret();
+                securityToken = cred.getSecurityToken();
+            }
             region = this.signer.getRegion();
         }
         // credential
         String credential = null;
-        if (cred != null && region != null) {
-            credential = String.format("%s/%s/%s/tos/request", cred.getAccessKeyId(), dateDay, region);
+        if (ak != null && sk != null && region != null) {
+            credential = String.format("%s/%s/%s/tos/request", ak, dateDay, region);
             query.add(new AbstractMap.SimpleEntry<>(SigningUtils.v4Credential, credential));
-            if (StringUtils.isNotEmpty(cred.getSecurityToken())) {
-                query.add(new AbstractMap.SimpleEntry<>(SigningUtils.v4SecurityToken, cred.getSecurityToken()));
+            if (StringUtils.isNotEmpty(securityToken)) {
+                query.add(new AbstractMap.SimpleEntry<>(SigningUtils.v4SecurityToken, securityToken));
             }
         }
         List<PolicySignatureCondition> conditions = new ArrayList<>(input.getConditions());
@@ -223,8 +247,8 @@ public class TosPreSignedRequestHandler {
 
         // sign key
         byte[] signK = null;
-        if (cred != null && region != null) {
-            signK = SigningUtils.signKey(new SignKeyInfo().setCredential(cred).setDate(dateDay).setRegion(region));
+        if (ak != null && sk != null && region != null) {
+            signK = SigningUtils.signKey(new SignKeyInfo().setSk(sk).setDate(dateDay).setRegion(region));
         }
         byte[] sign = SigningUtils.hmacSha256(signK, buf.getBytes());
 

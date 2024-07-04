@@ -1,6 +1,8 @@
 package com.volcengine.tos.model.bucket;
 
-public class DeleteBucketCustomDomainInput {
+import com.volcengine.tos.model.GenericInput;
+
+public class DeleteBucketCustomDomainInput extends GenericInput {
     private String bucket;
     private String domain;
 

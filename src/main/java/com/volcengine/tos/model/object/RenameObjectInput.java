@@ -1,6 +1,8 @@
 package com.volcengine.tos.model.object;
 
-public class RenameObjectInput {
+import com.volcengine.tos.model.GenericInput;
+
+public class RenameObjectInput extends GenericInput {
     private String bucket;
     private String key;
     private String newKey;

@@ -1,6 +1,7 @@
 package com.volcengine.tos.model.bucket;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.volcengine.tos.comm.common.BucketType;
 
 import java.io.Serializable;
 public class ListedBucket implements Serializable {
@@ -16,6 +17,8 @@ public class ListedBucket implements Serializable {
     private String intranetEndpoint;
     @JsonProperty("ProjectName")
     private String projectName;
+    @JsonProperty("BucketType")
+    private BucketType bucketType;
 
     public String getCreationDate() {
         return creationDate;
@@ -71,6 +74,15 @@ public class ListedBucket implements Serializable {
         return this;
     }
 
+    public BucketType getBucketType() {
+        return bucketType;
+    }
+
+    public ListedBucket setBucketType(BucketType bucketType) {
+        this.bucketType = bucketType;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "ListedBucket{" +
@@ -80,6 +92,7 @@ public class ListedBucket implements Serializable {
                 ", extranetEndpoint='" + extranetEndpoint + '\'' +
                 ", intranetEndpoint='" + intranetEndpoint + '\'' +
                 ", projectName='" + projectName + '\'' +
+                ", bucketType=" + bucketType +
                 '}';
     }
 }

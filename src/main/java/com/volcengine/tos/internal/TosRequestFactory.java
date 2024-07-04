@@ -3,6 +3,7 @@ package com.volcengine.tos.internal;
 import com.volcengine.tos.auth.Signer;
 import com.volcengine.tos.comm.TosHeader;
 import com.volcengine.tos.internal.util.ParamsChecker;
+import com.volcengine.tos.internal.util.StringUtils;
 import com.volcengine.tos.internal.util.TosUtils;
 
 import java.io.InputStream;
@@ -19,6 +20,7 @@ public class TosRequestFactory {
     private int urlMode = URL_MODE_DEFAULT;
     private boolean isCustomDomain;
     private boolean disableEncodingMeta;
+    private String userAgent;
 
     public TosRequestFactory(Signer signer, String endpoint) {
         this.signer = signer;
@@ -99,6 +101,11 @@ public class TosRequestFactory {
         return this;
     }
 
+    public TosRequestFactory setUserAgent(String userAgent) {
+        this.userAgent = userAgent;
+        return this;
+    }
+
     public RequestBuilder init(String bucket, String object, Map<String, String> headers) {
         return newBuilder(bucket, object, headers).setUrlMode(urlMode).setPort(port);
     }
@@ -117,7 +124,11 @@ public class TosRequestFactory {
 
     private RequestBuilder newBuilder(String bucket, String object) {
         RequestBuilder rb = new RequestBuilder(bucket, object, this.scheme, this.host, this.signer).setDisableEncodingMeta(this.disableEncodingMeta);
-        rb.withHeader(TosHeader.HEADER_USER_AGENT, TosUtils.getUserAgent());
+        if (StringUtils.isEmpty(this.userAgent)) {
+            rb.withHeader(TosHeader.HEADER_USER_AGENT, TosUtils.getUserAgent());
+        } else {
+            rb.withHeader(TosHeader.HEADER_USER_AGENT, this.userAgent);
+        }
         return rb;
     }
 

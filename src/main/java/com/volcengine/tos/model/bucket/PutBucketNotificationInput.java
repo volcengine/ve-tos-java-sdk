@@ -2,10 +2,11 @@ package com.volcengine.tos.model.bucket;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.volcengine.tos.model.GenericInput;
 
 import java.util.List;
 
-public class PutBucketNotificationInput {
+public class PutBucketNotificationInput extends GenericInput {
     @JsonIgnore
     private String bucket;
     @JsonProperty("CloudFunctionConfigurations")

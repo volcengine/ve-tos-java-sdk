@@ -2,10 +2,11 @@ package com.volcengine.tos.model.object;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.volcengine.tos.model.GenericInput;
 
 import java.util.List;
 
-public class CompleteMultipartUploadV2Input {
+public class CompleteMultipartUploadV2Input extends GenericInput {
     @JsonIgnore
     private String bucket;
     @JsonIgnore

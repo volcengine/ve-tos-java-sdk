@@ -1,6 +1,8 @@
 package com.volcengine.tos.model.object;
 
-public class GetFileStatusInput {
+import com.volcengine.tos.model.GenericInput;
+
+public class GetFileStatusInput extends GenericInput {
     private String bucket;
     private String key;
 

@@ -2,8 +2,9 @@ package com.volcengine.tos.model.bucket;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.volcengine.tos.model.GenericInput;
 
-public class PutBucketEncryptionInput {
+public class PutBucketEncryptionInput extends GenericInput {
     @JsonIgnore
     private String bucket;
 

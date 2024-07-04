@@ -1,6 +1,8 @@
 package com.volcengine.tos.model.bucket;
 
-public class HeadBucketV2Input {
+import com.volcengine.tos.model.GenericInput;
+
+public class HeadBucketV2Input extends GenericInput {
     private String bucket;
 
     public HeadBucketV2Input() {

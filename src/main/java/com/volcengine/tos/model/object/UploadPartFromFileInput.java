@@ -2,11 +2,12 @@ package com.volcengine.tos.model.object;
 
 import com.volcengine.tos.comm.event.DataTransferListener;
 import com.volcengine.tos.comm.ratelimit.RateLimiter;
+import com.volcengine.tos.model.GenericInput;
 
 import java.io.File;
 import java.io.FileInputStream;
 
-public class UploadPartFromFileInput {
+public class UploadPartFromFileInput extends GenericInput {
     private UploadPartBasicInput uploadPartBasicInput = new UploadPartBasicInput();
     private String filePath;
     private File file;

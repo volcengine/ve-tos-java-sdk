@@ -1,6 +1,8 @@
 package com.volcengine.tos.model.bucket;
 
-public class GetBucketCORSInput {
+import com.volcengine.tos.model.GenericInput;
+
+public class GetBucketCORSInput extends GenericInput {
     private String bucket;
 
     public String getBucket() {

@@ -1,8 +1,17 @@
 ## Release Note
-### 2024.5.16 Version 2.7.1
 
-- fix getFileStatus bug
-- list object output add crc32
+### 2024.6.1 Version 2.8.1
+
+- 支持 DeleteObject 递归删除
+- HeadObject 支持返回 EC
+
+### 2024.4.15 Version 2.8.0
+
+- 支持分层命名空间桶
+- 支持 PutBucketInventory/GetBucketInventory/ListBucketInventory/DeleteBucketInventory
+- 支持 PutSymlink/GetSymlink
+- 支持 User-Agent 扩展规范
+- 支持 CredentialsProvider 和 ECS 免密登录
 
 ### 2024.3.31 Version 2.7.0
 

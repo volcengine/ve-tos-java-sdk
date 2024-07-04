@@ -41,6 +41,8 @@ public class GetObjectBasicOutput {
     private String contentMD5;
     private RestoreInfo restoreInfo;
     private ReplicationStatusType replicationStatus;
+    private boolean isDirectory;
+    private int taggingCount;
 
     public RequestInfo getRequestInfo() {
         return requestInfo;
@@ -147,6 +149,14 @@ public class GetObjectBasicOutput {
         return replicationStatus;
     }
 
+    public boolean isDirectory() {
+        return isDirectory;
+    }
+
+    public int getTaggingCount() {
+        return taggingCount;
+    }
+
     public GetObjectBasicOutput parseFromTosResponse(TosResponse response) {
         this.contentLength = response.getContentLength();
         this.contentType = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_CONTENT_TYPE);
@@ -170,6 +180,16 @@ public class GetObjectBasicOutput {
         this.storageClass = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_STORAGE_CLASS);
         this.contentRange = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_CONTENT_RANGE);
         this.replicationStatus = ReplicationStatusType.parse(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_REPLICATION_STATUS));
+        this.isDirectory = Boolean.parseBoolean(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_DIRECTORY));
+        String taggingCount = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_TAGGING_COUNT);
+        if (StringUtils.isNotEmpty(taggingCount)) {
+            try {
+                this.taggingCount = Integer.parseInt(taggingCount);
+            } catch (Exception ex) {
+                // ingore
+            }
+        }
+
 
         String restore = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_RESTORE);
         if (StringUtils.isNotEmpty(restore)) {
@@ -244,6 +264,8 @@ public class GetObjectBasicOutput {
                 ", contentLanguage='" + contentLanguage + '\'' +
                 ", contentType='" + contentType + '\'' +
                 ", expires=" + expires + '\'' +
+                ", isDirectory=" + isDirectory + '\'' +
+                ", taggingCount=" + taggingCount + '\'' +
                 '}';
     }
 }

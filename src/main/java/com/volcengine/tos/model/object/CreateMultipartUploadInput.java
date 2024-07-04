@@ -1,14 +1,17 @@
 package com.volcengine.tos.model.object;
 
+import com.volcengine.tos.model.GenericInput;
+
 import java.util.Map;
 
-public class CreateMultipartUploadInput {
+public class CreateMultipartUploadInput extends GenericInput {
     private String bucket;
     private String key;
     private String encodingType;
 
     private ObjectMetaRequestOptions options;
     private boolean forbidOverwrite;
+    private String tagging;
 
     public String getBucket() {
         return bucket;
@@ -59,6 +62,15 @@ public class CreateMultipartUploadInput {
         return this;
     }
 
+    public String getTagging() {
+        return tagging;
+    }
+
+    public CreateMultipartUploadInput setTagging(String tagging) {
+        this.tagging = tagging;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "CreateMultipartUploadInput{" +
@@ -67,6 +79,7 @@ public class CreateMultipartUploadInput {
                 ", encodingType='" + encodingType + '\'' +
                 ", options=" + options +
                 ", forbidOverwrite=" + forbidOverwrite +
+                ", tagging='" + tagging + '\'' +
                 '}';
     }
 
@@ -80,6 +93,7 @@ public class CreateMultipartUploadInput {
         private String encodingType;
         private ObjectMetaRequestOptions options;
         private boolean forbidOverwrite;
+        private String tagging;
 
         private CreateMultipartUploadInputBuilder() {
         }
@@ -109,6 +123,11 @@ public class CreateMultipartUploadInput {
             return this;
         }
 
+        public CreateMultipartUploadInputBuilder tagging(String tagging) {
+            this.tagging = tagging;
+            return this;
+        }
+
         public CreateMultipartUploadInput build() {
             CreateMultipartUploadInput createMultipartUploadInput = new CreateMultipartUploadInput();
             createMultipartUploadInput.setBucket(bucket);
@@ -116,6 +135,7 @@ public class CreateMultipartUploadInput {
             createMultipartUploadInput.setEncodingType(encodingType);
             createMultipartUploadInput.setOptions(options);
             createMultipartUploadInput.setForbidOverwrite(forbidOverwrite);
+            createMultipartUploadInput.setTagging(tagging);
             return createMultipartUploadInput;
         }
     }

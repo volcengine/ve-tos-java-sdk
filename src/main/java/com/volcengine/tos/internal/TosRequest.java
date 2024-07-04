@@ -35,22 +35,24 @@ public class TosRequest {
     private Map<String, String> query = Collections.emptyMap();
 
     /**
-     *  only for POST data
-     *  only used in ClientV1, deprecated in ClientV2
-      */
+     * only for POST data
+     * only used in ClientV1, deprecated in ClientV2
+     */
     private byte[] data = new byte[0];
 
-    public TosRequest(){
+    public TosRequest() {
 
     }
-    public TosRequest(String scheme, String method, String host, String path){
+
+    public TosRequest(String scheme, String method, String host, String path) {
         this.scheme = scheme;
         this.method = method;
         this.host = host;
         this.path = path;
     }
+
     public TosRequest(String scheme, String method, String host, String path, InputStream inputStream,
-                      Map<String, String> query, Map<String, String> headers){
+                      Map<String, String> query, Map<String, String> headers) {
         this.scheme = scheme;
         this.method = method;
         this.host = host;
@@ -77,6 +79,17 @@ public class TosRequest {
             builder.port(port);
         }
         return builder.build();
+    }
+
+    public HttpUrl toEscapeURL() {
+        HttpUrl.Builder builder = new HttpUrl.Builder();
+        if (query != null) {
+            for (Map.Entry<String, String> entry : query.entrySet()) {
+                builder.addEncodedQueryParameter(entry.getKey(), TosUtils.uriEncode(entry.getValue(), true));
+            }
+        }
+
+        return builder.scheme(scheme).host(host).encodedPath(path).build();
     }
 
     public String getScheme() {

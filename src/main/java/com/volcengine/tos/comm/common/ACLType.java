@@ -1,5 +1,7 @@
 package com.volcengine.tos.comm.common;
 
+import com.fasterxml.jackson.annotation.JsonValue;
+
 public enum ACLType {
     /**
      * set bucket or object acl to private
@@ -45,6 +47,11 @@ public enum ACLType {
 
     @Override
     public String toString() {
+        return type;
+    }
+
+    @JsonValue
+    public String getType() {
         return type;
     }
 }

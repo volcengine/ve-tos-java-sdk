@@ -439,6 +439,14 @@ public interface TOSV2 extends TOS, Closeable {
 
     DeleteBucketTaggingOutput deleteBucketTagging(DeleteBucketTaggingInput input) throws TosException;
 
+    PutBucketInventoryOutput putBucketInventory(PutBucketInventoryInput input) throws TosException;
+
+    GetBucketInventoryOutput getBucketInventory(GetBucketInventoryInput input) throws TosException;
+
+    ListBucketInventoryOutput listBucketInventory(ListBucketInventoryInput input) throws TosException;
+
+    DeleteBucketInventoryOutput deleteBucketInventory(DeleteBucketInventoryInput input) throws TosException;
+
     /**
      * get data and metadata of an object
      *
@@ -646,6 +654,8 @@ public interface TOSV2 extends TOS, Closeable {
      */
     PutFetchTaskOutput putFetchTask(PutFetchTaskInput input) throws TosException;
 
+    GetFetchTaskOutput getFetchTask(GetFetchTaskInput input) throws TosException;
+
     /**
      * create a multipart upload operation
      *
@@ -726,6 +736,12 @@ public interface TOSV2 extends TOS, Closeable {
      * @throws TosException
      */
     RestoreObjectOutput restoreObject(RestoreObjectInput input) throws TosException;
+
+    PutSymlinkOutput putSymlink(PutSymlinkInput input) throws TosException;
+
+    GetSymlinkOutput getSymlink(GetSymlinkInput input) throws TosException;
+
+//    ModifyObjectOutput modifyObject(ModifyObjectInput input) throws TosException;
 
     /**
      * create a pre-signed URL

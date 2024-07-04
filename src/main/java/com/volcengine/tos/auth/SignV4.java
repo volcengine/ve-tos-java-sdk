@@ -1,6 +1,8 @@
 package com.volcengine.tos.auth;
 
 import com.volcengine.tos.TosClientException;
+import com.volcengine.tos.comm.TosHeader;
+import com.volcengine.tos.credential.CredentialsProvider;
 import com.volcengine.tos.internal.TosRequest;
 import com.volcengine.tos.internal.util.ParamsChecker;
 import com.volcengine.tos.internal.util.SigningUtils;
@@ -8,10 +10,7 @@ import com.volcengine.tos.internal.util.StringUtils;
 import com.volcengine.tos.internal.util.TosUtils;
 
 import java.nio.charset.StandardCharsets;
-import java.time.Duration;
-import java.time.Instant;
-import java.time.OffsetDateTime;
-import java.time.ZoneOffset;
+import java.time.*;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.*;
 import java.util.function.Predicate;
@@ -30,16 +29,30 @@ interface signKey{
 
 public class SignV4 implements Signer {
     private Credentials credentials;
+    private CredentialsProvider credentialsProvider;
     private final String region;
     private signingHeader signingHeader;
     private Predicate<String> signingQuery;
     private Supplier<Instant> now;
     private signKey signKey;
 
+    @Deprecated
     public SignV4(Credentials credentials, String region) {
         ParamsChecker.ensureNotNull(credentials, "Credentials");
         ParamsChecker.ensureNotNull(region, "Region");
         this.credentials = credentials;
+        this.region = region;
+        this.signingHeader = SignV4::defaultSigningHeaderV4;
+        this.signingQuery = SignV4::defaultSigningQueryV4;
+        this.now = SignV4::defaultUTCNow;
+        this.signKey = SigningUtils::signKey;
+    }
+
+    public SignV4(CredentialsProvider credentialsProvider, String region) {
+        ParamsChecker.ensureNotNull(credentialsProvider, "CredentialsProvider");
+        ParamsChecker.ensureNotNull(credentialsProvider.getCredentials(), "CredentialsProvider.Credentials");
+        ParamsChecker.ensureNotNull(region, "Region");
+        this.credentialsProvider = credentialsProvider;
         this.region = region;
         this.signingHeader = SignV4::defaultSigningHeaderV4;
         this.signingQuery = SignV4::defaultSigningQueryV4;
@@ -61,42 +74,75 @@ public class SignV4 implements Signer {
     }
 
     @Override
+    public CredentialsProvider getCredentialsProvider() {
+        return this.credentialsProvider;
+    }
+
+    @Override
     public String getRegion() {
         return this.region;
     }
 
     @Override
     public Map<String, String> signHeader(TosRequest req) {
-        ParamsChecker.ensureNotNull(req.getHost(), "host");
+        String host;
+        if (req.getHeaders().containsKey(TosHeader.HEADER_HOST)) {
+            host = req.getHeaders().get(TosHeader.HEADER_HOST);
+        } else {
+            host = req.getHost();
+        }
+        ParamsChecker.ensureNotNull(host, "host");
         Map<String, String> signed = new HashMap<>(4);
-        OffsetDateTime now = this.now.get().atOffset(ZoneOffset.UTC);
-        String date = now.format(SigningUtils.iso8601Layout);
         String contentSha256 = req.getHeaders().get(SigningUtils.v4ContentSHA256);
-
         Map<String, String> header = req.getHeaders();
         List<Map.Entry<String, String>> signedHeader = this.signedHeader(header, false, null);
-        signedHeader.add(new SimpleEntry<>(SigningUtils.v4Date.toLowerCase(), date));
-        signedHeader.add(new SimpleEntry<>("date", date));
-        signedHeader.add(new SimpleEntry<>("host", req.getHost()));
-
-        Credential cred = this.credentials.credential();
-        if (StringUtils.isNotEmpty(cred.getSecurityToken())) {
-            signedHeader.add(new SimpleEntry<>(SigningUtils.v4SecurityToken.toLowerCase(), cred.getSecurityToken()));
-            signed.put(SigningUtils.v4SecurityToken, cred.getSecurityToken());
+        OffsetDateTime now;
+        String date;
+        if (req.getHeaders().containsKey(SigningUtils.v4Date)) {
+            date = req.getHeaders().get(SigningUtils.v4Date);
+            now = LocalDateTime.parse(date, SigningUtils.iso8601Layout).atOffset(ZoneOffset.UTC);
+        } else {
+            now = this.now.get().atOffset(ZoneOffset.UTC);
+            date = now.format(SigningUtils.iso8601Layout);
+            signedHeader.add(new SimpleEntry<>(SigningUtils.v4Date.toLowerCase(), date));
         }
-        Collections.sort(signedHeader, new Comparator<Map.Entry<String, String>>() {
-            @Override
-            public int compare(Map.Entry<String, String> o1, Map.Entry<String, String> o2) {
-                return o1.getKey().compareTo(o2.getKey());
-            }
-        });
-        List<Map.Entry<String, String>> signedQuery = this.signedQuery(req.getQuery(), null);
-        String sign = this.doSign(req.getMethod(), req.getPath(), contentSha256, signedHeader, signedQuery, now, cred);
-        String credential = String.format("%s/%s/%s/tos/request", cred.getAccessKeyId(), now.format(SigningUtils.yyyyMMdd), this.region);
-        String keys = signedHeader.stream().map(Map.Entry::getKey).sorted().collect(Collectors.joining(";"));
-        String auth = String.format("TOS4-HMAC-SHA256 Credential=%s,SignedHeaders=%s,Signature=%s", credential, keys, sign);
+        signedHeader.add(new SimpleEntry<>("date", date));
+        signedHeader.add(new SimpleEntry<>("host", host));
 
-        signed.put(SigningUtils.authorization, auth);
+        String ak;
+        String sk;
+        String securityToken;
+        if (this.credentialsProvider != null) {
+            com.volcengine.tos.credential.Credentials cred = this.credentialsProvider.getCredentials();
+            ak = cred.getAk();
+            sk = cred.getSk();
+            securityToken = cred.getSecurityToken();
+        } else {
+            Credential cred = this.credentials.credential();
+            ak = cred.getAccessKeyId();
+            sk = cred.getAccessKeySecret();
+            securityToken = cred.getSecurityToken();
+        }
+
+        if (StringUtils.isNotEmpty(ak) && StringUtils.isNotEmpty(sk)) {
+            if (StringUtils.isNotEmpty(securityToken)) {
+                signedHeader.add(new SimpleEntry<>(SigningUtils.v4SecurityToken.toLowerCase(), securityToken));
+                signed.put(SigningUtils.v4SecurityToken, securityToken);
+            }
+            Collections.sort(signedHeader, new Comparator<Map.Entry<String, String>>() {
+                @Override
+                public int compare(Map.Entry<String, String> o1, Map.Entry<String, String> o2) {
+                    return o1.getKey().compareTo(o2.getKey());
+                }
+            });
+            List<Map.Entry<String, String>> signedQuery = this.signedQuery(req.getQuery(), null);
+            String sign = this.doSign(req.getMethod(), req.getPath(), contentSha256, signedHeader, signedQuery, now, sk);
+            String credential = String.format("%s/%s/%s/tos/request", ak, now.format(SigningUtils.yyyyMMdd), this.region);
+            String keys = signedHeader.stream().map(Map.Entry::getKey).sorted().collect(Collectors.joining(";"));
+            String auth = String.format("TOS4-HMAC-SHA256 Credential=%s,SignedHeaders=%s,Signature=%s", credential, keys, sign);
+
+            signed.put(SigningUtils.authorization, auth);
+        }
         signed.put(SigningUtils.v4Date, date);
         signed.put("Date", date);
         return signed;
@@ -109,41 +155,57 @@ public class SignV4 implements Signer {
         Map<String, String> query = req.getQuery();
         Map<String, String> extra = new HashMap<>();
 
-        Credential cred = this.credentials.credential();
-        String credential = String.format("%s/%s/%s/tos/request", cred.getAccessKeyId(), now.format(SigningUtils.yyyyMMdd), this.region);
-        extra.put(SigningUtils.v4Algorithm, SigningUtils.signPrefix);
-        extra.put(SigningUtils.v4Credential, credential);
-        extra.put(SigningUtils.v4Date, date);
-        extra.put(SigningUtils.v4Expires, String.valueOf(ttl.toMillis() / 1000));
-        if (StringUtils.isNotEmpty(cred.getSecurityToken())) {
-            extra.put(SigningUtils.v4SecurityToken, cred.getSecurityToken());
+        String ak;
+        String sk;
+        String securityToken;
+        if (this.credentialsProvider != null) {
+            com.volcengine.tos.credential.Credentials cred = this.credentialsProvider.getCredentials();
+            ak = cred.getAk();
+            sk = cred.getSk();
+            securityToken = cred.getSecurityToken();
+        } else {
+            Credential cred = this.credentials.credential();
+            ak = cred.getAccessKeyId();
+            sk = cred.getAccessKeySecret();
+            securityToken = cred.getSecurityToken();
         }
-//        extra.put(v4SignedHeaders, "host"); // 目前只有host
-        List<String> contentSha256Container = new ArrayList<>(1);
-        List<Map.Entry<String, String>> signedHeader = this.signedHeader(req.getHeaders(), true, contentSha256Container);
 
-        String host = req.getHost();
-        if (StringUtils.isEmpty(host)) {
-            throw new TosClientException("empty host", null);
-        }
-        signedHeader.add(new SimpleEntry<>("host", host));
-        Collections.sort(signedHeader, new Comparator<Map.Entry<String, String>>() {
-            @Override
-            public int compare(Map.Entry<String, String> o1, Map.Entry<String, String> o2) {
-                return o1.getKey().compareTo(o2.getKey());
+        if (StringUtils.isNotEmpty(ak) && StringUtils.isNotEmpty(sk)) {
+            String credential = String.format("%s/%s/%s/tos/request", ak, now.format(SigningUtils.yyyyMMdd), this.region);
+            extra.put(SigningUtils.v4Algorithm, SigningUtils.signPrefix);
+            extra.put(SigningUtils.v4Credential, credential);
+            extra.put(SigningUtils.v4Date, date);
+            extra.put(SigningUtils.v4Expires, String.valueOf(ttl.toMillis() / 1000));
+            if (StringUtils.isNotEmpty(securityToken)) {
+                extra.put(SigningUtils.v4SecurityToken, securityToken);
             }
-        });
+//        extra.put(v4SignedHeaders, "host"); // 目前只有host
+            List<String> contentSha256Container = new ArrayList<>(1);
+            List<Map.Entry<String, String>> signedHeader = this.signedHeader(req.getHeaders(), true, contentSha256Container);
 
-        String keys = signedHeader.stream().map(Map.Entry::getKey).sorted().collect(Collectors.joining(";"));
-        extra.put(SigningUtils.v4SignedHeaders, keys);
-        List<Map.Entry<String, String>> signedQuery = this.signedQuery(query, extra);
-        String contentSha256 = SigningUtils.unsignedPayload;
-        if (contentSha256Container.size() > 0) {
-            contentSha256 = contentSha256Container.get(0);
+            String host = req.getHost();
+            if (StringUtils.isEmpty(host)) {
+                throw new TosClientException("empty host", null);
+            }
+            signedHeader.add(new SimpleEntry<>("host", host));
+            Collections.sort(signedHeader, new Comparator<Map.Entry<String, String>>() {
+                @Override
+                public int compare(Map.Entry<String, String> o1, Map.Entry<String, String> o2) {
+                    return o1.getKey().compareTo(o2.getKey());
+                }
+            });
+
+            String keys = signedHeader.stream().map(Map.Entry::getKey).sorted().collect(Collectors.joining(";"));
+            extra.put(SigningUtils.v4SignedHeaders, keys);
+            List<Map.Entry<String, String>> signedQuery = this.signedQuery(query, extra);
+            String contentSha256 = SigningUtils.unsignedPayload;
+            if (contentSha256Container.size() > 0) {
+                contentSha256 = contentSha256Container.get(0);
+            }
+
+            String sign = this.doSign(req.getMethod(), req.getPath(), contentSha256, signedHeader, signedQuery, now, sk);
+            extra.put(SigningUtils.v4Signature, sign);
         }
-
-        String sign = this.doSign(req.getMethod(), req.getPath(), contentSha256, signedHeader, signedQuery, now, cred);
-        extra.put(SigningUtils.v4Signature, sign);
 
         return extra;
     }
@@ -277,7 +339,7 @@ public class SignV4 implements Signer {
     private String doSign(String method, String path, String contentSha256,
                           List<Map.Entry<String, String>> header,
                           List<Map.Entry<String, String>> query,
-                          OffsetDateTime now, Credential cred) {
+                          OffsetDateTime now, String sk) {
         final char split = '\n';
 
         String req = this.canonicalRequest(method, path, contentSha256, header, query);
@@ -300,7 +362,7 @@ public class SignV4 implements Signer {
         byte[] sum = SigningUtils.sha256(req);
         buf.append(SigningUtils.toHex(sum));
         TosUtils.getLogger().debug("string to sign:\n {}", buf.toString());
-        byte[] signK = SigningUtils.signKey(new SignKeyInfo(date, this.region, cred));
+        byte[] signK = SigningUtils.signKey(new SignKeyInfo(date, this.region, sk));
         byte[] sign = SigningUtils.hmacSha256(signK, buf.toString().getBytes(StandardCharsets.UTF_8));
         return String.valueOf(SigningUtils.toHex(sign));
     }

@@ -1,6 +1,8 @@
 package com.volcengine.tos.model.object;
 
-public class GetObjectTaggingInput {
+import com.volcengine.tos.model.GenericInput;
+
+public class GetObjectTaggingInput extends GenericInput {
     private String bucket;
     private String key;
     private String versionID;

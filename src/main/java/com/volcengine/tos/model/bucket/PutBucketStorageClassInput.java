@@ -1,8 +1,9 @@
 package com.volcengine.tos.model.bucket;
 
 import com.volcengine.tos.comm.common.StorageClassType;
+import com.volcengine.tos.model.GenericInput;
 
-public class PutBucketStorageClassInput {
+public class PutBucketStorageClassInput extends GenericInput {
     private String bucket;
     private StorageClassType storageClass;
 

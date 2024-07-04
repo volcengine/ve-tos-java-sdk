@@ -2,6 +2,8 @@ package com.volcengine.tos.model.object;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.Objects;
+
 public class ObjectTobeDeleted {
     @JsonProperty("Key")
     private String key;
@@ -32,6 +34,19 @@ public class ObjectTobeDeleted {
                 "key='" + key + '\'' +
                 ", versionID='" + versionID + '\'' +
                 '}';
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        ObjectTobeDeleted that = (ObjectTobeDeleted) o;
+        return Objects.equals(key, that.key) && Objects.equals(versionID, that.versionID);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(key, versionID);
     }
 
     public static ObjectTobeDeletedBuilder builder() {

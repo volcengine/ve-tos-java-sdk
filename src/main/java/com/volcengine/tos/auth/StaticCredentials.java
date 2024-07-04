@@ -1,5 +1,6 @@
 package com.volcengine.tos.auth;
 
+@Deprecated
 public class StaticCredentials implements Credentials{
     private String accessKey;
     private String secretKey;

@@ -3,15 +3,17 @@ package com.volcengine.tos.model.object;
 import com.volcengine.tos.TosClientException;
 import com.volcengine.tos.comm.TosHeader;
 import com.volcengine.tos.comm.common.MetadataDirectiveType;
+import com.volcengine.tos.comm.common.TaggingDirectiveType;
 import com.volcengine.tos.internal.Consts;
 import com.volcengine.tos.internal.util.DateConverter;
 import com.volcengine.tos.internal.util.StringUtils;
+import com.volcengine.tos.model.GenericInput;
 
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
-public class CopyObjectV2Input {
+public class CopyObjectV2Input extends GenericInput {
     /**
      * the bucket copy to
      */
@@ -72,6 +74,8 @@ public class CopyObjectV2Input {
 
     private boolean forbidOverwrite;
     private String ifMatch;
+    private String tagging;
+    private TaggingDirectiveType taggingDirective;
 
     private Map<String, String> headers;
 
@@ -126,6 +130,8 @@ public class CopyObjectV2Input {
         if (forbidOverwrite) {
             withHeader(TosHeader.HEADER_FORBID_OVERWRITE, "true");
         }
+        withHeader(TosHeader.HEADER_TAGGING, tagging);
+        withHeader(TosHeader.HEADER_TAGGING_DIRECTIVE, taggingDirective == null ? null : taggingDirective.getType());
         return headers;
     }
 
@@ -258,6 +264,24 @@ public class CopyObjectV2Input {
         return this;
     }
 
+    public String getTagging() {
+        return tagging;
+    }
+
+    public CopyObjectV2Input setTagging(String tagging) {
+        this.tagging = tagging;
+        return this;
+    }
+
+    public TaggingDirectiveType getTaggingDirective() {
+        return taggingDirective;
+    }
+
+    public CopyObjectV2Input setTaggingDirective(TaggingDirectiveType taggingDirective) {
+        this.taggingDirective = taggingDirective;
+        return this;
+    }
+
     public static CopyObjectV2InputBuilder builder() {
         return new CopyObjectV2InputBuilder();
     }
@@ -299,6 +323,8 @@ public class CopyObjectV2Input {
         private ObjectMetaRequestOptions options;
         private boolean forbidOverwrite;
         private String ifMatch;
+        private String tagging;
+        private TaggingDirectiveType taggingDirective;
 
         private CopyObjectV2InputBuilder() {
         }
@@ -383,6 +409,16 @@ public class CopyObjectV2Input {
             return this;
         }
 
+        public CopyObjectV2InputBuilder tagging(String tagging) {
+            this.tagging = tagging;
+            return this;
+        }
+
+        public CopyObjectV2InputBuilder taggingDirective(TaggingDirectiveType taggingDirective) {
+            this.taggingDirective = taggingDirective;
+            return this;
+        }
+
         public CopyObjectV2Input build() {
             CopyObjectV2Input copyObjectV2Input = new CopyObjectV2Input();
             copyObjectV2Input.setBucket(bucket);
@@ -401,6 +437,8 @@ public class CopyObjectV2Input {
             copyObjectV2Input.setOptions(options);
             copyObjectV2Input.setIfMatch(ifMatch);
             copyObjectV2Input.setForbidOverwrite(forbidOverwrite);
+            copyObjectV2Input.setTagging(tagging);
+            copyObjectV2Input.setTaggingDirective(taggingDirective);
             return copyObjectV2Input;
         }
     }

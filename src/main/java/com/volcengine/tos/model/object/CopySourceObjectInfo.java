@@ -8,6 +8,7 @@ public class CopySourceObjectInfo {
     private String hashCrc64ecma;
     private Date lastModified;
     private long objectSize;
+    private boolean isSymlink;
 
     public String getEtag() {
         return etag;
@@ -45,6 +46,15 @@ public class CopySourceObjectInfo {
         return this;
     }
 
+    public boolean isSymlink() {
+        return isSymlink;
+    }
+
+    public CopySourceObjectInfo setSymlink(boolean symlink) {
+        isSymlink = symlink;
+        return this;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) {
@@ -55,12 +65,12 @@ public class CopySourceObjectInfo {
         }
         CopySourceObjectInfo that = (CopySourceObjectInfo) o;
         return objectSize == that.objectSize && etag.equals(that.etag)
-                && Objects.equals(hashCrc64ecma, that.hashCrc64ecma) && lastModified.equals(that.lastModified);
+                && Objects.equals(hashCrc64ecma, that.hashCrc64ecma) && lastModified.equals(that.lastModified) && isSymlink == that.isSymlink;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(etag, hashCrc64ecma, lastModified, objectSize);
+        return Objects.hash(etag, hashCrc64ecma, lastModified, objectSize, isSymlink);
     }
 
     @Override
@@ -70,6 +80,7 @@ public class CopySourceObjectInfo {
                 ", hashCrc64ecma='" + hashCrc64ecma + '\'' +
                 ", lastModified=" + lastModified +
                 ", objectSize=" + objectSize +
+                ", isSymlink=" + isSymlink +
                 '}';
     }
 }

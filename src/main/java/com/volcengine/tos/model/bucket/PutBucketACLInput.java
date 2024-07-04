@@ -3,12 +3,13 @@ package com.volcengine.tos.model.bucket;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.volcengine.tos.comm.common.ACLType;
+import com.volcengine.tos.model.GenericInput;
 import com.volcengine.tos.model.acl.GrantV2;
 import com.volcengine.tos.model.acl.Owner;
 
 import java.util.List;
 
-public class PutBucketACLInput {
+public class PutBucketACLInput extends GenericInput {
     @JsonIgnore
     private String bucket;
     @JsonIgnore

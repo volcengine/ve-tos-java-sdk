@@ -2,6 +2,7 @@ package com.volcengine.tos.internal.model;
 
 import com.volcengine.tos.TosClientException;
 import com.volcengine.tos.comm.Utils;
+import com.volcengine.tos.comm.io.Retryable;
 import com.volcengine.tos.internal.util.CRC64Utils;
 
 import java.io.IOException;
@@ -9,7 +10,7 @@ import java.io.InputStream;
 import java.util.zip.CheckedInputStream;
 import java.util.zip.Checksum;
 
-public class CheckCrc64AutoInputStream extends CheckedInputStream implements RetryCountNotifier {
+public class CheckCrc64AutoInputStream extends CheckedInputStream implements RetryCountNotifier, Retryable {
     private final String serverCrc64;
     public CheckCrc64AutoInputStream(InputStream in, Checksum cksum, String serverCrc64) {
         super(in, cksum);

@@ -1,6 +1,8 @@
 package com.volcengine.tos.model.bucket;
 
-public class DeleteBucketInput {
+import com.volcengine.tos.model.GenericInput;
+
+public class DeleteBucketInput extends GenericInput {
     private String bucket;
 
     public DeleteBucketInput() {

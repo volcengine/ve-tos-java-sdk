@@ -4,6 +4,7 @@ import com.volcengine.tos.TosClientException;
 import com.volcengine.tos.comm.HttpMethod;
 import com.volcengine.tos.comm.HttpStatus;
 import com.volcengine.tos.comm.TosHeader;
+import com.volcengine.tos.comm.io.Retryable;
 import com.volcengine.tos.comm.io.TosRepeatableFileInputStream;
 import com.volcengine.tos.internal.model.CRC64Checksum;
 import com.volcengine.tos.internal.model.RetryCountNotifier;
@@ -21,16 +22,8 @@ import okhttp3.Authenticator;
 import okhttp3.*;
 import okio.BufferedSink;
 
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSocketFactory;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
 import java.io.*;
 import java.net.*;
-import java.security.KeyManagementException;
-import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
-import java.security.cert.X509Certificate;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 import java.util.zip.CheckedInputStream;
@@ -60,8 +53,8 @@ public class RequestTransport implements Transport, Closeable {
         int maxConnections = config.getMaxConnections() > 0 ? config.getMaxConnections() : Consts.DEFAULT_MAX_CONNECTIONS;
         int maxIdleConnectionTimeMills = config.getIdleConnectionTimeMills() > 0 ?
                 config.getIdleConnectionTimeMills() : Consts.DEFAULT_IDLE_CONNECTION_TIME_MILLS;
-        int readTimeout = config.getReadTimeoutMills() > 0 ? config.getReadTimeoutMills() : Consts.DEFAULT_READ_TIMEOUT_MILLS;
-        int writeTimeout = config.getWriteTimeoutMills() > 0 ? config.getWriteTimeoutMills() : Consts.DEFAULT_WRITE_TIMEOUT_MILLS;
+        int readTimeout = config.getReadTimeoutMills() >= 0 ? config.getReadTimeoutMills() : Consts.DEFAULT_READ_TIMEOUT_MILLS;
+        int writeTimeout = config.getWriteTimeoutMills() >= 0 ? config.getWriteTimeoutMills() : Consts.DEFAULT_WRITE_TIMEOUT_MILLS;
         int connectTimeout = config.getConnectTimeoutMills() > 0 ? config.getConnectTimeoutMills() : Consts.DEFAULT_CONNECT_TIMEOUT_MILLS;
 
         this.maxRetries = config.getMaxRetryCount();
@@ -81,7 +74,7 @@ public class RequestTransport implements Transport, Closeable {
             // the sdk verifies ssl cert while using https,
             // but if you disable ssl verification,
             // will ignore it by the following method.
-            builder = ignoreCertificate(builder);
+            builder = TosUtils.ignoreCertificate(builder);
         }
         if (StringUtils.isNotEmpty(config.getProxyHost()) && config.getProxyPort() > 0 ) {
             addProxyConfig(config, builder);
@@ -222,7 +215,7 @@ public class RequestTransport implements Transport, Closeable {
                 printAccessLogFailed(e);
                 throw new TosClientException("tos: request interrupted", e);
             } catch (IOException e) {
-                if (tosRequest.isRetryableOnClientException()) {
+                if (tosRequest.isRetryableOnClientException() && !"mark/reset not supported".equals(e.toString())) {
                     try{
                         if (i == maxRetries) {
                             // last time does not need to sleep
@@ -283,7 +276,7 @@ public class RequestTransport implements Transport, Closeable {
         long clientCrcLong = ((CheckedInputStream) tosRequest.getContent()).getChecksum().getValue();
         String clientHashCrc64Ecma = CRC64Utils.longToUnsignedLongString(clientCrcLong);
         String serverHashCrc64Ecma = response.header(TosHeader.HEADER_CRC64);
-        if (!StringUtils.equals(clientHashCrc64Ecma, serverHashCrc64Ecma)) {
+        if (StringUtils.isNotEmpty(serverHashCrc64Ecma) && !StringUtils.equals(clientHashCrc64Ecma, serverHashCrc64Ecma)) {
             throw new TosClientException("tos: crc64 check failed, " +
                     "expected:" + serverHashCrc64Ecma +
                     ", in fact:" + clientHashCrc64Ecma,
@@ -408,33 +401,6 @@ public class RequestTransport implements Transport, Closeable {
     }
 
 
-    private OkHttpClient.Builder ignoreCertificate(OkHttpClient.Builder builder) throws TosClientException {
-        TosUtils.getLogger().info("tos: ignore ssl certificate verification");
-        try {
-            final TrustManager[] trustAllCerts = new TrustManager[] {
-                new X509TrustManager() {
-                    @Override
-                    public void checkClientTrusted(X509Certificate[] chain, String authType) {}
-                    @Override
-                    public void checkServerTrusted(X509Certificate[] chain, String authType) {}
-                    @Override
-                    public X509Certificate[] getAcceptedIssuers() {
-                        return new X509Certificate[]{};
-                    }
-                }
-            };
-            final SSLContext sslContext = SSLContext.getInstance("SSL");
-            sslContext.init(null, trustAllCerts, new SecureRandom());
-            final SSLSocketFactory sslSocketFactory = sslContext.getSocketFactory();
-
-            builder.sslSocketFactory(sslSocketFactory, (X509TrustManager)trustAllCerts[0]);
-            builder.hostnameVerifier((hostname, session) -> true);
-        } catch (NoSuchAlgorithmException | KeyManagementException e) {
-            throw new TosClientException("tos: set ignoreCertificate failed", e);
-        }
-        return builder;
-    }
-
     private MediaType getMediaType(TosRequest request) {
         String type = "";
         if (request.getHeaders() != null && request.getHeaders().containsKey(TosHeader.HEADER_CONTENT_TYPE)) {
@@ -526,10 +492,16 @@ class WrappedTransportRequestBody extends RequestBody implements Closeable {
     }
 
     void reset() throws IOException {
-        if (totalBytesRead > 0 && this.content != null && this.content.markSupported()) {
-            TosUtils.getLogger().debug("tos: okhttp writeTo call reset");
-            this.content.reset();
-            totalBytesRead = 0;
+        if (totalBytesRead > 0 && this.content != null) {
+            if (this.content.markSupported()) {
+                TosUtils.getLogger().debug("tos: okhttp writeTo call reset");
+                this.content.reset();
+                totalBytesRead = 0;
+            } else if (this.content instanceof Retryable) {
+                TosUtils.getLogger().debug("tos: okhttp writeTo call reset");
+                ((Retryable) this.content).reset();
+                totalBytesRead = 0;
+            }
         }
     }
 

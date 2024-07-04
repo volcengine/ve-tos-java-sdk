@@ -6,7 +6,7 @@ import java.io.InputStream;
 public class UploadPartInput {
     private String key;
     private String uploadID;
-    private long partSize;
+    private long partSize = -1;
     private int partNumber;
     private InputStream content;
 

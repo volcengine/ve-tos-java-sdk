@@ -221,112 +221,114 @@ public class TosFileRequestHandlerTest {
     @Test
     void downloadFileTest() {
         // upload data
-        String key = Consts.internalFileCrudPrefix + getUniqueObjectKey();
-        PutObjectFromFileInput input = PutObjectFromFileInput.builder()
-                .filePath(sampleFilePath).bucket(Consts.bucket).key(key).build();
-        try{
-            PutObjectFromFileOutput output = getHandler().putObjectFromFile(input);
-            Assert.assertNotNull(output.getPutObjectOutput());
-        } catch (TosException e) {
-            testFailed(e);
-        }
+        for (int i = 0; i < 2; i++) {
+            String key = Consts.internalFileCrudPrefix + getUniqueObjectKey();
+            PutObjectFromFileInput input = PutObjectFromFileInput.builder()
+                    .filePath(sampleFilePath).bucket(Consts.bucket).key(key).build();
+            try {
+                PutObjectFromFileOutput output = getHandler().putObjectFromFile(input);
+                Assert.assertNotNull(output.getPutObjectOutput());
+            } catch (TosException e) {
+                testFailed(e);
+            }
 
-        // head it
-        HeadObjectV2Output head = ClientInstance.getObjectRequestHandlerInstance()
-                .headObject(new HeadObjectV2Input().setBucket(Consts.bucket).setKey(key));
-        long contentLength = head.getContentLength();
-        Assert.assertEquals(contentLength, new File(sampleFilePath).length());
+            // head it
+            HeadObjectV2Output head = ClientInstance.getObjectRequestHandlerInstance()
+                    .headObject(new HeadObjectV2Input().setBucket(Consts.bucket).setKey(key));
+            long contentLength = head.getContentLength();
+            Assert.assertEquals(contentLength, new File(sampleFilePath).length());
 
-        DownloadFileInput downloadFileInput = DownloadFileInput.builder()
-                .bucket(Consts.bucket)
-                .key(key)
-                .filePath(notFound + ".3")
-                .enableCheckpoint(true)
-                .taskNum(3)
-                .partSize(1024 * 1024 * 5L)
-                .build();
+            DownloadFileInput downloadFileInput = DownloadFileInput.builder()
+                    .bucket(Consts.bucket)
+                    .key(key)
+                    .filePath(notFound + "." + Integer.toString(i))
+                    .enableCheckpoint(true)
+                    .taskNum(3)
+                    .partSize(1024 * 1024 * 5L)
+                    .build();
 
-        // invalid part size
-        try{
-            downloadFileInput.setPartSize(5L * 1024 * 1024 * 1024 + 1000);
-            getHandler().downloadFile(downloadFileInput);
-        } catch (TosClientException e) {
-            Assert.assertTrue(e.getMessage().contains("invalid part size"));
-        }
-        try{
-            downloadFileInput.setPartSize(3L * 1024 * 1024);
-            getHandler().downloadFile(downloadFileInput);
-        } catch (TosClientException e) {
-            Assert.assertTrue(e.getMessage().contains("invalid part size"));
-        }
-        downloadFileInput.setPartSize(5 * 1024 * 1024);
+            // invalid part size
+            try {
+                downloadFileInput.setPartSize(5L * 1024 * 1024 * 1024 + 1000);
+                getHandler().downloadFile(downloadFileInput);
+            } catch (TosClientException e) {
+                Assert.assertTrue(e.getMessage().contains("invalid part size"));
+            }
+            try {
+                downloadFileInput.setPartSize(3L * 1024 * 1024);
+                getHandler().downloadFile(downloadFileInput);
+            } catch (TosClientException e) {
+                Assert.assertTrue(e.getMessage().contains("invalid part size"));
+            }
+            downloadFileInput.setPartSize(5 * 1024 * 1024);
 
-        // download not found object
-        try{
-            downloadFileInput.setBucket(bucket).setKey(key+"notfound"+System.currentTimeMillis());
-            getHandler().downloadFile(downloadFileInput);
-            Assert.fail();
-        } catch (TosException e) {
-            Assert.assertEquals(e.getStatusCode(), HttpStatus.NOT_FOUND);
-        }
-
-        downloadFileInput = DownloadFileInput.builder()
-                .bucket(Consts.bucket)
-                .key(key)
-                .filePath(notFound + ".3")
-                .enableCheckpoint(true)
-                .taskNum(3)
-                .partSize(1024 * 1024 * 5)
-                .build();
-        AtomicInteger createTempFile = new AtomicInteger();
-        AtomicInteger downloadPart = new AtomicInteger();
-        AtomicInteger renameTempFile = new AtomicInteger();
-        downloadFileInput.setDownloadEventListener(((event) -> {
-            if (event.getDownloadEventType() == DownloadEventType.DownloadEventCreateTempFileSucceed) {
-                createTempFile.getAndIncrement();
-            }
-            if (event.getDownloadEventType() == DownloadEventType.DownloadEventDownloadPartSucceed) {
-                downloadPart.getAndIncrement();
-            }
-            if (event.getDownloadEventType() == DownloadEventType.DownloadEventRenameTempFileSucceed) {
-                renameTempFile.getAndIncrement();
-            }
-        }));
-        downloadFileInput.setDataTransferListener(status -> {
-            Assert.assertEquals(status.getTotalBytes(), contentLength);
-            if (status.getType() == DataTransferType.DATA_TRANSFER_STARTED) {
-                Assert.assertEquals(status.getConsumedBytes(), 0);
-            }
-            if (status.getType() == DataTransferType.DATA_TRANSFER_RW) {
-                Assert.assertTrue(status.getConsumedBytes() <= status.getTotalBytes());
-            }
-            if (status.getType() == DataTransferType.DATA_TRANSFER_SUCCEED) {
-                Assert.assertEquals(status.getConsumedBytes(), contentLength);
-            }
-            if (status.getType() == DataTransferType.DATA_TRANSFER_FAILED) {
+            // download not found object
+            try {
+                downloadFileInput.setBucket(bucket).setKey(key + "notfound" + System.currentTimeMillis());
+                getHandler().downloadFile(downloadFileInput);
                 Assert.fail();
+            } catch (TosException e) {
+                Assert.assertEquals(e.getStatusCode(), HttpStatus.NOT_FOUND);
             }
-        });
-        DownloadFileOutput output = getHandler().downloadFile(downloadFileInput);
-        Assert.assertEquals(createTempFile.get(), 1);
-        Assert.assertEquals(downloadPart.get(), 3);
-        Assert.assertEquals(renameTempFile.get(), 1);
 
-        try(FileInputStream inputStream = new FileInputStream(notFound + ".3")){
-            MessageDigest md5 = MessageDigest.getInstance("MD5");
-            byte[] buffer = new byte[8192];
-            int length;
-            while ((length = inputStream.read(buffer)) != -1) {
-                md5.update(buffer, 0, length);
+            downloadFileInput = DownloadFileInput.builder()
+                    .bucket(Consts.bucket)
+                    .key(key)
+                    .filePath(notFound + "." + Integer.toString(i))
+                    .enableCheckpoint(i % 2 == 0)
+                    .taskNum(3)
+                    .partSize(1024 * 1024 * 5)
+                    .build();
+            AtomicInteger createTempFile = new AtomicInteger();
+            AtomicInteger downloadPart = new AtomicInteger();
+            AtomicInteger renameTempFile = new AtomicInteger();
+            downloadFileInput.setDownloadEventListener(((event) -> {
+                if (event.getDownloadEventType() == DownloadEventType.DownloadEventCreateTempFileSucceed) {
+                    createTempFile.getAndIncrement();
+                }
+                if (event.getDownloadEventType() == DownloadEventType.DownloadEventDownloadPartSucceed) {
+                    downloadPart.getAndIncrement();
+                }
+                if (event.getDownloadEventType() == DownloadEventType.DownloadEventRenameTempFileSucceed) {
+                    renameTempFile.getAndIncrement();
+                }
+            }));
+            downloadFileInput.setDataTransferListener(status -> {
+                Assert.assertEquals(status.getTotalBytes(), contentLength);
+                if (status.getType() == DataTransferType.DATA_TRANSFER_STARTED) {
+                    Assert.assertEquals(status.getConsumedBytes(), 0);
+                }
+                if (status.getType() == DataTransferType.DATA_TRANSFER_RW) {
+                    Assert.assertTrue(status.getConsumedBytes() <= status.getTotalBytes());
+                }
+                if (status.getType() == DataTransferType.DATA_TRANSFER_SUCCEED) {
+                    Assert.assertEquals(status.getConsumedBytes(), contentLength);
+                }
+                if (status.getType() == DataTransferType.DATA_TRANSFER_FAILED) {
+                    Assert.fail();
+                }
+            });
+            DownloadFileOutput output = getHandler().downloadFile(downloadFileInput);
+            Assert.assertEquals(createTempFile.get(), 1);
+            Assert.assertEquals(downloadPart.get(), 3);
+            Assert.assertEquals(renameTempFile.get(), 1);
+
+            try (FileInputStream inputStream = new FileInputStream(notFound + "." + Integer.toString(i))) {
+                MessageDigest md5 = MessageDigest.getInstance("MD5");
+                byte[] buffer = new byte[8192];
+                int length;
+                while ((length = inputStream.read(buffer)) != -1) {
+                    md5.update(buffer, 0, length);
+                }
+                Assert.assertEquals(new String(Hex.encodeHex(md5.digest())), getMD5());
+            } catch (IOException | NoSuchAlgorithmException e) {
+                testFailed(e);
+            } finally {
+                ClientInstance.getObjectRequestHandlerInstance().deleteObject(new DeleteObjectInput()
+                        .setBucket(Consts.bucket).setKey(key));
+                File file = new File("src/test/resources/xxx");
+                FileTest.deleteFileRecursive(file);
             }
-            Assert.assertEquals(new String(Hex.encodeHex(md5.digest())), getMD5());
-        } catch (IOException | NoSuchAlgorithmException e) {
-            testFailed(e);
-        } finally {
-            ClientInstance.getObjectRequestHandlerInstance().deleteObject(new DeleteObjectInput()
-                    .setBucket(Consts.bucket).setKey(key));
-            File file = new File("src/test/resources/xxx");
-            FileTest.deleteFileRecursive(file);
         }
     }
 

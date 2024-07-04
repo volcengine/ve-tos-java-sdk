@@ -630,7 +630,8 @@ public class TosClientV1Adapter {
             if (s.length() > 0) {
                 try{
                     ServerExceptionJson se = TosUtils.getJsonMapper().readValue(s, new TypeReference<ServerExceptionJson>(){});
-                    throw new TosServerException(res.getStatusCode(), se.getCode(), se.getMessage(), se.getRequestID(), se.getHostID()).setEc(se.getEc());
+                    throw new TosServerException(res.getStatusCode(), se.getCode(), se.getMessage(), se.getRequestID(), se.getHostID())
+                            .setEc(se.getEc()).setKey(se.getKey());
                 } catch (JsonProcessingException e) {
                     if (res.getStatusCode() == HttpStatus.BAD_REQUEST) {
                         throw new TosClientException("bad request, " + s, null);
@@ -638,14 +639,15 @@ public class TosClientV1Adapter {
                     throw new TosClientException("parse server exception failed", e);
                 }
             }
+            String ec = res.getHeaders().get(TosHeader.HEADER_EC.toLowerCase());
             // head 不返回 body，此处特殊处理
             if (res.getStatusCode() == HttpStatus.NOT_FOUND) {
                 // 针对 head 404 场景
-                throw new TosServerException(res.getStatusCode(), Code.NOT_FOUND, "", res.getRequesID(), "");
+                throw new TosServerException(res.getStatusCode(), Code.NOT_FOUND, "", res.getRequesID(), "").setEc(ec);
             }
             if (res.getStatusCode() == HttpStatus.FORBIDDEN) {
                 // 针对 head 403 场景
-                throw new TosServerException(res.getStatusCode(), Code.FORBIDDEN, "", res.getRequesID(), "");
+                throw new TosServerException(res.getStatusCode(), Code.FORBIDDEN, "", res.getRequesID(), "").setEc(ec);
             }
         }
         throw new UnexpectedStatusCodeException(res.getStatusCode(), expectedCode, res.getRequesID());

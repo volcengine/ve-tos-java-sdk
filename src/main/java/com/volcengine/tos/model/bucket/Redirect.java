@@ -18,10 +18,14 @@ public class Redirect {
     private MirrorHeader mirrorHeader;
     @JsonProperty("PublicSource")
     private PublicSource publicSource;
+    @JsonProperty("PrivateSource")
+    private PrivateSource privateSource;
     @JsonProperty("Transform")
     private Transform transform;
     @JsonProperty("FetchHeaderToMetaDataRules")
     private List<FetchHeaderToMetaDataRules> fetchHeaderToMetaDataRules;
+    @JsonProperty("FetchSourceOnRedirectWithQuery")
+    private Boolean fetchSourceOnRedirectWithQuery;
 
     public RedirectType getRedirectType() {
         return redirectType;
@@ -77,6 +81,15 @@ public class Redirect {
         return this;
     }
 
+    public PrivateSource getPrivateSource() {
+        return privateSource;
+    }
+
+    public Redirect setPrivateSource(PrivateSource privateSource) {
+        this.privateSource = privateSource;
+        return this;
+    }
+
     public Transform getTransform() {
         return transform;
     }
@@ -95,6 +108,15 @@ public class Redirect {
         return this;
     }
 
+    public Boolean getFetchSourceOnRedirectWithQuery() {
+        return this.fetchSourceOnRedirectWithQuery;
+    }
+
+    public Redirect setFetchSourceOnRedirectWithQuery(Boolean fetchSourceOnRedirectWithQuery) {
+        this.fetchSourceOnRedirectWithQuery = fetchSourceOnRedirectWithQuery;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "Redirect{" +
@@ -104,7 +126,10 @@ public class Redirect {
                 ", followRedirect=" + followRedirect +
                 ", mirrorHeader=" + mirrorHeader +
                 ", publicSource=" + publicSource +
+                ", privateSource=" + privateSource +
                 ", transform=" + transform +
+                ", fetchHeaderToMetaDataRules=" + fetchHeaderToMetaDataRules +
+                ", fetchSourceOnRedirectWithQuery=" + fetchSourceOnRedirectWithQuery +
                 '}';
     }
 
@@ -119,8 +144,10 @@ public class Redirect {
         private boolean followRedirect;
         private MirrorHeader mirrorHeader;
         private PublicSource publicSource;
+        private PrivateSource privateSource;
         private Transform transform;
         private List<FetchHeaderToMetaDataRules> fetchHeaderToMetaDataRules;
+        private Boolean fetchSourceOnRedirectWithQuery;
 
         private RedirectBuilder() {
         }
@@ -155,6 +182,11 @@ public class Redirect {
             return this;
         }
 
+        public RedirectBuilder privateSource(PrivateSource privateSource) {
+            this.privateSource = privateSource;
+            return this;
+        }
+
         public RedirectBuilder transform(Transform transform) {
             this.transform = transform;
             return this;
@@ -162,6 +194,11 @@ public class Redirect {
 
         public RedirectBuilder fetchHeaderToMetaDataRules(List<FetchHeaderToMetaDataRules> fetchHeaderToMetaDataRules) {
             this.fetchHeaderToMetaDataRules = fetchHeaderToMetaDataRules;
+            return this;
+        }
+
+        public RedirectBuilder fetchSourceOnRedirectWithQuery(Boolean fetchSourceOnRedirectWithQuery) {
+            this.fetchSourceOnRedirectWithQuery = fetchSourceOnRedirectWithQuery;
             return this;
         }
 
@@ -173,8 +210,10 @@ public class Redirect {
             redirect.setFollowRedirect(followRedirect);
             redirect.setMirrorHeader(mirrorHeader);
             redirect.setPublicSource(publicSource);
+            redirect.setPrivateSource(privateSource);
             redirect.setTransform(transform);
             redirect.setFetchHeaderToMetaDataRules(fetchHeaderToMetaDataRules);
+            redirect.setFetchSourceOnRedirectWithQuery(fetchSourceOnRedirectWithQuery);
             return redirect;
         }
     }

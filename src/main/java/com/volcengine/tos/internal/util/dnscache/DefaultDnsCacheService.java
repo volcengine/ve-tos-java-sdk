@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
 
+@Deprecated
 public class DefaultDnsCacheService implements DnsCacheService {
     private static final ExecutorService executor = new ThreadPoolExecutor(1, 3, 1000,
             TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>(), Executors.defaultThreadFactory(), new ThreadPoolExecutor.AbortPolicy());

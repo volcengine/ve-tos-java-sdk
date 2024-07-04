@@ -1,6 +1,8 @@
 package com.volcengine.tos.model.bucket;
 
-public class GetBucketPolicyInput {
+import com.volcengine.tos.model.GenericInput;
+
+public class GetBucketPolicyInput extends GenericInput {
     private String bucket;
 
     public String getBucket() {

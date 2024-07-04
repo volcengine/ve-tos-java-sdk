@@ -1,6 +1,8 @@
 package com.volcengine.tos.model.bucket;
 
-public class GetBucketReplicationInput {
+import com.volcengine.tos.model.GenericInput;
+
+public class GetBucketReplicationInput extends GenericInput {
     private String bucket;
     private String ruleID;
 

@@ -1,6 +1,7 @@
 package com.volcengine.tos.internal.util.ratelimit;
 
 import com.volcengine.tos.TosClientException;
+import com.volcengine.tos.comm.io.Retryable;
 import com.volcengine.tos.comm.ratelimit.RateLimitRes;
 import com.volcengine.tos.comm.ratelimit.RateLimiter;
 import com.volcengine.tos.internal.model.RetryCountNotifier;
@@ -10,7 +11,7 @@ import java.io.FilterInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
-public class RateLimitedInputStream extends FilterInputStream implements RetryCountNotifier {
+public class RateLimitedInputStream extends FilterInputStream implements RetryCountNotifier, Retryable {
     private final RateLimiter rateLimiter;
     private int acquireN;
     public RateLimitedInputStream(InputStream in, RateLimiter rateLimiter) {

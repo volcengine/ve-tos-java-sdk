@@ -153,6 +153,14 @@ public class GetObjectV2Output implements Closeable {
         return getObjectBasicOutput.getReplicationStatus();
     }
 
+    public boolean isDirectory() {
+        return getObjectBasicOutput.isDirectory();
+    }
+
+    public int getTaggingCount() {
+        return getObjectBasicOutput.getTaggingCount();
+    }
+
     @Override
     public void close() throws IOException {
         if (this.content != null) {
@@ -189,6 +197,8 @@ public class GetObjectV2Output implements Closeable {
                 ", contentLanguage='" + getContentLanguage() + '\'' +
                 ", contentType='" + getContentType() + '\'' +
                 ", expires=" + getExpires() + '\'' +
+                ", isDirectory=" + isDirectory() + '\'' +
+                ", taggingCount=" + getTaggingCount() + '\'' +
                 '}';
     }
 }

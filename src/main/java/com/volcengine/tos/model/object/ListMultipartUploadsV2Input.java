@@ -1,6 +1,8 @@
 package com.volcengine.tos.model.object;
 
-public class ListMultipartUploadsV2Input {
+import com.volcengine.tos.model.GenericInput;
+
+public class ListMultipartUploadsV2Input extends GenericInput {
     private String bucket;
     private String encodingType;
     private String prefix;
