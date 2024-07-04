@@ -29,7 +29,7 @@ public class RequestBuilder {
     private String bucket;
     private String object;
     private int urlMode = URL_MODE_DEFAULT;
-    private long contentLength;
+    private long contentLength = -1;
     private HttpRange range;
     private Map<String, String> headers = new HashMap<>(1);
     private Map<String, String> query;
@@ -177,7 +177,7 @@ public class RequestBuilder {
     }
 
     private void tryResolveContentLength(TosRequest request) {
-        if (this.contentLength > 0) {
+        if (this.contentLength >= 0) {
             request.setContentLength(contentLength);
         } else if (StringUtils.isNotEmpty(headers.get(TosHeader.HEADER_CONTENT_LENGTH))) {
             try{

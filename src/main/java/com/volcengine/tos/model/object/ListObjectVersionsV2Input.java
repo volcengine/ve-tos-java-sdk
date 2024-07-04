@@ -1,6 +1,8 @@
 package com.volcengine.tos.model.object;
 
-public class ListObjectVersionsV2Input {
+import com.volcengine.tos.model.GenericInput;
+
+public class ListObjectVersionsV2Input extends GenericInput {
     private String bucket;
     private String prefix;
     private String delimiter;

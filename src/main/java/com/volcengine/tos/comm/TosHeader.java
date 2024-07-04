@@ -24,6 +24,7 @@ public interface TosHeader {
     String HEADER_LOCATION = "Location";
     String HEADER_RETRY_AFTER = "Retry-After";
     String HEADER_EXPECT = "Expect";
+    String HEADER_HOST = "Host";
 
     /**
      * TOS Header
@@ -40,7 +41,9 @@ public interface TosHeader {
     String HEADER_SSE_CUSTOMER_KEY = "X-Tos-Server-Side-Encryption-Customer-Key";
     String HEADER_SSE = "x-tos-server-side-encryption";
     String HEADER_CRC64 = "x-tos-hash-crc64ecma";
+    String HEADER_CRC32 = "x-tos-hash-crc32c";
     String HEADER_REQUEST_ID = "X-Tos-Request-Id";
+    String HEADER_EC = "X-Tos-Ec";
     String HEADER_ID_2 = "X-Tos-Id-2";
     String HEADER_BUCKET_REGION = "X-Tos-Bucket-Region";
     String HEADER_ACL = "X-Tos-Acl";
@@ -70,6 +73,24 @@ public interface TosHeader {
     String HEADER_RESTORE_EXPIRY_DATE = "x-tos-restore-expiry-date";
     String HEADER_RESTORE_EXPIRY_DAYS = "x-tos-restore-expiry-days";
     String HEADER_RESTORE_TIER = "x-tos-restore-tier";
+    String HEADER_TAGGING = "x-tos-tagging";
+    String HEADER_TAGGING_DIRECTIVE = "x-tos-tagging-directive";
+    String HEADER_WEBSITE_REDIRECT_LOCATION = "X-Tos-Website-Redirect-Location";
+    String HEADER_CS_TYPE = "X-Tos-Cs-Type";
+    String HEADER_META_PREFIX = "X-Tos-Meta-";
+    String HEADER_SDK_RETRY_COUNT = "x-sdk-retry-count";
+    String HEADER_PROJECT_NAME = "x-tos-project-name";
+    String HEADER_REPLICATION_STATUS = "x-tos-replication-status";
+    String HEADER_FORBID_OVERWRITE = "x-tos-forbid-overwrite";
+    String HEADER_X_IF_MATCH = "x-tos-if-match";
+    String HEADER_ALLOW_SAME_ACTION_OVERLAP = "x-tos-allow-same-action-overlap";
+    String HEADER_SYMLINK_TARGET = "x-tos-symlink-target";
+    String HEADER_SYMLINK_BUCKET = "x-tos-symlink-bucket";
+    String HEADER_SYMLINK_TARGET_SIZE = "x-tos-symlink-target-size";
+    String HEADER_BUCKET_TYPE = "x-tos-bucket-type";
+    String HEADER_NEXT_MODIFY_OFFSET = "x-tos-next-modify-offset";
+    String HEADER_DIRECTORY = "x-tos-directory";
+    String HEADER_TAGGING_COUNT = "x-tos-tagging-count";
 
     /**
      *  only for getObject() method queries
@@ -86,13 +107,4 @@ public interface TosHeader {
     String QUERY_DOC_DST_TYPE = "x-tos-doc-dst-type";
     String QUERY_SAVE_BUCKET = "x-tos-save-bucket";
     String QUERY_SAVE_OBJECT = "x-tos-save-object";
-    String HEADER_WEBSITE_REDIRECT_LOCATION = "X-Tos-Website-Redirect-Location";
-    String HEADER_CS_TYPE = "X-Tos-Cs-Type";
-    String HEADER_META_PREFIX = "X-Tos-Meta-";
-    String HEADER_SDK_RETRY_COUNT = "x-sdk-retry-count";
-    String HEADER_PROJECT_NAME = "x-tos-project-name";
-    String HEADER_REPLICATION_STATUS = "x-tos-replication-status";
-    String HEADER_FORBID_OVERWRITE = "x-tos-forbid-overwrite";
-    String HEADER_X_IF_MATCH = "x-tos-if-match";
-    String HEADER_ALLOW_SAME_ACTION_OVERLAP = "x-tos-allow-same-action-overlap";
 }

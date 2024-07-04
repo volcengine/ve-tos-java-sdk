@@ -2,11 +2,13 @@ package com.volcengine.tos.internal;
 
 import com.volcengine.tos.Consts;
 import com.volcengine.tos.TosException;
+import com.volcengine.tos.TosServerException;
 import com.volcengine.tos.comm.Code;
 import com.volcengine.tos.comm.HttpMethod;
 import com.volcengine.tos.comm.HttpStatus;
 import com.volcengine.tos.comm.common.*;
 import com.volcengine.tos.internal.util.StringUtils;
+import com.volcengine.tos.internal.util.TosUtils;
 import com.volcengine.tos.model.acl.GrantV2;
 import com.volcengine.tos.model.acl.GranteeV2;
 import com.volcengine.tos.model.acl.Owner;
@@ -126,6 +128,11 @@ public class TosBucketRequestHandlerTest {
             }
             output = getHandler().listBuckets(new ListBucketsV2Input().setProjectName("non-exists-" + System.currentTimeMillis()));
             Assert.assertTrue(output.getBuckets() == null || output.getBuckets().size() == 0);
+
+            output = getHandler().listBuckets(new ListBucketsV2Input().setBucketType(BucketType.BUCKET_TYPE_HNS));
+            for (ListedBucket bucket : output.getBuckets()) {
+                Assert.assertEquals(bucket.getBucketType(), BucketType.BUCKET_TYPE_HNS);
+            }
         } catch (Exception e) {
             testFailed(e);
         }
@@ -323,9 +330,10 @@ public class TosBucketRequestHandlerTest {
             Assert.assertEquals(e.getStatusCode(), HttpStatus.NOT_FOUND);
         }
 
-        Condition condition = new Condition().setHttpCode(HttpStatus.NOT_FOUND);
+        Condition condition = new Condition().setHttpCode(HttpStatus.NOT_FOUND).setAllowHost(Arrays.asList("www.domain1.com", "www.domain2.com"));
         MirrorHeader mirrorHeader = new MirrorHeader().setPassAll(true)
-                .setPass(Arrays.asList("aa", "bb")).setRemove(Collections.singletonList("xx"));
+                .setPass(Arrays.asList("aa", "bb")).setRemove(Collections.singletonList("xx"))
+                .setSet(Arrays.asList(new MirrorHeaderKeyValue().setKey("host").setValue("www.domain3.com")));
         SourceEndpoint sourceEndpoint = new SourceEndpoint()
                 .setPrimary(Collections.singletonList("http://www.volcengine.com/obj/tostest/"))
                 .setFollower(Collections.singletonList("http://www.volcengine.com/obj/tostest/1"));
@@ -339,7 +347,8 @@ public class TosBucketRequestHandlerTest {
                 .setFollowRedirect(true)
                 .setMirrorHeader(mirrorHeader)
                 .setPublicSource(publicSource)
-                .setTransform(transform);
+                .setTransform(transform)
+                .setFetchSourceOnRedirectWithQuery(true);
         MirrorBackRule rule = new MirrorBackRule().setId("1").setCondition(condition).setRedirect(redirect);
         List<MirrorBackRule> rules = Collections.singletonList(rule);
         try{
@@ -353,7 +362,28 @@ public class TosBucketRequestHandlerTest {
             MirrorBackRule gotRule = got.getRules().get(0);
             Assert.assertEquals(gotRule.getId(), "1");
             Assert.assertEquals(gotRule.getCondition().getHttpCode(), HttpStatus.NOT_FOUND);
+            Assert.assertEquals(gotRule.getCondition().getAllowHost().size(), 2);
+            Assert.assertEquals(gotRule.getCondition().getAllowHost(), Arrays.asList("www.domain1.com", "www.domain2.com"));
+            Assert.assertEquals(gotRule.getRedirect().getFetchSourceOnRedirectWithQuery(), Boolean.TRUE);
+            Assert.assertEquals(gotRule.getRedirect().getMirrorHeader().getSet(), Arrays.asList(new MirrorHeaderKeyValue().setKey("host").setValue("www.domain3.com")));
             Assert.assertEquals(gotRule.getRedirect().toString(), redirect.toString());
+
+            try {
+                PrivateSource privateSource = new PrivateSource()
+                        .setSourceEndpoint(new CommonSourceEndpoint()
+                                .setPrimary(Arrays.asList(new EndpointCredentialProvider()
+                                        .setEndpoint("www.domain4.com").setBucketName("test-bucket").setCredentialProvider(new CredentialProvider().setRole("TosArchiveTOSInventory")))));
+                getHandler().putBucketMirrorBack(new PutBucketMirrorBackInput()
+                        .setBucket(Consts.bucket).setRules(Arrays.asList(new MirrorBackRule().setId("2")
+                                .setCondition(condition).setRedirect(new Redirect().setPrivateSource(privateSource)))));
+                got = getHandler().getBucketMirrorBack(new GetBucketMirrorBackInput().setBucket(Consts.bucket));
+                Assert.assertEquals(got.getRules().size(), 1);
+                gotRule = got.getRules().get(0);
+                Assert.assertEquals(gotRule.getId(), "2");
+                Assert.assertEquals(gotRule.getRedirect().getPrivateSource().toString(), privateSource.toString());
+            } catch (TosServerException ex) {
+                Assert.assertEquals(ex.getStatusCode(), HttpStatus.METHOD_NOT_ALLOWED);
+            }
         } catch (TosException e) {
             testFailed(e);
         } finally {
@@ -425,6 +455,7 @@ public class TosBucketRequestHandlerTest {
             // put
             getHandler().putBucketStorageClass(new PutBucketStorageClassInput().setBucket(Consts.bucket)
                     .setStorageClass(StorageClassType.STORAGE_CLASS_STANDARD));
+            Thread.sleep(60 * 1000);
             // get
             HeadBucketV2Output got = getHandler().headBucket(new HeadBucketV2Input().setBucket(Consts.bucket));
             Assert.assertNotNull(got);
@@ -482,10 +513,12 @@ public class TosBucketRequestHandlerTest {
         String role = "ServiceRoleforReplicationAccessTOS";
         ReplicationRule rule = new ReplicationRule().setId("1").setStatus(StatusType.STATUS_ENABLED)
                 .setPrefixSet(Arrays.asList("prefix1", "prefix2"))
+                .setTags(Arrays.asList(new Tag().setKey("tag1").setValue("value1"), new Tag().setKey("tag2").setValue("value2")))
                 .setDestination(new Destination().setBucket(Consts.bucketInRegion2).setLocation(Consts.region2)
                         .setStorageClass(StorageClassType.STORAGE_CLASS_IA)
                         .setStorageClassInheritDirectiveType(StorageClassInheritDirectiveType.STORAGE_CLASS_ID_SOURCE_OBJECT))
-                .setHistoricalObjectReplication(StatusType.STATUS_DISABLED);
+                .setHistoricalObjectReplication(StatusType.STATUS_DISABLED)
+                .setAccessControlTranslation(new AccessControlTranslation().setOwner("BucketOwnerEntrusted"));
         List<ReplicationRule> rules = new ArrayList<>();
         rules.add(rule);
         try{
@@ -502,12 +535,18 @@ public class TosBucketRequestHandlerTest {
             Assert.assertEquals(gotRule.getStatus(), StatusType.STATUS_ENABLED);
             Assert.assertNotNull(gotRule.getPrefixSet());
             Assert.assertEquals(gotRule.getPrefixSet().size(), 2);
+            Assert.assertNotNull(gotRule.getTags());
+            Assert.assertEquals(gotRule.getTags().size(), 2);
+            Assert.assertEquals(gotRule.getTags().get(0).getKey(), "tag1");
+            Assert.assertEquals(gotRule.getTags().get(1).getKey(), "tag2");
             Assert.assertNotNull(gotRule.getDestination());
             Assert.assertEquals(gotRule.getDestination().getLocation(), Consts.region2);
             Assert.assertEquals(gotRule.getDestination().getBucket(), Consts.bucketInRegion2);
             Assert.assertEquals(gotRule.getDestination().getStorageClass(), StorageClassType.STORAGE_CLASS_IA);
             Assert.assertEquals(gotRule.getDestination().getStorageClassInheritDirectiveType(),
                     StorageClassInheritDirectiveType.STORAGE_CLASS_ID_SOURCE_OBJECT);
+            Assert.assertNotNull(gotRule.getAccessControlTranslation());
+            Assert.assertEquals(gotRule.getAccessControlTranslation().getOwner(), "BucketOwnerEntrusted");
             Assert.assertNotNull(gotRule.getProgress());
             Consts.LOG.debug("[getBucketReplication] progress is {}", gotRule.getProgress());
         } catch (TosException e) {
@@ -533,7 +572,7 @@ public class TosBucketRequestHandlerTest {
             PutBucketVersioningInput input = new PutBucketVersioningInput().setBucket(Consts.bucketForVersioning)
                     .setStatus(VersioningStatusType.VERSIONING_STATUS_ENABLED);
             getHandler().putBucketVersioning(input);
-            Thread.sleep(10000);
+            Thread.sleep(60 * 1000);
             GetBucketVersioningOutput output = getHandler().getBucketVersioning(new GetBucketVersioningInput().setBucket(Consts.bucketForVersioning));
             Assert.assertNotNull(output);
             Assert.assertEquals(output.getStatus(), VersioningStatusType.VERSIONING_STATUS_ENABLED);
@@ -541,7 +580,7 @@ public class TosBucketRequestHandlerTest {
             input = new PutBucketVersioningInput().setBucket(Consts.bucketForVersioning)
                     .setStatus(VersioningStatusType.VERSIONING_STATUS_SUSPENDED);
             getHandler().putBucketVersioning(input);
-            Thread.sleep(15000);
+            Thread.sleep(60 * 1000);
             output = getHandler().getBucketVersioning(new GetBucketVersioningInput().setBucket(Consts.bucketForVersioning));
             Assert.assertNotNull(output);
             Assert.assertEquals(output.getStatus(), VersioningStatusType.VERSIONING_STATUS_SUSPENDED);
@@ -712,6 +751,14 @@ public class TosBucketRequestHandlerTest {
             Assert.assertEquals(output.getRule().size(), 1);
             Assert.assertEquals(output.getRule().get(0).getDomain(), domain);
             Assert.assertEquals(output.getRule().get(0).getCertID(), "");
+            try {
+                ListBucketsV2Input linput = new ListBucketsV2Input();
+                linput.setRequestHost("www.volcengine.com");
+                getHandler().listBuckets(linput);
+            } catch (TosServerException ex) {
+                Assert.assertEquals(ex.getStatusCode(), 404);
+                Assert.assertEquals(ex.getCode(), "NoSuchBucket");
+            }
         } catch (TosException e) {
             testFailed(e);
         } finally {
@@ -828,46 +875,47 @@ public class TosBucketRequestHandlerTest {
         }
     }
 
-    // todo open in next version
-//    @Test
-//    void bucketRenameTest() {
-//        try{
-//            getHandler().deleteBucketRename(new DeleteBucketRenameInput().setBucket(Consts.bucket));
-//        } catch (TosException e) {
-//            testFailed(e);
-//        }
-//
-//        try{
-//            GetBucketRenameOutput output = getHandler().getBucketRename(new GetBucketRenameInput().setBucket(Consts.bucket));
-//            Assert.assertFalse(output.isRenameEnable());
-//        } catch (TosException e) {
-//            testFailed(e);
-//        }
-//
-//        try{
-//            // put
-//            boolean renameEnable = true;
-//            PutBucketRenameInput input = new PutBucketRenameInput().setBucket(Consts.bucket).setRenameEnable(renameEnable);
-//            getHandler().putBucketRename(input);
-//            // get
-//            GetBucketRenameOutput output = getHandler().getBucketRename(new GetBucketRenameInput().setBucket(Consts.bucket));;
-//            Assert.assertTrue(output.isRenameEnable());
-//        } catch (TosException e) {
-//            testFailed(e);
-//        } finally {
-//            try{
-//                getHandler().deleteBucketRename(new DeleteBucketRenameInput().setBucket(Consts.bucket));
-//            } catch (Exception e) {
-//                testFailed(e);
-//            }
-//            try{
-//                GetBucketRenameOutput output = getHandler().getBucketRename(new GetBucketRenameInput().setBucket(Consts.bucket));
-//                Assert.assertFalse(output.isRenameEnable());
-//            } catch (TosException e) {
-//                testFailed(e);
-//            }
-//        }
-//    }
+    @Test
+    void bucketRenameTest() {
+        String bucket = TosUtils.genUuid();
+        try {
+            try {
+                getHandler().createBucket(new CreateBucketV2Input().setBucket(bucket));
+
+                GetBucketRenameOutput output = getHandler().getBucketRename(new GetBucketRenameInput().setBucket(bucket));
+                Assert.assertFalse(output.isRenameEnable());
+            } catch (TosException e) {
+                testFailed(e);
+            }
+
+            try {
+                // put
+                boolean renameEnable = true;
+                PutBucketRenameInput input = new PutBucketRenameInput().setBucket(bucket).setRenameEnable(renameEnable);
+                getHandler().putBucketRename(input);
+                // get
+                GetBucketRenameOutput output = getHandler().getBucketRename(new GetBucketRenameInput().setBucket(bucket));
+                Assert.assertTrue(output.isRenameEnable());
+
+            } catch (TosException e) {
+                testFailed(e);
+            } finally {
+                try {
+                    getHandler().deleteBucketRename(new DeleteBucketRenameInput().setBucket(bucket));
+                } catch (Exception e) {
+                    testFailed(e);
+                }
+                try {
+                    GetBucketRenameOutput output = getHandler().getBucketRename(new GetBucketRenameInput().setBucket(bucket));
+                    Assert.assertFalse(output.isRenameEnable());
+                } catch (TosException e) {
+                    testFailed(e);
+                }
+            }
+        } finally {
+            getHandler().deleteBucket(new DeleteBucketInput().setBucket(bucket));
+        }
+    }
 
     private void testFailed(Exception e) {
         Consts.LOG.error("bucket test failed, {}", e.toString());

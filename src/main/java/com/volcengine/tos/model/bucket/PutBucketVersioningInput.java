@@ -3,8 +3,9 @@ package com.volcengine.tos.model.bucket;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.volcengine.tos.comm.common.VersioningStatusType;
+import com.volcengine.tos.model.GenericInput;
 
-public class PutBucketVersioningInput {
+public class PutBucketVersioningInput extends GenericInput {
     @JsonIgnore
     private String bucket;
     @JsonProperty("Status")

@@ -10,6 +10,7 @@ import com.volcengine.tos.comm.common.StorageClassType;
 import com.volcengine.tos.comm.io.TosRepeatableBoundedFileInputStream;
 import com.volcengine.tos.internal.util.DateConverter;
 import com.volcengine.tos.internal.util.StringUtils;
+import com.volcengine.tos.internal.util.TosUtils;
 import com.volcengine.tos.model.bucket.CreateBucketV2Input;
 import com.volcengine.tos.model.bucket.HeadBucketV2Input;
 import com.volcengine.tos.model.bucket.HeadBucketV2Output;
@@ -907,7 +908,8 @@ public class TosObjectRequestHandlerAppendMultipartCopyTest {
         try{
             for(int i = 0; i < 5; i++) {
                 CreateMultipartUploadOutput output = getHandler().createMultipartUpload(
-                        CreateMultipartUploadInput.builder().bucket(Consts.bucket).key(uniqueKeyPrefix + i).build()
+                        CreateMultipartUploadInput.builder().bucket(Consts.bucket).key(uniqueKeyPrefix + i)
+                                .options(new ObjectMetaRequestOptions().setStorageClass(StorageClassType.STORAGE_CLASS_STANDARD)).build()
                 );
                 List<String> keyAndUploadID = new ArrayList<>();
                 keyAndUploadID.add(uniqueKeyPrefix + i);
@@ -1304,17 +1306,49 @@ public class TosObjectRequestHandlerAppendMultipartCopyTest {
             String crc64 = head.getHashCrc64ecma();
             String etag = head.getEtag();
 
+            String ep = Consts.endpoint.toLowerCase();
+            if (ep.startsWith("http://")) {
+                ep = "http://" + bucket + "." + ep.substring("http://".length());
+            } else if (ep.startsWith("https://")) {
+                ep = "https://" + bucket + "." + ep.substring("https://".length());
+            } else {
+                ep = "http://" + bucket + "." + ep;
+            }
+
             // fetch
             Map<String, String> meta = new HashMap<>();
             meta.put("test-key", "test-value");
+            meta.put("中文键", "中文值");
             PutFetchTaskInput input = new PutFetchTaskInput().setBucket(bucket).setKey(fetchKey)
-                    .setOptions(new ObjectMetaRequestOptions().setAclType(ACLType.ACL_PRIVATE)
+                    .setOptions(new ObjectMetaRequestOptions().setAclType(ACLType.ACL_PUBLIC_READ)
                             .setStorageClass(StorageClassType.STORAGE_CLASS_IA)
                             .setCustomMetadata(meta))
-                    .setUrl("https://" + bucket + "." + endpoint + "/" + key);
+                    .setUrl(ep + "/" + key);
             PutFetchTaskOutput output = getHandler().putFetchTask(input);
             Assert.assertNotNull(output);
             Assert.assertNotNull(output.getTaskID());
+
+            // get fetch task
+            GetFetchTaskOutput goutput = getHandler().getFetchTask(new GetFetchTaskInput().setBucket(bucket).setTaskId(output.getTaskID()));
+            Assert.assertTrue(goutput.getRequestInfo().getRequestId().length() > 0);
+            Assert.assertTrue(goutput.getState().length() > 0);
+            Assert.assertEquals(goutput.getTask().getBucket(), bucket);
+            Assert.assertEquals(goutput.getTask().getKey(), fetchKey);
+            Assert.assertEquals(goutput.getTask().isIgnoreSameKey(), false);
+            Assert.assertEquals(goutput.getTask().getUrl(), ep + "/" + key);
+            Assert.assertEquals(goutput.getTask().getAcl(), ACLType.ACL_PUBLIC_READ);
+//            Assert.assertEquals(goutput.getTask().getStorageClass(), StorageClassType.STORAGE_CLASS_IA);
+            Assert.assertEquals(goutput.getTask().getMeta().size(), 2);
+            Assert.assertEquals(goutput.getTask().getMeta().get("test-key"), "test-value");
+            Assert.assertEquals(goutput.getTask().getMeta().get("中文键"), "中文值");
+
+            TosObjectRequestHandler handler = new TosObjectRequestHandler(getHandler().getTransport(), getHandler().getFactory())
+                    .setEnableCrcCheck(true).setClientAutoRecognizeContentType(true).setDisableEncodingMeta(true);
+
+            goutput = handler.getFetchTask(new GetFetchTaskInput().setBucket(bucket).setTaskId(output.getTaskID()));
+            Assert.assertEquals(goutput.getTask().getMeta().size(), 2);
+            Assert.assertEquals(goutput.getTask().getMeta().get("test-key"), "test-value");
+            Assert.assertEquals(goutput.getTask().getMeta().get(TosUtils.encodeHeader("中文键").toLowerCase()), TosUtils.encodeHeader("中文值"));
 //
 //            Thread.sleep(5 * 1000);
 //

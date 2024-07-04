@@ -1,6 +1,8 @@
 package com.volcengine.tos.model.object;
 
-public class GetObjectACLV2Input {
+import com.volcengine.tos.model.GenericInput;
+
+public class GetObjectACLV2Input extends GenericInput {
     private String bucket;
     private String key;
     private String versionID;

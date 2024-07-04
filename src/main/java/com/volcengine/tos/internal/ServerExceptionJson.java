@@ -15,6 +15,8 @@ public class ServerExceptionJson{
 
     @JsonProperty("EC")
     private String ec;
+    @JsonProperty("Key")
+    private String key;
 
     public int getStatusCode() {
         return statusCode;
@@ -38,6 +40,10 @@ public class ServerExceptionJson{
 
     public String getEc() {
         return ec;
+    }
+
+    public String getKey() {
+        return key;
     }
 }
 

@@ -1,6 +1,8 @@
 package com.volcengine.tos.model.bucket;
 
-public class GetBucketNotificationInput {
+import com.volcengine.tos.model.GenericInput;
+
+public class GetBucketNotificationInput extends GenericInput {
     private String bucket;
 
     public String getBucket() {

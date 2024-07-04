@@ -1,6 +1,8 @@
 package com.volcengine.tos.model.object;
 
-public class ListPartsInput {
+import com.volcengine.tos.model.GenericInput;
+
+public class ListPartsInput extends GenericInput {
     private String bucket;
     private String key;
     private String uploadID;

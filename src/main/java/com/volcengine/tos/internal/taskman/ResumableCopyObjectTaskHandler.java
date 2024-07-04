@@ -35,12 +35,16 @@ public class ResumableCopyObjectTaskHandler {
         this.enableCrcCheck = enableCrcCheck;
     }
 
-    public void initTask() {
+    public boolean initTask() {
         validateInput();
         if (this.input.isEnableCheckpoint()) {
             validateCheckpointPath();
         }
         CopySourceObjectInfo copySourceObjectInfo = getCopySourceObjectInfo(input.getSrcBucket(), input.getSrcKey());
+        if (copySourceObjectInfo.isSymlink()) {
+            return true;
+        }
+
         setCheckpoint(copySourceObjectInfo);
         int partsNum = this.checkpoint.getCopyPartInfoList().size();
         this.abortTaskHook = new ResumableCopyObjectTaskCanceler(this.handler, this.taskMan, this.checkpoint.getBucket(), this.checkpoint.getKey(),
@@ -52,6 +56,7 @@ public class ResumableCopyObjectTaskHandler {
                     .setEnableCheckpoint(input.isEnableCheckpoint()).setCheckpointFilePath(input.getCheckpointFile());
         }
         this.copiedPartInfos = new ArrayList<>(partsNum);
+        return false;
     }
 
     public void dispatch() {
@@ -211,9 +216,9 @@ public class ResumableCopyObjectTaskHandler {
         try{
             HeadObjectV2Output head = this.handler.headObject(new HeadObjectV2Input().setBucket(bucket).setKey(key));
             GetObjectBasicOutput basicOutput = head.getHeadObjectBasicOutput();
-            return new CopySourceObjectInfo().setObjectSize(basicOutput.getContentLength())
+            return new CopySourceObjectInfo().setObjectSize(head.getContentLength())
                     .setHashCrc64ecma(basicOutput.getHashCrc64ecma()).setEtag(basicOutput.getEtag())
-                    .setLastModified(basicOutput.getLastModifiedInDate());
+                    .setLastModified(basicOutput.getLastModifiedInDate()).setSymlink(Consts.SYMLINK.equals(head.getObjectType()));
         } catch (TosException e) {
             throw new TosClientException("tos: ResumableCopyObject get copySourceObject info failed", e);
         }

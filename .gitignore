@@ -32,3 +32,4 @@ output/
 .vscode/
 target/
 *.class
+out/

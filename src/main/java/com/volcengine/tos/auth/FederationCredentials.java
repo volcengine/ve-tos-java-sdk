@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.concurrent.atomic.AtomicInteger;
 
+@Deprecated
 public class FederationCredentials implements Credentials{
     private FederationToken cachedToken;
     private AtomicInteger refreshing = new AtomicInteger(0);

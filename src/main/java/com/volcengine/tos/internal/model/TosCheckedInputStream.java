@@ -1,12 +1,13 @@
 package com.volcengine.tos.internal.model;
 
+import com.volcengine.tos.comm.io.Retryable;
 import com.volcengine.tos.internal.util.TosUtils;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.zip.CheckedInputStream;
 
-public class TosCheckedInputStream extends CheckedInputStream implements RetryCountNotifier {
+public class TosCheckedInputStream extends CheckedInputStream implements RetryCountNotifier, Retryable {
     /**
      * Creates an input stream using the specified Checksum.
      *

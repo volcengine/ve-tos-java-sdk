@@ -6,13 +6,14 @@ import com.volcengine.tos.comm.common.DocPreviewSrcType;
 import com.volcengine.tos.comm.event.DataTransferListener;
 import com.volcengine.tos.comm.ratelimit.RateLimiter;
 import com.volcengine.tos.internal.util.StringUtils;
+import com.volcengine.tos.model.GenericInput;
 
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
-public class GetObjectV2Input {
+public class GetObjectV2Input extends GenericInput {
     private String bucket;
     private String key;
     private String versionID;

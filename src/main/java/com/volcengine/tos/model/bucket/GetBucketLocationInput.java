@@ -1,6 +1,8 @@
 package com.volcengine.tos.model.bucket;
 
-public class GetBucketLocationInput {
+import com.volcengine.tos.model.GenericInput;
+
+public class GetBucketLocationInput extends GenericInput {
     private String bucket;
 
     public String getBucket() {

@@ -1,6 +1,8 @@
 package com.volcengine.tos.model.bucket;
 
-public class GetBucketTaggingInput {
+import com.volcengine.tos.model.GenericInput;
+
+public class GetBucketTaggingInput extends GenericInput {
     private String bucket;
 
     public String getBucket() {

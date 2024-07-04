@@ -1,8 +1,9 @@
 package com.volcengine.tos.internal;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.volcengine.tos.*;
 import com.volcengine.tos.Consts;
-import com.volcengine.tos.TosException;
+import com.volcengine.tos.auth.StaticCredentials;
 import com.volcengine.tos.comm.HttpMethod;
 import com.volcengine.tos.comm.HttpStatus;
 import com.volcengine.tos.comm.TosHeader;
@@ -25,7 +26,9 @@ import java.util.concurrent.TimeUnit;
 public class TosPreSignedRequestHandlerTest {
     private TosPreSignedRequestHandler handler;
     private OkHttpClient client;
+    private TOSV2 tosClient;
     private final String sampleData = StringUtils.randomString(1024);
+
     @BeforeTest
     void init() {
         handler = ClientInstance.getPreSignedRequestHandlerInstance();
@@ -38,13 +41,15 @@ public class TosPreSignedRequestHandlerTest {
                 .connectionPool(connectionPool).retryOnConnectionFailure(true).connectTimeout(10000, TimeUnit.MILLISECONDS)
                 .readTimeout(30000, TimeUnit.MILLISECONDS).writeTimeout(30000, TimeUnit.MILLISECONDS)
                 .followRedirects(false).followSslRedirects(false).build();
+        this.tosClient = new TOSV2ClientBuilder().build(TOSClientConfiguration.builder().region(Consts.region).endpoint(Consts.endpoint)
+                .credentials(new StaticCredentials(Consts.accessKey, Consts.secretKey)).build());
     }
 
     @Test
     void preSignedURLCreateDeleteBucketTest() {
         String bucket = Consts.bucket + System.nanoTime();
         // create bucket and delete bucket
-        try{
+        try {
             PreSignedURLInput input = new PreSignedURLInput().setHttpMethod(HttpMethod.PUT).setBucket(bucket).setExpires(1000);
             PreSignedURLOutput url = handler.preSignedURL(input);
             Consts.LOG.debug("url, {}", url.getSignedUrl());
@@ -56,7 +61,7 @@ public class TosPreSignedRequestHandlerTest {
         } finally {
             PreSignedURLInput input = new PreSignedURLInput().setBucket(bucket).setHttpMethod(HttpMethod.DELETE);
             PreSignedURLOutput url = handler.preSignedURL(input);
-            try{
+            try {
                 Response resp = doReq(HttpMethod.DELETE, url.getSignedUrl(), null, -1, "");
                 Assert.assertEquals(resp.code(), HttpStatus.NO_CONTENT);
             } catch (Exception e) {
@@ -66,9 +71,89 @@ public class TosPreSignedRequestHandlerTest {
     }
 
     @Test
+    void preSignedURLSpecialCharTest() {
+        String key = "/abc+ /?#~!.txt";
+
+        // preSign put object
+        PreSignedURLInput input = new PreSignedURLInput().setHttpMethod(HttpMethod.PUT).setBucket(Consts.bucket)
+                .setKey(key);
+        PreSignedURLOutput url = handler.preSignedURL(input);
+        Random random = new Random();
+        int length = random.nextInt(65536) + 1;
+        try {
+            InputStream content = new ByteArrayInputStream(StringUtils.randomString(length).getBytes());
+            Response resp = doReq(HttpMethod.PUT, url.getSignedUrl(), content, length, "");
+            Assert.assertEquals(resp.code(), HttpStatus.OK);
+            resp.close();
+        } catch (Exception e) {
+            testFailed(e);
+        }
+
+        // preSign get object
+        Response resp;
+        try {
+            input = new PreSignedURLInput().setHttpMethod(HttpMethod.GET).setBucket(Consts.bucket).setKey(key);
+            url = handler.preSignedURL(input);
+            resp = doReq(HttpMethod.GET, url.getSignedUrl(), null, -1, "");
+            Assert.assertEquals(resp.code(), HttpStatus.OK);
+            Assert.assertEquals(resp.headers().get(TosHeader.HEADER_CONTENT_LENGTH), String.valueOf(length));
+            Objects.requireNonNull(resp.body()).close();
+
+            GetObjectV2Output getOutput = tosClient.getObject(new GetObjectV2Input().setBucket(Consts.bucket)
+                    .setKey(key));
+            Assert.assertEquals(getOutput.getContentLength(), length);
+            getOutput.getContent().close();
+        } catch (Exception e) {
+            testFailed(e);
+        }
+
+        // delete object
+        try {
+            input = new PreSignedURLInput().setHttpMethod(HttpMethod.DELETE).setBucket(Consts.bucket).setKey(key);
+            url = handler.preSignedURL(input);
+            resp = doReq(HttpMethod.DELETE, url.getSignedUrl(), null, -1, "");
+            Assert.assertEquals(resp.code(), HttpStatus.NO_CONTENT);
+        } catch (Exception e) {
+            testFailed(e);
+        }
+
+        // put object
+        key = "/bcd+ /?#~!.txt";
+        length = random.nextInt(65536) + 1;
+        try {
+            InputStream content = new ByteArrayInputStream(StringUtils.randomString(length).getBytes());
+            tosClient.putObject(new PutObjectInput().setBucket(Consts.bucket).setKey(key).setContent(content));
+        } catch (Exception e) {
+            testFailed(e);
+        }
+
+        // get object
+        try {
+            input = new PreSignedURLInput().setHttpMethod(HttpMethod.GET).setBucket(Consts.bucket).setKey(key);
+            url = handler.preSignedURL(input);
+            resp = doReq(HttpMethod.GET, url.getSignedUrl(), null, -1, "");
+            Assert.assertEquals(resp.code(), HttpStatus.OK);
+            Assert.assertEquals(resp.headers().get(TosHeader.HEADER_CONTENT_LENGTH), String.valueOf(length));
+            Objects.requireNonNull(resp.body()).close();
+        } catch (Exception e) {
+            testFailed(e);
+        }
+
+        // delete object
+        try {
+            input = new PreSignedURLInput().setHttpMethod(HttpMethod.DELETE).setBucket(Consts.bucket).setKey(key);
+            url = handler.preSignedURL(input);
+            resp = doReq(HttpMethod.DELETE, url.getSignedUrl(), null, -1, "");
+            Assert.assertEquals(resp.code(), HttpStatus.NO_CONTENT);
+        } catch (Exception e) {
+            testFailed(e);
+        }
+    }
+
+    @Test
     void preSignedURLObjectCURDTest() {
         String key = getUniqueObjectKey();
-        try{
+        try {
             PreSignedURLInput input = new PreSignedURLInput().setHttpMethod(HttpMethod.PUT).setBucket(Consts.bucket)
                     .setKey(key).setExpires(604800 * 10);
             handler.preSignedURL(input);
@@ -80,7 +165,7 @@ public class TosPreSignedRequestHandlerTest {
         PreSignedURLInput input = new PreSignedURLInput().setHttpMethod(HttpMethod.PUT).setBucket(Consts.bucket)
                 .setKey(key).setExpires(1);
         PreSignedURLOutput url = handler.preSignedURL(input);
-        try{
+        try {
             InputStream content = new ByteArrayInputStream(StringUtils.randomString(65536).getBytes());
             Response resp = doReq(HttpMethod.PUT, url.getSignedUrl(), content, 65536, "");
             Assert.assertEquals(resp.code(), HttpStatus.OK);
@@ -114,7 +199,7 @@ public class TosPreSignedRequestHandlerTest {
                 .setKey(key).setExpires(60);
         url = handler.preSignedURL(input);
         String data = StringUtils.randomString(65536);
-        try{
+        try {
             // prepare data
             InputStream content = new ByteArrayInputStream(data.getBytes());
             Response resp = doReq(HttpMethod.PUT, url.getSignedUrl(), content, 65536, "");
@@ -136,7 +221,7 @@ public class TosPreSignedRequestHandlerTest {
 
         // get object
         Response resp;
-        try{
+        try {
             input = new PreSignedURLInput().setHttpMethod(HttpMethod.GET).setBucket(Consts.bucket)
                     .setKey(key).setExpires(2);
             url = handler.preSignedURL(input);
@@ -153,7 +238,7 @@ public class TosPreSignedRequestHandlerTest {
         }
 
         // delete object
-        try{
+        try {
             input = new PreSignedURLInput().setHttpMethod(HttpMethod.DELETE).setBucket(Consts.bucket)
                     .setKey(key).setExpires(2);
             url = handler.preSignedURL(input);
@@ -170,7 +255,7 @@ public class TosPreSignedRequestHandlerTest {
     @Test
     void preSignedURLMultipartUploadTest() {
         String key = getUniqueObjectKey();
-        try{
+        try {
             // createMultipartUpload
             PreSignedURLInput input = new PreSignedURLInput().setHttpMethod(HttpMethod.POST).setBucket(Consts.bucket)
                     .setKey(key).setExpires(120).setQuery(Collections.singletonMap("uploads", ""));
@@ -179,7 +264,8 @@ public class TosPreSignedRequestHandlerTest {
                     null, -1, "");
             Assert.assertEquals(resp.code(), HttpStatus.OK);
             CreateMultipartUploadOutputJson create = PayloadConverter.parsePayload(resp.body().byteStream(),
-                    new TypeReference<CreateMultipartUploadOutputJson>(){});
+                    new TypeReference<CreateMultipartUploadOutputJson>() {
+                    });
             String uploadID = create.getUploadID();
 
             // uploadPart
@@ -229,7 +315,7 @@ public class TosPreSignedRequestHandlerTest {
     @Test
     void preSignedURLAlternativeEndpointTest() {
         String key = getUniqueObjectKey();
-        try{
+        try {
             PreSignedURLInput input = new PreSignedURLInput().setHttpMethod(HttpMethod.PUT).setBucket(Consts.bucket)
                     .setKey(key).setExpires(604800 * 10).setAlternativeEndpoint(Consts.endpoint2);
             handler.preSignedURL(input);
@@ -254,7 +340,7 @@ public class TosPreSignedRequestHandlerTest {
     @Test
     void preSignedPostSignatureTest() {
         String key = getUniqueObjectKey();
-        try{
+        try {
             // base upload
             PreSignedPostSignatureInput input = new PreSignedPostSignatureInput().setBucket(Consts.bucket)
                     .setKey(key).setExpires(3600);
@@ -301,7 +387,7 @@ public class TosPreSignedRequestHandlerTest {
             Assert.assertEquals(response.code(), HttpStatus.BAD_REQUEST);
             response.close();
             GetObjectV2Input get = new GetObjectV2Input().setBucket(Consts.bucket).setKey(key);
-            try(GetObjectV2Output got = ClientInstance.getObjectRequestHandlerInstance().getObject(get)) {
+            try (GetObjectV2Output got = ClientInstance.getObjectRequestHandlerInstance().getObject(get)) {
                 String gotData = StringUtils.toString(got.getContent(), "content");
                 Consts.LOG.debug(gotData);
             } catch (TosException e) {
@@ -314,7 +400,7 @@ public class TosPreSignedRequestHandlerTest {
 
     @Test
     void preSignedPostSignatureWithConditionTest() {
-        try{
+        try {
             String keyPrefix = "post-";
             String key = keyPrefix + getUniqueObjectKey();
             // base upload
@@ -377,7 +463,7 @@ public class TosPreSignedRequestHandlerTest {
         PreSignedPolicyURLOutput output = handler.preSignedPolicyURL(input);
 
         String getUrl = output.getPreSignedPolicyURLGenerator().getSignedURLForGetOrHead(key, null);
-        try{
+        try {
             Response response = doReq(HttpMethod.GET, getUrl, null, -1, "");
             String body = null;
             if (response.body() != null) {
@@ -409,7 +495,8 @@ public class TosPreSignedRequestHandlerTest {
             Assert.assertEquals(response.code(), HttpStatus.OK);
             Assert.assertNotNull(response.body());
             ListObjectsV2Output listed = PayloadConverter.parsePayload(response.body().byteStream(),
-                    new TypeReference<ListObjectsV2Output>(){});
+                    new TypeReference<ListObjectsV2Output>() {
+                    });
             response.close();
             Assert.assertNotNull(listed);
             Assert.assertNotNull(listed.getContents());
@@ -456,7 +543,7 @@ public class TosPreSignedRequestHandlerTest {
 
     private void checkData(String key) throws IOException {
         GetObjectV2Input get = new GetObjectV2Input().setBucket(Consts.bucket).setKey(key);
-        try(GetObjectV2Output got = ClientInstance.getObjectRequestHandlerInstance().getObject(get)) {
+        try (GetObjectV2Output got = ClientInstance.getObjectRequestHandlerInstance().getObject(get)) {
             String gotData = StringUtils.toString(got.getContent(), "content");
             Assert.assertEquals(TosObjectRequestHandlerBasicTest.getContentMD5(gotData),
                     TosObjectRequestHandlerBasicTest.getContentMD5(sampleData));

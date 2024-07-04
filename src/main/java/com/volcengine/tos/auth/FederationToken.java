@@ -1,6 +1,8 @@
 package com.volcengine.tos.auth;
 
 import java.time.LocalDateTime;
+
+@Deprecated
 public class FederationToken {
     private Credential credential;
     private LocalDateTime expiration;

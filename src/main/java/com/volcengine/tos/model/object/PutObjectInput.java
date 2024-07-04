@@ -2,10 +2,11 @@ package com.volcengine.tos.model.object;
 
 import com.volcengine.tos.comm.event.DataTransferListener;
 import com.volcengine.tos.comm.ratelimit.RateLimiter;
+import com.volcengine.tos.model.GenericInput;
 
 import java.io.InputStream;
 
-public class PutObjectInput {
+public class PutObjectInput extends GenericInput {
     private PutObjectBasicInput putObjectBasicInput = new PutObjectBasicInput();
     private InputStream content;
 
@@ -128,6 +129,15 @@ public class PutObjectInput {
 
     public PutObjectInput setIfMatch(String ifMatch) {
         this.putObjectBasicInput.setIfMatch(ifMatch);
+        return this;
+    }
+
+    public String getTagging() {
+        return this.putObjectBasicInput.getTagging();
+    }
+
+    public PutObjectInput setTagging(String tagging) {
+        this.putObjectBasicInput.setTagging(tagging);
         return this;
     }
 

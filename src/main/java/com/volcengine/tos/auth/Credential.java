@@ -1,5 +1,6 @@
 package com.volcengine.tos.auth;
 
+@Deprecated
 public class Credential {
     private String accessKeyId;
     private String accessKeySecret;

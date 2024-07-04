@@ -11,7 +11,7 @@ public interface Consts {
     String SCHEME_HTTP = "http";
     String SCHEME_HTTPS = "https";
     String SDK_NAME = "ve-tos-java-sdk";
-    String SDK_VERSION = "v2.6.5";
+    String SDK_VERSION = "v2.8.1";
     String OS_NAME = System.getProperty("os.name");
     String OS_ARCH = System.getProperty("os.arch");
     String JAVA_VERSION = System.getProperty("java.version", "0");
@@ -72,4 +72,7 @@ public interface Consts {
     int DEFAULT_MAX_RETRY_COUNT = 3;
     int DEFAULT_EXPECT_100_CONTINUE_THRESHOLD = 65536;
     int DEFAULT_HIGH_LATENCY_LOG_THRESHOLD = 100;
+
+    String DEFAULT_USER_AGENT_ITEM = "undefined";
+    String SYMLINK = "Symlink";
 }

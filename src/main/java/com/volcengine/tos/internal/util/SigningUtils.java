@@ -44,7 +44,7 @@ public class SigningUtils {
     public static final char[] HEX = "0123456789abcdef".toCharArray();
 
     public static byte[] signKey(SignKeyInfo info) {
-        byte[] date = hmacSha256(info.getCredential().getAccessKeySecret().getBytes(StandardCharsets.UTF_8),
+        byte[] date = hmacSha256(info.getSk().getBytes(StandardCharsets.UTF_8),
                 info.getDate().getBytes(StandardCharsets.UTF_8));
         byte[] region = hmacSha256(date, info.getRegion().getBytes(StandardCharsets.UTF_8));
         byte[] service = hmacSha256(region, "tos".getBytes(StandardCharsets.UTF_8));

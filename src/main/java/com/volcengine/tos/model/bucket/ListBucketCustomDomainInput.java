@@ -1,6 +1,8 @@
 package com.volcengine.tos.model.bucket;
 
-public class ListBucketCustomDomainInput {
+import com.volcengine.tos.model.GenericInput;
+
+public class ListBucketCustomDomainInput extends GenericInput {
     private String bucket;
 
     public String getBucket() {

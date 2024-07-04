@@ -3,7 +3,8 @@ package com.volcengine.tos;
 import com.volcengine.tos.auth.Credentials;
 import com.volcengine.tos.auth.SignV4;
 import com.volcengine.tos.auth.Signer;
-import com.volcengine.tos.auth.StaticCredentials;
+import com.volcengine.tos.credential.CredentialsProvider;
+import com.volcengine.tos.credential.StaticCredentialsProvider;
 import com.volcengine.tos.internal.*;
 import com.volcengine.tos.internal.util.ParamsChecker;
 import com.volcengine.tos.internal.util.StringUtils;
@@ -19,6 +20,9 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.io.InputStream;
 import java.time.Duration;
+import java.util.Map;
+
+import static com.volcengine.tos.internal.Consts.DEFAULT_USER_AGENT_ITEM;
 
 public class TOSV2Client implements TOSV2 {
     private TOSClientConfiguration config;
@@ -61,20 +65,71 @@ public class TOSV2Client implements TOSV2 {
                 setIsHttpByEndpoint(this.config.getEndpoint());
                 this.transport = new RequestTransport(this.config.getTransportConfig()).setDisableEncodingMeta(this.config.isDisableEncodingMeta());
             }
-            if (this.signer == null && this.config.getCredentials() != null) {
-                // 允许 signer 为空，匿名访问
-                this.signer = new SignV4(this.config.getCredentials(), this.config.getRegion());
+            // 允许 signer 为空，匿名访问
+            if (this.signer == null) {
+                if (this.config.getCredentialsProvider() != null) {
+                    this.signer = new SignV4(this.config.getCredentialsProvider(), this.config.getRegion());
+                } else if (this.config.getCredentials() != null) {
+                    this.signer = new SignV4(this.config.getCredentials(), this.config.getRegion());
+                }
             }
             this.factory = new TosRequestFactory(this.signer, this.config.getEndpoint())
-                    .setIsCustomDomain(config.isCustomDomain()).setDisableEncodingMeta(this.config.isDisableEncodingMeta());
+                    .setIsCustomDomain(config.isCustomDomain())
+                    .setDisableEncodingMeta(this.config.isDisableEncodingMeta()).setUserAgent(this.buildUserAgent());
         }
         this.bucketRequestHandler = new TosBucketRequestHandler(this.transport, this.factory);
-        this.objectRequestHandler = new TosObjectRequestHandler(this.transport, this.factory)
+        this.objectRequestHandler = new TosObjectRequestHandler(this.transport, this.factory, this.bucketRequestHandler)
                 .setClientAutoRecognizeContentType(this.config.isClientAutoRecognizeContentType())
-                .setEnableCrcCheck(this.config.isEnableCrc());
+                .setEnableCrcCheck(this.config.isEnableCrc())
+                .setDisableEncodingMeta(this.config.isDisableEncodingMeta());
         this.fileRequestHandler = new TosFileRequestHandler(objectRequestHandler, this.transport, this.factory)
                 .setEnableCrcCheck(this.config.isEnableCrc());
         this.preSignedRequestHandler = new TosPreSignedRequestHandler(this.factory, this.signer);
+    }
+
+    private String buildUserAgent() {
+        if (StringUtils.isEmpty(this.config.getUserAgentProductName()) && StringUtils.isEmpty(this.config.getUserAgentSoftName())
+                && StringUtils.isEmpty(this.config.getUserAgentSoftVersion()) && (this.config.getUserAgentCustomizedKeyValues() == null || this.config.getUserAgentCustomizedKeyValues().isEmpty())) {
+            return TosUtils.getUserAgent();
+        }
+        StringBuilder sb = new StringBuilder();
+        sb.append(TosUtils.getUserAgent());
+        sb.append(" -- ");
+        if (StringUtils.isEmpty(this.config.getUserAgentProductName())) {
+            sb.append(DEFAULT_USER_AGENT_ITEM);
+        } else {
+            sb.append(this.config.getUserAgentProductName());
+        }
+        sb.append("/");
+        if (StringUtils.isEmpty(this.config.getUserAgentSoftName())) {
+            sb.append(DEFAULT_USER_AGENT_ITEM);
+        } else {
+            sb.append(this.config.getUserAgentSoftName());
+        }
+        sb.append("/");
+        if (StringUtils.isEmpty(this.config.getUserAgentSoftVersion())) {
+            sb.append(DEFAULT_USER_AGENT_ITEM);
+        } else {
+            sb.append(this.config.getUserAgentSoftVersion());
+        }
+        if (this.config.getUserAgentCustomizedKeyValues() != null && !this.config.getUserAgentCustomizedKeyValues().isEmpty()) {
+            sb.append(" (");
+            int index = 0;
+            for (Map.Entry<String, String> e : this.config.getUserAgentCustomizedKeyValues().entrySet()) {
+                if (e.getKey() == null || e.getValue() == null) {
+                    continue;
+                }
+                sb.append(e.getKey());
+                sb.append("/");
+                sb.append(e.getValue());
+                if (index != this.config.getUserAgentCustomizedKeyValues().size() - 1) {
+                    sb.append(";");
+                }
+                index++;
+            }
+            sb.append(")");
+        }
+        return sb.toString();
     }
 
     private void setIsHttpByEndpoint(String endpoint) {
@@ -91,6 +146,7 @@ public class TOSV2Client implements TOSV2 {
     }
 
     @Override
+    @Deprecated
     public void changeCredentials(Credentials credentials) {
         this.config.setCredentials(credentials);
         if (credentials == null) {
@@ -105,22 +161,21 @@ public class TOSV2Client implements TOSV2 {
 
     @Override
     public boolean refreshCredentials(String accessKey, String secretKey, String securityToken) {
-        Credentials cred = null;
-        if (StringUtils.isNotEmpty(accessKey) && StringUtils.isNotEmpty(secretKey)) {
-            if (StringUtils.isEmpty(securityToken)) {
-                cred = new StaticCredentials(accessKey, secretKey);
-            } else {
-                cred = new StaticCredentials(accessKey, secretKey).withSecurityToken(securityToken);
-            }
+        if (this.config.getCredentialsProvider() != null && !(this.config.getCredentialsProvider() instanceof StaticCredentialsProvider)) {
+            return false;
         }
-        this.config.setCredentials(cred);
+
+        CredentialsProvider cred = null;
+        if (StringUtils.isNotEmpty(accessKey) && StringUtils.isNotEmpty(secretKey)) {
+            cred = new StaticCredentialsProvider(accessKey, secretKey, securityToken);
+        }
+        this.config.setCredentials(null);
+        this.config.setCredentialsProvider(cred);
         if (cred == null) {
             this.signer = null;
         } else {
             this.signer = new SignV4(cred, this.config.getRegion());
         }
-        this.factory.setSigner(this.signer);
-        cascadeUpdateRequestFactory();
         return true;
     }
 
@@ -439,6 +494,26 @@ public class TOSV2Client implements TOSV2 {
     }
 
     @Override
+    public PutBucketInventoryOutput putBucketInventory(PutBucketInventoryInput input) throws TosException {
+        return bucketRequestHandler.putBucketInventory(input);
+    }
+
+    @Override
+    public GetBucketInventoryOutput getBucketInventory(GetBucketInventoryInput input) throws TosException {
+        return bucketRequestHandler.getBucketInventory(input);
+    }
+
+    @Override
+    public ListBucketInventoryOutput listBucketInventory(ListBucketInventoryInput input) throws TosException {
+        return bucketRequestHandler.listBucketInventory(input);
+    }
+
+    @Override
+    public DeleteBucketInventoryOutput deleteBucketInventory(DeleteBucketInventoryInput input) throws TosException {
+        return bucketRequestHandler.deleteBucketInventory(input);
+    }
+
+    @Override
     public GetObjectV2Output getObject(GetObjectV2Input input) throws TosException {
         return objectRequestHandler.getObject(input);
     }
@@ -567,6 +642,11 @@ public class TOSV2Client implements TOSV2 {
     }
 
     @Override
+    public GetFetchTaskOutput getFetchTask(GetFetchTaskInput input) throws TosException {
+        return objectRequestHandler.getFetchTask(input);
+    }
+
+    @Override
     public CreateMultipartUploadOutput createMultipartUpload(CreateMultipartUploadInput input) throws TosException {
         return objectRequestHandler.createMultipartUpload(input);
     }
@@ -610,6 +690,21 @@ public class TOSV2Client implements TOSV2 {
     public RestoreObjectOutput restoreObject(RestoreObjectInput input) throws TosException {
         return objectRequestHandler.restoreObject(input);
     }
+
+    @Override
+    public PutSymlinkOutput putSymlink(PutSymlinkInput input) throws TosException {
+        return objectRequestHandler.putSymlink(input);
+    }
+
+    @Override
+    public GetSymlinkOutput getSymlink(GetSymlinkInput input) throws TosException {
+        return objectRequestHandler.getSymlink(input);
+    }
+
+    protected ModifyObjectOutput modifyObject(ModifyObjectInput input) throws TosException {
+        return objectRequestHandler.modifyObject(input, "0", false);
+    }
+
     @Override
     public PreSignedURLOutput preSignedURL(PreSignedURLInput input) throws TosException {
         return preSignedRequestHandler.preSignedURL(input);
@@ -769,7 +864,18 @@ public class TOSV2Client implements TOSV2 {
     @Override
     public void close() throws IOException {
         if (this.transport != null && this.transport instanceof Closeable) {
-            ((Closeable) this.transport).close();
+            try {
+                ((Closeable) this.transport).close();
+            } catch (IOException ex) {
+
+            }
+        }
+        if (this.config != null && this.config.getCredentialsProvider() != null && (this.config.getCredentialsProvider() instanceof Closeable)) {
+            try {
+                ((Closeable) this.config.getCredentialsProvider()).close();
+            } catch (IOException ex) {
+
+            }
         }
     }
 }

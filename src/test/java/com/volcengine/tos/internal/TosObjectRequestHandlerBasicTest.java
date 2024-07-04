@@ -1410,6 +1410,7 @@ public class TosObjectRequestHandlerBasicTest {
                     .bucket(Consts.bucket)
                     .key(key)
                     .content(content)
+                    .options(new ObjectMetaRequestOptions().setStorageClass(StorageClassType.STORAGE_CLASS_STANDARD))
                     .build());
 
             HeadObjectV2Output headRes = getHandler().headObject(HeadObjectV2Input.builder()
@@ -1537,7 +1538,7 @@ public class TosObjectRequestHandlerBasicTest {
             GetFileStatusInput input = GetFileStatusInput.builder().bucket(Consts.bucket).key(key).build();
             GetFileStatusOutput out = getHandler().getFileStatus(input);
             Assert.assertEquals(out.getKey(), key);
-            Assert.assertEquals(out.getSize().intValue(), data.length());
+            Assert.assertEquals(out.getSize(), data.length());
             Assert.assertNotNull(out.getLastModified());
             Assert.assertNotNull(out.getCrc32());
             Assert.assertNotNull(out.getCrc64());
@@ -1979,57 +1980,6 @@ public class TosObjectRequestHandlerBasicTest {
             }
         }
     }
-
-    // todo open in next version
-//    @Test
-//    void renameObjectTest() {
-//        String key = getUniqueObjectKey();
-//        String data = sampleData + StringUtils.randomString(new Random().nextInt(128));
-//        InputStream content = new ByteArrayInputStream(data.getBytes(StandardCharsets.UTF_8));
-//        try{
-//            // 需要先开启 rename 特性，才能 rename object
-//            boolean renameEnable = true;
-//            PutBucketRenameInput input = new PutBucketRenameInput().setBucket(Consts.bucket).setRenameEnable(renameEnable);
-//            ClientInstance.getBucketRequestHandlerInstance().putBucketRename(input);
-//            GetBucketRenameOutput output = ClientInstance.getBucketRequestHandlerInstance()
-//                    .getBucketRename(new GetBucketRenameInput().setBucket(Consts.bucket));;
-//            Assert.assertTrue(output.isRenameEnable());
-//
-//            PutObjectOutput putRes = getHandler().putObject(PutObjectInput.builder()
-//                    .bucket(Consts.bucket)
-//                    .key(key)
-//                    .content(content)
-//                    .build());
-//
-//            HeadObjectV2Output headRes = getHandler().headObject(HeadObjectV2Input.builder()
-//                    .bucket(Consts.bucket)
-//                    .key(key)
-//                    .build());
-//            Assert.assertEquals(headRes.getContentLength(), data.length());
-//            Assert.assertEquals(headRes.getEtag(), putRes.getEtag());
-//            Assert.assertEquals(headRes.getVersionID(), putRes.getVersionID());
-//
-//            String renamedKey = key + "-rename";
-//            getHandler().renameObject(new RenameObjectInput().setBucket(bucket).setKey(key).setNewKey(renamedKey));
-//
-//            try(GetObjectV2Output getRes = getHandler().getObject(GetObjectV2Input.builder()
-//                    .bucket(Consts.bucket)
-//                    .key(renamedKey)
-//                    .build())){
-//                Assert.assertEquals(getRes.getContentLength(), data.length());
-//                Assert.assertEquals(getRes.getEtag(), putRes.getEtag());
-//                Assert.assertEquals(getRes.getVersionID(), putRes.getVersionID());
-//                validateDataSame(data, StringUtils.toString(getRes.getContent(), "content"));
-//            } catch (IOException e) {
-//                testFailed(e);
-//            }
-//        } catch (Exception e) {
-//            testFailed(e);
-//        } finally{
-//            clearData(key);
-//            ClientInstance.getBucketRequestHandlerInstance().deleteBucketRename(new DeleteBucketRenameInput().setBucket(bucket));
-//        }
-//    }
 
     @Test
     void restoreObjectTest() {

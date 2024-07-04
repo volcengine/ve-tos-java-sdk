@@ -10,6 +10,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
+@Deprecated
 class DnsCache {
     private String host;
     private volatile List<InetAddress> ipList;

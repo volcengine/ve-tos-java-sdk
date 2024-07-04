@@ -4,8 +4,11 @@ import com.volcengine.tos.auth.StaticCredentials;
 import com.volcengine.tos.comm.Code;
 import com.volcengine.tos.comm.HttpMethod;
 import com.volcengine.tos.comm.HttpStatus;
-import com.volcengine.tos.comm.common.StorageClassType;
-import com.volcengine.tos.comm.common.TierType;
+import com.volcengine.tos.comm.common.*;
+import com.volcengine.tos.credential.Credentials;
+import com.volcengine.tos.credential.EcsCredentialsProvider;
+import com.volcengine.tos.credential.EnvCredentialsProvider;
+import com.volcengine.tos.credential.StaticCredentialsProvider;
 import com.volcengine.tos.internal.util.StringUtils;
 import com.volcengine.tos.internal.util.TosUtils;
 import com.volcengine.tos.model.acl.*;
@@ -14,18 +17,25 @@ import com.volcengine.tos.model.object.*;
 import com.volcengine.tos.session.Session;
 import com.volcengine.tos.session.SessionOptions;
 import com.volcengine.tos.transport.TransportConfig;
+import okhttp3.*;
+import okhttp3.mockwebserver.MockResponse;
+import okhttp3.mockwebserver.MockWebServer;
+import okio.BufferedSink;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InterruptedIOException;
+import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.time.Instant;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.TimeUnit;
 import java.util.zip.CRC32;
 
 public class TOSV2ClientTest {
@@ -492,6 +502,17 @@ public class TOSV2ClientTest {
             HeadObjectOutput head = client.headObject(Consts.bucket, key);
             Assert.assertEquals("image", head.getObjectMeta().getContentType());
 
+            String key2 = "object-meta-" + System.currentTimeMillis();
+            client.deleteObject(new DeleteObjectInput().setBucket(Consts.bucket).setKey(key2));
+
+            try {
+                client.headObject(Consts.bucket, key2);
+                Assert.assertTrue(false);
+            } catch (TosServerException ex) {
+                Assert.assertEquals(ex.getStatusCode(), 404);
+                Assert.assertTrue(ex.getEc() != null && ex.getEc().length() > 0);
+            }
+
             client.setObjectMeta(Consts.bucket, key, RequestOptions.withContentType("video"));
             head = client.headObject(Consts.bucket, key);
             Assert.assertEquals("video", head.getObjectMeta().getContentType());
@@ -955,6 +976,18 @@ public class TOSV2ClientTest {
     @Test
     void disableEncodingMetaTest() {
         String key = "disable-encoding-meta-" + System.currentTimeMillis();
+        DeleteObjectOutput doutput = client.deleteObject(new DeleteObjectInput().setBucket(Consts.bucket).setKey(key));
+        Assert.assertTrue(doutput.getRequestInfo().getRequestId().length() > 0);
+
+        try (GetObjectV2Output goutput = client.getObject(new GetObjectV2Input().setBucket(Consts.bucket).setKey(key))) {
+            Assert.assertTrue(false);
+        } catch (Exception ex) {
+            Assert.assertTrue(ex instanceof TosServerException);
+            Assert.assertEquals(((TosServerException) ex).getStatusCode(), 404);
+            Assert.assertEquals(((TosServerException) ex).getKey(), key);
+            Assert.assertEquals(((TosServerException) ex).getEc(), "0017-00000003");
+        }
+
         PutObjectInput input = new PutObjectInput().setBucket(Consts.bucket).setKey(key).setContent(new ByteArrayInputStream("helloworld".getBytes()));
         Map<String, String> meta = new HashMap<>();
         meta.put("key1", "value1");
@@ -1004,6 +1037,555 @@ public class TOSV2ClientTest {
             StringUtils.toString(goutput.getContent(), "helloworld");
         } catch (Exception ex) {
             Assert.assertTrue(false);
+        }
+    }
+
+    @Test
+    void bucketInventoryTest() {
+        GetBucketACLOutput aclOutput = client.getBucketACL(new GetBucketACLInput().setBucket(Consts.bucket));
+        Assert.assertTrue(aclOutput.getRequestInfo().getRequestId().length() > 0);
+        String accountId = aclOutput.getOwner().getId();
+
+        for (int i = 1; i <= 3; i++) {
+            PutBucketInventoryInput input = new PutBucketInventoryInput();
+            input.setBucket(Consts.bucket);
+            input.setId(Integer.toString(i));
+            input.setIsEnabled(true);
+            input.setFilter(new BucketInventoryConfiguration.InventoryFilter().setPrefix("filter_prefix" + i));
+            if (i % 2 == 0) {
+                input.setIncludedObjectVersions(InventoryIncludedObjType.INVENTORY_INCLUDED_OBJ_TYPE_CURRENT);
+            } else {
+                input.setIncludedObjectVersions(InventoryIncludedObjType.INVENTORY_INCLUDED_OBJ_TYPE_ALL);
+            }
+            input.setDestination(new BucketInventoryConfiguration.InventoryDestination()
+                    .setTosBucketDestination(new BucketInventoryConfiguration
+                            .TOSBucketDestination().setBucket(Consts.bucket)
+                            .setPrefix("destination_prefix" + i).setFormat(InventoryFormatType.INVENTORY_FORMAT_CSV)
+                            .setRole("TosArchiveTOSInventory").setAccountId(accountId)));
+            input.setOptionalFields(new BucketInventoryConfiguration.InventoryOptionalFields().setField(Arrays.asList("Size", "ETag", "CRC64")));
+            if (i % 2 == 0) {
+                input.setSchedule(new BucketInventoryConfiguration.InventorySchedule().setFrequency(InventoryFrequencyType.INVENTORY_FREQUENCY_TYPE_DAILY));
+            } else {
+                input.setSchedule(new BucketInventoryConfiguration.InventorySchedule().setFrequency(InventoryFrequencyType.INVENTORY_FREQUENCY_TYPE_WEEKLY));
+            }
+            PutBucketInventoryOutput poutput = client.putBucketInventory(input);
+            Assert.assertTrue(poutput.getRequestInfo().getRequestId().length() > 0);
+        }
+
+        for (int i = 1; i <= 3; i++) {
+            GetBucketInventoryOutput goutput = client.getBucketInventory(new GetBucketInventoryInput().setBucket(Consts.bucket).setId(Integer.toString(i)));
+            Assert.assertTrue(goutput.getRequestInfo().getRequestId().length() > 0);
+            Assert.assertEquals(goutput.getId(), Integer.toString(i));
+            Assert.assertEquals(goutput.getIsEnabled(), true);
+            Assert.assertEquals(goutput.getFilter().getPrefix(), "filter_prefix" + i);
+            if (i % 2 == 0) {
+                Assert.assertEquals(goutput.getIncludedObjectVersions(), InventoryIncludedObjType.INVENTORY_INCLUDED_OBJ_TYPE_CURRENT);
+            } else {
+                Assert.assertEquals(goutput.getIncludedObjectVersions(), InventoryIncludedObjType.INVENTORY_INCLUDED_OBJ_TYPE_ALL);
+            }
+            Assert.assertEquals(goutput.getDestination().getTosBucketDestination().getBucket(), Consts.bucket);
+            Assert.assertEquals(goutput.getDestination().getTosBucketDestination().getPrefix(), "destination_prefix" + i);
+            Assert.assertEquals(goutput.getDestination().getTosBucketDestination().getFormat(), InventoryFormatType.INVENTORY_FORMAT_CSV);
+            Assert.assertEquals(goutput.getDestination().getTosBucketDestination().getRole(), "TosArchiveTOSInventory");
+            Assert.assertEquals(goutput.getDestination().getTosBucketDestination().getAccountId(), accountId);
+            Assert.assertEquals(goutput.getOptionalFields().getField(), Arrays.asList("Size", "ETag", "CRC64"));
+            if (i % 2 == 0) {
+                Assert.assertEquals(goutput.getSchedule().getFrequency(), InventoryFrequencyType.INVENTORY_FREQUENCY_TYPE_DAILY);
+            } else {
+                Assert.assertEquals(goutput.getSchedule().getFrequency(), InventoryFrequencyType.INVENTORY_FREQUENCY_TYPE_WEEKLY);
+            }
+        }
+
+        ListBucketInventoryOutput loutput = client.listBucketInventory(new ListBucketInventoryInput().setBucket(Consts.bucket));
+        Assert.assertTrue(loutput.getRequestInfo().getRequestId().length() > 0);
+        Assert.assertFalse(loutput.isTruncated());
+        Assert.assertTrue(StringUtils.isEmpty(loutput.getNextContinuationToken()));
+        Assert.assertTrue(loutput.getConfigurations().size() >= 3);
+        int count = 0;
+        for (BucketInventoryConfiguration conf : loutput.getConfigurations()) {
+            if (conf.getId().equals("1") || conf.getId().equals("2") || conf.getId().equals("3")) {
+                count++;
+                int i = Integer.parseInt(conf.getId());
+                BucketInventoryConfiguration goutput = conf;
+                Assert.assertEquals(goutput.getId(), Integer.toString(i));
+                Assert.assertEquals(goutput.getIsEnabled(), true);
+                Assert.assertEquals(goutput.getFilter().getPrefix(), "filter_prefix" + i);
+                if (i % 2 == 0) {
+                    Assert.assertEquals(goutput.getIncludedObjectVersions(), InventoryIncludedObjType.INVENTORY_INCLUDED_OBJ_TYPE_CURRENT);
+                } else {
+                    Assert.assertEquals(goutput.getIncludedObjectVersions(), InventoryIncludedObjType.INVENTORY_INCLUDED_OBJ_TYPE_ALL);
+                }
+                Assert.assertEquals(goutput.getDestination().getTosBucketDestination().getBucket(), Consts.bucket);
+                Assert.assertEquals(goutput.getDestination().getTosBucketDestination().getPrefix(), "destination_prefix" + i);
+                Assert.assertEquals(goutput.getDestination().getTosBucketDestination().getFormat(), InventoryFormatType.INVENTORY_FORMAT_CSV);
+                Assert.assertEquals(goutput.getDestination().getTosBucketDestination().getRole(), "TosArchiveTOSInventory");
+                Assert.assertEquals(goutput.getDestination().getTosBucketDestination().getAccountId(), accountId);
+                Assert.assertEquals(goutput.getOptionalFields().getField(), Arrays.asList("Size", "ETag", "CRC64"));
+                if (i % 2 == 0) {
+                    Assert.assertTrue(goutput.getSchedule().getFrequency() == InventoryFrequencyType.INVENTORY_FREQUENCY_TYPE_DAILY);
+                    Assert.assertEquals(goutput.getSchedule().getFrequency(), InventoryFrequencyType.INVENTORY_FREQUENCY_TYPE_DAILY);
+                } else {
+                    Assert.assertTrue(goutput.getSchedule().getFrequency() == InventoryFrequencyType.INVENTORY_FREQUENCY_TYPE_WEEKLY);
+                    Assert.assertEquals(goutput.getSchedule().getFrequency(), InventoryFrequencyType.INVENTORY_FREQUENCY_TYPE_WEEKLY);
+                }
+            }
+        }
+
+        Assert.assertEquals(count, 3);
+        DeleteBucketInventoryOutput doutput = client.deleteBucketInventory(new DeleteBucketInventoryInput().setBucket(Consts.bucket).setId("1"));
+        Assert.assertTrue(loutput.getRequestInfo().getRequestId().length() > 0);
+        try {
+            client.getBucketInventory(new GetBucketInventoryInput().setBucket(Consts.bucket).setId("1"));
+            Assert.assertTrue(false);
+        } catch (TosServerException ex) {
+            Assert.assertEquals(ex.getStatusCode(), 404);
+        }
+
+        for (int i = 1; i <= 3; i++) {
+            client.deleteBucketInventory(new DeleteBucketInventoryInput().setBucket(Consts.bucket).setId(Integer.toString(i)));
+        }
+    }
+
+    @Test
+    void objectTaggingTest() {
+        String key = "object-tagging-" + System.currentTimeMillis();
+        String tagging = "tag1=value1&tag2=value2";
+        PutObjectInput input = new PutObjectInput().setBucket(Consts.bucket).setKey(key)
+                .setContent(new ByteArrayInputStream("helloworld".getBytes()))
+                .setTagging(tagging);
+        PutObjectOutput output = client.putObject(input);
+        Assert.assertTrue(output.getRequestInfo().getRequestId().length() > 0);
+
+        GetObjectTaggingOutput goutput = client.getObjectTagging(new GetObjectTaggingInput().setBucket(Consts.bucket).setKey(key));
+        Assert.assertTrue(goutput.getRequestInfo().getRequestId().length() > 0);
+        Assert.assertEquals(goutput.getTagSet().getTags().size(), 2);
+        Assert.assertEquals(goutput.getTagSet().getTags().get(0).getKey(), "tag1");
+        Assert.assertEquals(goutput.getTagSet().getTags().get(0).getValue(), "value1");
+        Assert.assertEquals(goutput.getTagSet().getTags().get(1).getKey(), "tag2");
+        Assert.assertEquals(goutput.getTagSet().getTags().get(1).getValue(), "value2");
+
+        String key2 = "object-tagging-" + System.currentTimeMillis();
+        CreateMultipartUploadOutput coutput = client.createMultipartUpload(new CreateMultipartUploadInput().setBucket(Consts.bucket).setKey(key2).setTagging(tagging));
+        Assert.assertTrue(coutput.getUploadID().length() > 0);
+        String uploadId = coutput.getUploadID();
+
+        UploadPartV2Output uoutput = client.uploadPart(new UploadPartV2Input().setBucket(Consts.bucket).setKey(key2).setUploadID(uploadId)
+                .setPartNumber(1).setContent(new ByteArrayInputStream("helloworld".getBytes())).setContentLength("helloworld".length()));
+        Assert.assertTrue(uoutput.getRequestInfo().getRequestId().length() > 0);
+        CompleteMultipartUploadV2Output ccoutput = client.completeMultipartUpload(new CompleteMultipartUploadV2Input().setBucket(Consts.bucket)
+                .setKey(key2).setUploadID(uploadId).setUploadedParts(Arrays.asList(new UploadedPartV2().setPartNumber(1).setEtag(uoutput.getEtag()))));
+        Assert.assertTrue(ccoutput.getRequestInfo().getRequestId().length() > 0);
+
+        goutput = client.getObjectTagging(new GetObjectTaggingInput().setBucket(Consts.bucket).setKey(key2));
+        Assert.assertTrue(goutput.getRequestInfo().getRequestId().length() > 0);
+        Assert.assertEquals(goutput.getTagSet().getTags().size(), 2);
+        Assert.assertEquals(goutput.getTagSet().getTags().get(0).getKey(), "tag1");
+        Assert.assertEquals(goutput.getTagSet().getTags().get(0).getValue(), "value1");
+        Assert.assertEquals(goutput.getTagSet().getTags().get(1).getKey(), "tag2");
+        Assert.assertEquals(goutput.getTagSet().getTags().get(1).getValue(), "value2");
+
+        String key3 = "object-tagging-" + System.currentTimeMillis();
+        CopyObjectV2Output cccoutput = client.copyObject(new CopyObjectV2Input().setBucket(Consts.bucket)
+                .setKey(key3).setSrcBucket(Consts.bucket).setSrcKey(key2).setTaggingDirective(TaggingDirectiveType.TaggingDirectiveCopy));
+        Assert.assertTrue(cccoutput.getRequestInfo().getRequestId().length() > 0);
+
+        goutput = client.getObjectTagging(new GetObjectTaggingInput().setBucket(Consts.bucket).setKey(key3));
+        Assert.assertTrue(goutput.getRequestInfo().getRequestId().length() > 0);
+        Assert.assertEquals(goutput.getTagSet().getTags().size(), 2);
+        Assert.assertEquals(goutput.getTagSet().getTags().get(0).getKey(), "tag1");
+        Assert.assertEquals(goutput.getTagSet().getTags().get(0).getValue(), "value1");
+        Assert.assertEquals(goutput.getTagSet().getTags().get(1).getKey(), "tag2");
+        Assert.assertEquals(goutput.getTagSet().getTags().get(1).getValue(), "value2");
+
+        cccoutput = client.copyObject(new CopyObjectV2Input().setBucket(Consts.bucket)
+                .setKey(key3).setSrcBucket(Consts.bucket).setSrcKey(key2).setTaggingDirective(TaggingDirectiveType.TaggingDirectiveReplace)
+                .setTagging("tag3=value3&tag4=value4"));
+        Assert.assertTrue(cccoutput.getRequestInfo().getRequestId().length() > 0);
+        goutput = client.getObjectTagging(new GetObjectTaggingInput().setBucket(Consts.bucket).setKey(key3));
+        Assert.assertTrue(goutput.getRequestInfo().getRequestId().length() > 0);
+        Assert.assertEquals(goutput.getTagSet().getTags().size(), 2);
+        Assert.assertEquals(goutput.getTagSet().getTags().get(0).getKey(), "tag3");
+        Assert.assertEquals(goutput.getTagSet().getTags().get(0).getValue(), "value3");
+        Assert.assertEquals(goutput.getTagSet().getTags().get(1).getKey(), "tag4");
+        Assert.assertEquals(goutput.getTagSet().getTags().get(1).getValue(), "value4");
+    }
+
+    @Test
+    void testUserAgent() {
+        Map<String, String> m = new HashMap<>();
+        m.put("cloud_type", "aliyun");
+        m.put("cloud_region", "hangzhou");
+        TOSV2 cli = new TOSV2ClientBuilder().build(TOSClientConfiguration.builder().region(Consts.region).endpoint(Consts.endpoint)
+                .credentialsProvider(new StaticCredentialsProvider(Consts.accessKey, Consts.secretKey)).
+                transportConfig(new TransportConfig()).disableEncodingMeta(true)
+                .userAgentProductName("EMR").userAgentSoftName("Hadoop")
+                .userAgentSoftVersion("v3.0.0").userAgentCustomizedKeyValues(m).build());
+        ListBucketsV2Input input = new ListBucketsV2Input();
+        ListBucketsV2Output o = cli.listBuckets(input);
+        Assert.assertTrue(o.getRequestInfo().getRequestId().length() > 0);
+
+        input.setRequestDate(new Date());
+        o = cli.listBuckets(input);
+        Assert.assertTrue(o.getRequestInfo().getRequestId().length() > 0);
+
+        try {
+            input.setRequestDate(Date.from(Instant.now().minusSeconds(3600)));
+            cli.listBuckets(input);
+            Assert.assertTrue(false);
+        } catch (TosServerException ex) {
+            Assert.assertEquals(ex.getStatusCode(), 403);
+            Assert.assertEquals(ex.getCode(), "RequestTimeTooSkewed");
+        }
+
+        input = new ListBucketsV2Input();
+        cli = new TOSV2ClientBuilder().build(TOSClientConfiguration.builder().region(Consts.region).endpoint(Consts.endpoint)
+                .credentialsProvider(new EnvCredentialsProvider()).
+                transportConfig(new TransportConfig()).disableEncodingMeta(true).build());
+        try {
+            o = cli.listBuckets(input);
+            Assert.assertTrue(o.getRequestInfo().getRequestId().length() > 0);
+        } catch (TosServerException ex) {
+            Assert.assertTrue(ex.getRequestID().length() > 0);
+        }
+    }
+
+    @Test
+    void testEcsCredentialsProvider() throws IOException, InterruptedException {
+        MockWebServer server = new MockWebServer();
+        server.enqueue(new MockResponse().setResponseCode(200).setBody("{\n" +
+                "    \"AccessKeyId\" : \"abc\",\n" +
+                "    \"SecretAccessKey\" : \"123\",\n" +
+                "    \"SessionToken\" : \"999\",\n" +
+                "    \"ExpiredTime\" : \"2099-01-01T08:00:01+08:00\"\n" +
+                "}"));
+        server.start();
+        String url = "http://" + server.getHostName() + ":" + server.getPort() + "/volcstack/latest/iam/security_credentials";
+        final EcsCredentialsProvider provider = new EcsCredentialsProvider("test_role", url);
+        final ConcurrentHashMap<String, Credentials> map = new ConcurrentHashMap<>();
+        List<Thread> threads = new ArrayList<>();
+        for (int i = 0; i < 5; i++) {
+            final String key = Integer.toString(i);
+            Thread t = new Thread() {
+                @Override
+                public void run() {
+                    Credentials c = provider.getCredentials();
+                    map.put(key, c);
+                }
+            };
+            threads.add(t);
+        }
+
+        for (Thread t : threads) {
+            t.start();
+        }
+
+        for (Thread t : threads) {
+            t.join();
+        }
+        provider.close();
+        Assert.assertEquals(server.getRequestCount(), 1);
+        Assert.assertEquals(map.size(), 5);
+        Credentials c = map.get(Integer.toString(0));
+        Assert.assertEquals(c.getAk(), "abc");
+        Assert.assertEquals(c.getSk(), "123");
+        Assert.assertEquals(c.getSecurityToken(), "999");
+        for (int i = 0; i < 4; i++) {
+            Assert.assertEquals(map.get(Integer.toString(i)), map.get(Integer.toString(i + 1)));
+        }
+        server.close();
+    }
+
+    @Test
+    void testSymlink() throws IOException {
+        String bucket = Consts.bucket;
+        String key = "object-symlink-" + System.currentTimeMillis() + "-中文后缀";
+        PutObjectOutput poutput = client.putObject(new PutObjectInput().setBucket(bucket)
+                .setKey(key).setContent(new ByteArrayInputStream("helloworld".getBytes())).setContentLength("helloworld".length()));
+        Assert.assertTrue(poutput.getRequestInfo().getRequestId().length() > 0);
+        Map<String, String> meta = new HashMap<>();
+        meta.put("key1", "value1");
+        meta.put("中文键", "中文值");
+        String key2 = "object-symlink-" + System.currentTimeMillis();
+        PutSymlinkOutput ppoutput = client.putSymlink(new PutSymlinkInput().setBucket(bucket).setKey(key2)
+                .setSymlinkTargetBucket(bucket).setSymlinkTargetKey(key).setForbidOverwrite(true)
+                .setAcl(ACLType.ACL_PUBLIC_READ).setStorageClass(StorageClassType.STORAGE_CLASS_IA).setMeta(meta));
+        Assert.assertTrue(ppoutput.getRequestInfo().getRequestId().length() > 0);
+
+        GetSymlinkOutput goutput = client.getSymlink(new GetSymlinkInput().setBucket(bucket).setKey(key2));
+        Assert.assertTrue(goutput.getRequestInfo().getRequestId().length() > 0);
+        Assert.assertEquals(goutput.getSymlinkTargetBucket(), bucket);
+        Assert.assertEquals(goutput.getSymlinkTargetKey(), key);
+        Assert.assertNotNull(goutput.getLastModified());
+
+        HeadObjectV2Output houtput = client.headObject(new HeadObjectV2Input().setBucket(bucket).setKey(key2));
+        Assert.assertTrue(houtput.getRequestInfo().getRequestId().length() > 0);
+        Assert.assertTrue(houtput.getContentLength() > 0);
+        Assert.assertEquals(houtput.getCustomMetadata().size(), 2);
+        Assert.assertEquals(houtput.getCustomMetadata().get("key1"), "value1");
+        Assert.assertEquals(houtput.getCustomMetadata().get("中文键"), "中文值");
+
+        HeadObjectV2Output hhoutput = client.headObject(new HeadObjectV2Input().setBucket(bucket).setKey(key));
+        Assert.assertEquals(hhoutput.getContentLength(), houtput.getSymlinkTargetSize());
+        Assert.assertEquals(hhoutput.getEtag(), houtput.getEtag());
+        Assert.assertEquals(hhoutput.getStorageClass(), houtput.getStorageClass());
+
+        GetObjectV2Output ggoutput = client.getObject(new GetObjectV2Input().setBucket(bucket).setKey(key2));
+        Assert.assertTrue(ggoutput.getRequestInfo().getRequestId().length() > 0);
+        Assert.assertEquals(StringUtils.toString(ggoutput.getContent(), "content"), "helloworld");
+        ggoutput.getContent().close();
+    }
+
+    @Test
+    void testDeleteObjectRecursive() throws InterruptedException, NoSuchFieldException, IllegalAccessException {
+        String bucket = Consts.bucket;
+        boolean[] args = new boolean[]{false, true};
+        for (boolean forceUseHns : args) {
+            String rootFolder = "delete-object-recursive-" + System.currentTimeMillis() + "/";
+            List<String> folders = new ArrayList<>(2);
+            for (int i = 0; i < 2; i++) {
+                folders.add(rootFolder + +System.currentTimeMillis() + "/");
+                Thread.sleep(10);
+            }
+
+            List<String> sfolders = new ArrayList<>(3);
+            for (String folder : folders) {
+                for (int i = 0; i < 3; i++) {
+                    PutObjectOutput poutput = client.putObject(new PutObjectInput().setBucket(bucket)
+                            .setKey(folder + System.currentTimeMillis()).setContent(new ByteArrayInputStream("helloworld".getBytes())).setContentLength("helloworld".length()));
+                    Assert.assertTrue(poutput.getRequestInfo().getRequestId().length() > 0);
+                }
+                for (int i = 0; i < 3; i++) {
+                    sfolders.add(folder + System.currentTimeMillis() + "/");
+                    Thread.sleep(10);
+                }
+            }
+
+            List<String> ssfolders = new ArrayList<>(5);
+            for (String folder : sfolders) {
+                for (int i = 0; i < 5; i++) {
+                    PutObjectOutput poutput = client.putObject(new PutObjectInput().setBucket(bucket)
+                            .setKey(folder + System.currentTimeMillis()).setContent(new ByteArrayInputStream("helloworld".getBytes())).setContentLength("helloworld".length()));
+                    Assert.assertTrue(poutput.getRequestInfo().getRequestId().length() > 0);
+                }
+
+                for (int i = 0; i < 5; i++) {
+                    ssfolders.add(folder + System.currentTimeMillis() + "/");
+                    Thread.sleep(10);
+                }
+            }
+
+            for (String folder : ssfolders) {
+                for (int i = 0; i < 10; i++) {
+                    PutObjectOutput poutput = client.putObject(new PutObjectInput().setBucket(bucket)
+                            .setKey(folder + System.currentTimeMillis()).setContent(new ByteArrayInputStream("helloworld".getBytes())).setContentLength("helloworld".length()));
+                    Assert.assertTrue(poutput.getRequestInfo().getRequestId().length() > 0);
+                }
+            }
+
+            // root folders
+            ListObjectsType2Input linput = new ListObjectsType2Input().setPrefix(rootFolder).setDelimiter("/").setBucket(bucket).setMaxKeys(1000);
+            ListObjectsType2Output loutput = client.listObjectsType2(linput);
+            Assert.assertTrue(loutput.getRequestInfo().getRequestId().length() > 0);
+            Assert.assertEquals(loutput.getCommonPrefixes().size(), folders.size());
+            Assert.assertTrue(loutput.getContents() == null || loutput.getContents().size() == 0);
+            for (ListedCommonPrefix prefix : loutput.getCommonPrefixes()) {
+                Assert.assertTrue(folders.contains(prefix.getPrefix()));
+            }
+
+            for (String folder : folders) {
+                linput.setPrefix(folder);
+                loutput = client.listObjectsType2(linput);
+                Assert.assertTrue(loutput.getRequestInfo().getRequestId().length() > 0);
+                Assert.assertEquals(loutput.getCommonPrefixes().size(), 3);
+                Assert.assertEquals(loutput.getContents().size(), 3);
+                for (ListedCommonPrefix prefix : loutput.getCommonPrefixes()) {
+                    Assert.assertTrue(sfolders.contains(prefix.getPrefix()));
+                }
+            }
+
+            for (String folder : sfolders) {
+                linput.setPrefix(folder);
+                loutput = client.listObjectsType2(linput);
+                Assert.assertTrue(loutput.getRequestInfo().getRequestId().length() > 0);
+                Assert.assertEquals(loutput.getCommonPrefixes().size(), 5);
+                Assert.assertEquals(loutput.getContents().size(), 5);
+                for (ListedCommonPrefix prefix : loutput.getCommonPrefixes()) {
+                    Assert.assertTrue(ssfolders.contains(prefix.getPrefix()));
+                }
+            }
+
+            for (String folder : ssfolders) {
+                linput.setPrefix(folder);
+                loutput = client.listObjectsType2(linput);
+                Assert.assertTrue(loutput.getRequestInfo().getRequestId().length() > 0);
+                Assert.assertTrue(loutput.getCommonPrefixes() == null || loutput.getCommonPrefixes().size() == 0);
+                Assert.assertEquals(loutput.getContents().size(), 10);
+            }
+
+            DeleteObjectInput.DeleteObjectRecursiveOption option = new DeleteObjectInput.DeleteObjectRecursiveOption();
+            option.setBatchDeleteSize(10);
+            option.setBatchDeleteTaskNum(3);
+            option.setDeleteFailedRetryCount(3);
+            option.setEventListener(event -> {
+                Assert.assertEquals(event.getBucket(), bucket);
+                Assert.assertTrue(event.getOutput().getRequestInfo().getRequestId().length() > 0);
+                Assert.assertTrue(event.getOutput().getDeleteds().size() <= 10);
+                System.out.println(event.getOutput().getDeleteds());
+            });
+
+            Field f = option.getClass().getDeclaredField("forceUseHns");
+            f.setAccessible(true);
+            f.set(option, forceUseHns);
+
+            DeleteObjectOutput doutput = client.deleteObject(new DeleteObjectInput().setBucket(bucket)
+                    .setKey(rootFolder).setRecursive(true).setRecursiveOption(option));
+            Assert.assertTrue(doutput.getRequestInfo() != null);
+
+
+            ListObjectsType2Output lloutput = client.listObjectsType2(new ListObjectsType2Input().setBucket(bucket).setMaxKeys(1000).setPrefix(rootFolder).setDelimiter("/"));
+            Assert.assertTrue(lloutput.getRequestInfo().getRequestId().length() > 0);
+            Assert.assertTrue(!lloutput.isTruncated());
+            Assert.assertTrue(lloutput.getContents() == null || lloutput.getContents().size() == 0);
+            Assert.assertTrue(lloutput.getCommonPrefixes() == null || lloutput.getCommonPrefixes().size() == 0);
+        }
+
+        DeleteObjectInput dinput = new DeleteObjectInput();
+        Field f = dinput.getClass().getDeclaredField("recursiveByServer");
+        f.setAccessible(true);
+        Assert.assertFalse(f.getBoolean(dinput));
+        f.setBoolean(dinput, true);
+        Assert.assertTrue(f.getBoolean(dinput));
+    }
+
+    @Test
+    void testTimeout() throws IOException, InterruptedException {
+        final MockWebServer server = new MockWebServer();
+        server.start();
+        String url = "http://" + server.getHostName() + ":" + server.getPort() + "/test";
+
+        Thread t = new Thread(() -> {
+            try {
+                Thread.sleep(3000);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+            for (int i = 0; i < 10; i++) {
+                server.enqueue(new MockResponse().setResponseCode(200).setBody("{\n" +
+                        "    \"AccessKeyId\" : \"abc\",\n" +
+                        "    \"SecretAccessKey\" : \"123\",\n" +
+                        "    \"SessionToken\" : \"999\",\n" +
+                        "    \"ExpiredTime\" : \"2099-01-01T08:00:01+08:00\"\n" +
+                        "}"));
+            }
+        });
+        t.start();
+
+        OkHttpClient cli = new OkHttpClient.Builder().readTimeout(1, TimeUnit.SECONDS)
+                .writeTimeout(1, TimeUnit.SECONDS).build();
+
+        Request readRequest = new Request.Builder().url(url).get().build();
+        try {
+            Response resp = cli.newCall(readRequest).execute();
+            Assert.assertTrue(false);
+        } catch (Exception ex) {
+            System.out.println(ex);
+            Assert.assertTrue(ex instanceof InterruptedIOException);
+        }
+
+        Request writeRequest = new Request.Builder().url(url).addHeader("Content-Length", String.valueOf("hello".length())).put(new RequestBody() {
+            @Override
+            public MediaType contentType() {
+                return MediaType.parse("text/plain");
+            }
+
+            @Override
+            public void writeTo(BufferedSink bufferedSink) throws IOException {
+                bufferedSink.write("hello".getBytes());
+            }
+        }).build();
+
+        try {
+            Response resp = cli.newCall(writeRequest).execute();
+            Assert.assertTrue(false);
+        } catch (Exception ex) {
+            System.out.println(ex);
+            Assert.assertTrue(ex instanceof InterruptedIOException);
+        }
+
+        t.join();
+        readRequest = new Request.Builder().url(url).get().build();
+        Response readResp = cli.newCall(readRequest).execute();
+        Assert.assertEquals(readResp.code(), 200);
+
+        writeRequest = new Request.Builder().url(url).addHeader("Content-Length", String.valueOf("hello".length())).put(new RequestBody() {
+            @Override
+            public MediaType contentType() {
+                return MediaType.parse("text/plain");
+            }
+
+            @Override
+            public void writeTo(BufferedSink bufferedSink) throws IOException {
+                bufferedSink.write("hello".getBytes());
+            }
+        }).build();
+        Response writeResp = cli.newCall(writeRequest).execute();
+        Assert.assertEquals(writeResp.code(), 200);
+        server.close();
+    }
+
+    @Test
+    void testConcurrentPutObject() throws InterruptedException {
+        final TOSV2 cli = new TOSV2ClientBuilder().build(TOSClientConfiguration.builder().region(Consts.region).endpoint(Consts.endpoint)
+                .transportConfig(new TransportConfig().setWriteTimeoutMills(30000).setReadTimeoutMills(30000).setMaxRetryCount(0))
+                .credentials(new StaticCredentials(Consts.accessKey, Consts.secretKey)).build());
+        final String bucket = Consts.bucket;
+        final long length = 4 * 1024 * 1024;
+        final int count = 10;
+        List<String> keys = new ArrayList<>(count);
+        final CyclicBarrier barrier = new CyclicBarrier(count);
+        final Thread[] threads = new Thread[count];
+        final byte[] data = new byte[(int) length];
+        Random r = new Random(System.currentTimeMillis());
+        for (int i = 0; i < data.length; i++) {
+            data[i] = (byte) r.nextInt(256);
+        }
+        for (int i = 0; i < count; i++) {
+            final String key = "concurrent-put-object" + System.currentTimeMillis();
+            keys.add(key);
+
+            threads[i] = new Thread(() -> {
+                try {
+                    barrier.await();
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
+                }
+                PutObjectOutput output = cli.putObject(new PutObjectInput().setBucket(bucket).setKey(key)
+                        .setContentLength(length).setContent(new ByteArrayInputStream(data)));
+                Assert.assertTrue(output.getRequestInfo().getRequestId().length() > 0);
+            });
+        }
+
+        for (Thread t : threads) {
+            t.start();
+        }
+
+        for (Thread t : threads) {
+            try {
+                t.join();
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+
+        for (String key : keys) {
+            try (GetObjectV2Output output = cli.getObject(new GetObjectV2Input().setBucket(bucket).setKey(key))) {
+                Assert.assertTrue(output.getRequestInfo().getRequestId().length() > 0);
+                Assert.assertEquals(output.getContentLength(), length);
+                Assert.assertEquals(StringUtils.toByteArray(output.getContent()), data);
+            } catch (Exception ex) {
+                throw new RuntimeException(ex);
+            }
         }
     }
 }

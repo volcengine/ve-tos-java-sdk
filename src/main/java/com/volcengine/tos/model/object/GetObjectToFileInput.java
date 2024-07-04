@@ -2,11 +2,12 @@ package com.volcengine.tos.model.object;
 
 import com.volcengine.tos.comm.event.DataTransferListener;
 import com.volcengine.tos.comm.ratelimit.RateLimiter;
+import com.volcengine.tos.model.GenericInput;
 
 import java.io.File;
 import java.util.Date;
 
-public class GetObjectToFileInput {
+public class GetObjectToFileInput extends GenericInput {
     private GetObjectV2Input getObjectInputV2 = new GetObjectV2Input();
     private String filePath;
     private File file;
@@ -139,6 +140,7 @@ public class GetObjectToFileInput {
         this.file = file;
         return this;
     }
+
 
     public static GetObjectToFileInputBuilder builder() {
         return new GetObjectToFileInputBuilder();

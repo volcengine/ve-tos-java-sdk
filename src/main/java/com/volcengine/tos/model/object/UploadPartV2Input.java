@@ -2,13 +2,14 @@ package com.volcengine.tos.model.object;
 
 import com.volcengine.tos.comm.event.DataTransferListener;
 import com.volcengine.tos.comm.ratelimit.RateLimiter;
+import com.volcengine.tos.model.GenericInput;
 
 import java.io.InputStream;
 
-public class UploadPartV2Input {
+public class UploadPartV2Input extends GenericInput {
     private UploadPartBasicInput uploadPartBasicInput = new UploadPartBasicInput();
     private transient InputStream content;
-    private long contentLength;
+    private long contentLength = -1;
 
     public InputStream getContent() {
         return content;
@@ -121,7 +122,7 @@ public class UploadPartV2Input {
     public static final class UploadPartV2InputBuilder {
         private UploadPartBasicInput uploadPartBasicInput = new UploadPartBasicInput();
         private transient InputStream content;
-        private long contentLength;
+        private long contentLength = -1;
 
         private UploadPartV2InputBuilder() {
         }

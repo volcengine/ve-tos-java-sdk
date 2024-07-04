@@ -1,6 +1,8 @@
 package com.volcengine.tos.model.object;
 
-public class DeleteObjectTaggingInput {
+import com.volcengine.tos.model.GenericInput;
+
+public class DeleteObjectTaggingInput extends GenericInput {
     private String bucket;
     private String key;
     private String versionID;

@@ -2,6 +2,8 @@ package com.volcengine.tos.model.bucket;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.List;
+
 public class Condition {
     @JsonProperty("HttpCode")
     private int httpCode;
@@ -9,6 +11,8 @@ public class Condition {
     private String keyPrefix;
     @JsonProperty("KeySuffix")
     private String keySuffix;
+    @JsonProperty("AllowHost")
+    private List<String> allowHost;
 
     public int getHttpCode() {
         return httpCode;
@@ -37,12 +41,22 @@ public class Condition {
         return this;
     }
 
+    public List<String> getAllowHost() {
+        return allowHost;
+    }
+
+    public Condition setAllowHost(List<String> allowHost) {
+        this.allowHost = allowHost;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "Condition{" +
                 "httpCode=" + httpCode +
                 ", keyPrefix='" + keyPrefix + '\'' +
                 ", keySuffix='" + keySuffix + '\'' +
+                ", allowHost=" + allowHost +
                 '}';
     }
 
@@ -54,6 +68,7 @@ public class Condition {
         private int httpCode;
         private String keyPrefix;
         private String keySuffix;
+        private List<String> allowHost;
 
         private ConditionBuilder() {
         }
@@ -73,11 +88,17 @@ public class Condition {
             return this;
         }
 
+        public ConditionBuilder allowHost(List<String> allowHost) {
+            this.allowHost = allowHost;
+            return this;
+        }
+
         public Condition build() {
             Condition condition = new Condition();
             condition.setHttpCode(httpCode);
             condition.setKeyPrefix(keyPrefix);
             condition.setKeySuffix(keySuffix);
+            condition.setAllowHost(allowHost);
             return condition;
         }
     }

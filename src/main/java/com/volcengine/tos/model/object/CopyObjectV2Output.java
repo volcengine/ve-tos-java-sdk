@@ -11,9 +11,9 @@ public class CopyObjectV2Output {
     private RequestInfo requestInfo;
     @JsonProperty("ETag")
     private String etag;
-    @JsonProperty("LastModified")
     private String versionID;
     private String copySourceVersionID;
+    @JsonProperty("LastModified")
     private Date lastModified;
     private String hashCrc64ecma;
 

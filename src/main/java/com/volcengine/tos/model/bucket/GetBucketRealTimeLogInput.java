@@ -1,6 +1,8 @@
 package com.volcengine.tos.model.bucket;
 
-public class GetBucketRealTimeLogInput {
+import com.volcengine.tos.model.GenericInput;
+
+public class GetBucketRealTimeLogInput extends GenericInput {
     private String bucket;
 
     public String getBucket() {

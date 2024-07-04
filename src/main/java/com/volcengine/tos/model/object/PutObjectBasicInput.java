@@ -2,13 +2,14 @@ package com.volcengine.tos.model.object;
 
 import com.volcengine.tos.comm.event.DataTransferListener;
 import com.volcengine.tos.comm.ratelimit.RateLimiter;
+import com.volcengine.tos.model.GenericInput;
 
 import java.util.Map;
 
-public class PutObjectBasicInput {
+public class PutObjectBasicInput extends GenericInput {
     private String bucket;
     private String key;
-    private long contentLength;
+    private long contentLength = -1;
     private int readLimit;
 
     private ObjectMetaRequestOptions options;
@@ -19,6 +20,7 @@ public class PutObjectBasicInput {
     private String callbackVar;
     private boolean forbidOverwrite;
     private String ifMatch;
+    private String tagging;
 
     /** 客户端限速，单位 Byte/s **/
     private RateLimiter rateLimiter;
@@ -126,16 +128,29 @@ public class PutObjectBasicInput {
         return this;
     }
 
+    public String getTagging() {
+        return tagging;
+    }
+
+    public PutObjectBasicInput setTagging(String tagging) {
+        this.tagging = tagging;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "PutObjectBasicInput{" +
                 "bucket='" + bucket + '\'' +
                 ", key='" + key + '\'' +
                 ", contentLength=" + contentLength +
+                ", readLimit=" + readLimit +
                 ", options=" + options +
                 ", dataTransferListener=" + dataTransferListener +
                 ", callback='" + callback + '\'' +
                 ", callbackVar='" + callbackVar + '\'' +
+                ", forbidOverwrite=" + forbidOverwrite +
+                ", ifMatch='" + ifMatch + '\'' +
+                ", tagging='" + tagging + '\'' +
                 ", rateLimiter=" + rateLimiter +
                 '}';
     }
@@ -147,7 +162,7 @@ public class PutObjectBasicInput {
     public static final class PutObjectBasicInputBuilder {
         private String bucket;
         private String key;
-        private long contentLength;
+        private long contentLength = -1;
         private ObjectMetaRequestOptions options;
         private DataTransferListener dataTransferListener;
         private RateLimiter rateLimit;
@@ -155,6 +170,7 @@ public class PutObjectBasicInput {
         private String callbackVar;
         private boolean forbidOverwrite;
         private String ifMatch;
+        private String tagging;
 
         private PutObjectBasicInputBuilder() {
         }
@@ -209,6 +225,11 @@ public class PutObjectBasicInput {
             return this;
         }
 
+        public PutObjectBasicInputBuilder tagging(String tagging) {
+            this.tagging = tagging;
+            return this;
+        }
+
         public PutObjectBasicInput build() {
             PutObjectBasicInput putObjectBasicInput = new PutObjectBasicInput();
             putObjectBasicInput.key = this.key;
@@ -221,6 +242,7 @@ public class PutObjectBasicInput {
             putObjectBasicInput.callbackVar = this.callbackVar;
             putObjectBasicInput.forbidOverwrite = this.forbidOverwrite;
             putObjectBasicInput.ifMatch = this.ifMatch;
+            putObjectBasicInput.tagging = this.tagging;
             return putObjectBasicInput;
         }
     }

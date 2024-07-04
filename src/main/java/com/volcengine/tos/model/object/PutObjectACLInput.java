@@ -1,12 +1,13 @@
 package com.volcengine.tos.model.object;
 
 import com.volcengine.tos.comm.common.ACLType;
+import com.volcengine.tos.model.GenericInput;
 import com.volcengine.tos.model.acl.GrantV2;
 import com.volcengine.tos.model.acl.Owner;
 
 import java.util.List;
 
-public class PutObjectACLInput {
+public class PutObjectACLInput extends GenericInput {
     private String bucket;
     private String key;
     private String versionID;

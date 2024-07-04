@@ -3,6 +3,7 @@ package com.volcengine.tos.internal.taskman;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.volcengine.tos.TosClientException;
 import com.volcengine.tos.TosException;
+import com.volcengine.tos.comm.TosHeader;
 import com.volcengine.tos.comm.Utils;
 import com.volcengine.tos.comm.event.DataTransferStatus;
 import com.volcengine.tos.comm.event.DataTransferType;
@@ -15,9 +16,7 @@ import com.volcengine.tos.model.object.*;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class DownloadFileTaskHandler {
@@ -44,23 +43,26 @@ public class DownloadFileTaskHandler {
         validateInput();
         headObjectV2Output = handler.headObject(new HeadObjectV2Input().setBucket(input.getBucket()).setKey(input.getKey())
                 .setVersionID(input.getVersionID()).setOptions(input.getOptions()));
+
         String newPath = FileUtils.parseFilePath(input.getFilePath(), input.getKey());
         if (StringUtils.isEmpty(newPath)) {
             return;
         }
         input.setFilePath(newPath);
-        input.setTempFilePath(newPath + Consts.TEMP_FILE_SUFFIX);
+        if (StringUtils.isEmpty(input.getTempFilePath())) {
+            input.setTempFilePath(newPath + Consts.TEMP_FILE_SUFFIX + "." + TosUtils.genUuid());
+        }
         if (this.input.isEnableCheckpoint()) {
             validateCheckpointPath();
         }
         setCheckpoint(headObjectV2Output);
         int partsNum = this.checkpoint.getDownloadPartInfos().size();
         this.abortTaskHook = new DownloadFileTaskCanceler(this.handler, this.taskMan, this.checkpoint.getBucket(),
-                this.checkpoint.getKey(), this.input.getCheckpointFile(), this.input.isEnableCheckpoint(), this.input.getTempFilePath());
+                this.checkpoint.getKey(), this.input.getCheckpointFile(), this.input.isEnableCheckpoint(), this.checkpoint.getDownloadFileInfo().getTempFilePath());
         this.taskMan = new TaskManagerImpl(this.input.getTaskNum(), partsNum, null, this.abortTaskHook);
         if (this.input.getCancelHook() != null && this.input.getCancelHook() instanceof DownloadFileTaskCanceler) {
             ((DownloadFileTaskCanceler) this.input.getCancelHook()).setHandler(this.handler).setTaskMan(this.taskMan)
-                    .setBucket(checkpoint.getBucket()).setKey(checkpoint.getKey()).setTempFilePath(input.getTempFilePath())
+                    .setBucket(checkpoint.getBucket()).setKey(checkpoint.getKey()).setTempFilePath(this.checkpoint.getDownloadFileInfo().getTempFilePath())
                     .setEnableCheckpoint(input.isEnableCheckpoint()).setCheckpointFilePath(input.getCheckpointFile());
         }
         this.downloadPartInfos = new ArrayList<>(partsNum);
@@ -76,7 +78,7 @@ public class DownloadFileTaskHandler {
                         .setDownloadEventListener(input.getDownloadEventListener())
                         .setHandler(handler)
                         .setHeadObjectV2Input(new HeadObjectV2Input().setBucket(input.getBucket())
-                                .setKey(input.getKey()).setOptions(input.getOptions()).setVersionID(input.getVersionID()))
+                                .setKey(input.getKey()).setOptions(this.cloneOptions(input.getOptions(), this.checkpoint.getDownloadObjectInfo().getEtag())).setVersionID(input.getVersionID()))
                         .setRateLimiter(input.getRateLimiter())
                         .setDataTransferListener(input.getDataTransferListener())
                         .setTrafficLimit(input.getTrafficLimit()));
@@ -84,6 +86,24 @@ public class DownloadFileTaskHandler {
                 downloadPartInfos.add(checkpoint.getDownloadPartInfos().get(i));
             }
         }
+    }
+
+    private ObjectMetaRequestOptions cloneOptions(ObjectMetaRequestOptions options, String etag) {
+        Map<String, String> headers;
+        if (options == null || options.getHeaders() == null) {
+            headers = new HashMap<>();
+        } else {
+            headers = new HashMap<>(options.getHeaders().size());
+            for (Map.Entry<String, String> entry : options.getHeaders().entrySet()) {
+                headers.put(entry.getKey(), entry.getValue());
+            }
+        }
+
+        if (!headers.containsKey(TosHeader.HEADER_IF_MATCH)) {
+            headers.put(TosHeader.HEADER_IF_MATCH, etag);
+        }
+
+        return new ObjectMetaRequestOptions().setHeaders(headers);
     }
 
     public DownloadFileOutput handle() {
@@ -235,6 +255,13 @@ public class DownloadFileTaskHandler {
 
     private DownloadFileCheckpoint initCheckpoint(HeadObjectV2Output head) throws TosException {
         ParamsChecker.ensureNotNull(head, "HeadObjectV2Output");
+        long objectSize;
+        if (Consts.SYMLINK.equals(head.getObjectType())) {
+            objectSize = head.getSymlinkTargetSize();
+        } else {
+            objectSize = head.getContentLength();
+        }
+
         return new DownloadFileCheckpoint().setBucket(input.getBucket()).setKey(input.getKey()).setVersionID(input.getVersionID())
                 .setIfMatch(input.getOptions() == null ? null : input.getOptions().getIfMatch())
                 .setIfModifiedSince(input.getOptions() == null ? null : input.getOptions().getIfModifiedSince())
@@ -243,9 +270,9 @@ public class DownloadFileTaskHandler {
                 .setSsecAlgorithm(input.getOptions() == null ? null : input.getOptions().getSsecAlgorithm())
                 .setSsecKeyMD5(input.getOptions() == null ? null : input.getOptions().getSsecKeyMD5())
                 .setDownloadFileInfo(new DownloadFileInfo().setFilePath(input.getFilePath()).setTempFilePath(input.getTempFilePath()))
-                .setDownloadObjectInfo(new DownloadObjectInfo().setObjectSize(head.getContentLength()).setEtag(head.getEtag())
+                .setDownloadObjectInfo(new DownloadObjectInfo().setObjectSize(objectSize).setEtag(head.getEtag())
                         .setHashCrc64ecma(head.getHashCrc64ecma()).setLastModified(head.getLastModifiedInDate()))
-                .setPartSize(input.getPartSize()).setDownloadPartInfos(getPartsFromFile(input.getPartSize(), head.getContentLength()));
+                .setPartSize(input.getPartSize()).setDownloadPartInfos(getPartsFromFile(input.getPartSize(), objectSize));
     }
 
     private List<DownloadPartInfo> getPartsFromFile(long partSize, long contentLength) {

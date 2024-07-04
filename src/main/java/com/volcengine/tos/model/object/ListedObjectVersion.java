@@ -1,7 +1,8 @@
 package com.volcengine.tos.model.object;
 
-import com.volcengine.tos.model.acl.Owner;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.volcengine.tos.model.acl.Owner;
 
 public class ListedObjectVersion {
     @JsonProperty("ETag")
@@ -86,11 +87,23 @@ public class ListedObjectVersion {
         return this;
     }
 
+    @Deprecated
     public String getType() {
         return type;
     }
 
+    @Deprecated
     public ListedObjectVersion setType(String type) {
+        this.type = type;
+        return this;
+    }
+
+    public String getObjectType() {
+        return type;
+    }
+
+    @JsonIgnore
+    public ListedObjectVersion setObjectType(String type) {
         this.type = type;
         return this;
     }
@@ -114,7 +127,7 @@ public class ListedObjectVersion {
                 ", owner=" + owner +
                 ", size=" + size +
                 ", storageClass='" + storageClass + '\'' +
-                ", type='" + type + '\'' +
+                ", objectType='" + type + '\'' +
                 ", versionID='" + versionID + '\'' +
                 '}';
     }

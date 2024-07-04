@@ -9,6 +9,7 @@ import com.volcengine.tos.internal.taskman.UploadFileTaskHandler;
 import com.volcengine.tos.internal.util.FileUtils;
 import com.volcengine.tos.internal.util.ParamsChecker;
 import com.volcengine.tos.internal.util.StringUtils;
+import com.volcengine.tos.internal.util.TosUtils;
 import com.volcengine.tos.model.object.*;
 
 import java.io.File;
@@ -75,6 +76,10 @@ public class TosFileRequestHandler {
 
     public GetObjectToFileOutput getObjectToFile(GetObjectToFileInput input) throws TosException {
         ParamsChecker.ensureNotNull(input, "GetObjectToFileInput");
+        if (input.getGetObjectInputV2() != null) {
+            input.getGetObjectInputV2().setRequestDate(input.getRequestDate());
+            input.getGetObjectInputV2().setRequestHost(input.getRequestHost());
+        }
         try(GetObjectV2Output output = objectHandler.getObject(input.getGetObjectInputV2())){
             String filePath = getFilePath(input);
             String newFilePath = FileUtils.parseFilePath(filePath, input.getKey());
@@ -83,7 +88,7 @@ public class TosFileRequestHandler {
                 return null;
             }
             File srcFile = new File(newFilePath);
-            File tmpFile = new File(newFilePath + Consts.TEMP_FILE_SUFFIX);
+            File tmpFile = new File(newFilePath + Consts.TEMP_FILE_SUFFIX + "." + TosUtils.genUuid());
             if (output.getContent() != null) {
                 try(FileOutputStream writer = new FileOutputStream(tmpFile);
                     InputStream inputStream = this.enableCrcCheck ?
@@ -128,7 +133,7 @@ public class TosFileRequestHandler {
     public PutObjectFromFileOutput putObjectFromFile(PutObjectFromFileInput input) throws TosException {
         ParamsChecker.ensureNotNull(input, "PutObjectFromFileInput");
         InputStream content = FileUtils.getFileContent(input.getFileInputStream(), input.getFile(), input.getFilePath());
-        PutObjectOutput putObjectOutput = objectHandler.putObject(PutObjectInput.builder()
+        PutObjectInput pinput = PutObjectInput.builder()
                 .bucket(input.getBucket())
                 .key(input.getKey())
                 .options(input.getOptions())
@@ -140,7 +145,10 @@ public class TosFileRequestHandler {
                 .rateLimiter(input.getRateLimiter())
                 .contentLength(FileUtils.getFileLength(input.getFile(), input.getFilePath()))
                 .content(content)
-                .build());
+                .build();
+        pinput.setRequestDate(input.getRequestDate());
+        pinput.setRequestHost(input.getRequestHost());
+        PutObjectOutput putObjectOutput = objectHandler.putObject(pinput);
         return new PutObjectFromFileOutput(putObjectOutput);
     }
 
@@ -148,11 +156,14 @@ public class TosFileRequestHandler {
         ParamsChecker.ensureNotNull(input, "UploadPartFromFileInput");
         InputStream content = FileUtils.getBoundedFileContent(input.getFileInputStream(), input.getFile(),
                 input.getFilePath(), input.getOffset(), input.getPartSize());
-        UploadPartV2Output uploadPartV2Output = objectHandler.uploadPart(UploadPartV2Input.builder()
+        UploadPartV2Input uinput = UploadPartV2Input.builder()
                 .uploadPartBasicInput(input.getUploadPartBasicInput())
                 .content(content)
                 .contentLength(input.getPartSize())
-                .build());
+                .build();
+        uinput.setRequestDate(input.getRequestDate());
+        uinput.setRequestHost(input.getRequestHost());
+        UploadPartV2Output uploadPartV2Output = objectHandler.uploadPart(uinput);
         return new UploadPartFromFileOutput(uploadPartV2Output);
     }
 
@@ -172,7 +183,20 @@ public class TosFileRequestHandler {
 
     public ResumableCopyObjectOutput resumableCopyObject(ResumableCopyObjectInput input) throws TosException {
         ResumableCopyObjectTaskHandler handler = new ResumableCopyObjectTaskHandler(input, this.objectHandler, this.enableCrcCheck);
-        handler.initTask();
+        // 适配 symlink
+        if (handler.initTask()) {
+            CopyObjectV2Output output = this.objectHandler.copyObject(new CopyObjectV2Input()
+                    .setBucket(input.getBucket()).setKey(input.getKey())
+                    .setSrcBucket(input.getSrcBucket()).setSrcKey(input.getSrcKey()).setSrcVersionID(input.getSrcVersionID())
+                    .setCopySourceIfMatch(input.getCopySourceIfMatch()).setCopySourceIfNoneMatch(input.getCopySourceIfNoneMatch())
+                    .setCopySourceIfModifiedSince(input.getCopySourceIfModifiedSince()).setCopySourceIfUnmodifiedSince(input.getCopySourceIfUnModifiedSince())
+                    .setCopySourceSSECAlgorithm(input.getCopySourceSSECAlgorithm()).setCopySourceSSECKey(input.getCopySourceSSECKey())
+                    .setCopySourceSSECKeyMD5(input.getCopySourceSSECKeyMD5()));
+
+            return new ResumableCopyObjectOutput()
+                    .setRequestInfo(output.getRequestInfo()).setEtag(output.getEtag())
+                    .setVersionID(output.getVersionID()).setHashCrc64ecma(output.getHashCrc64ecma());
+        }
         handler.dispatch();
         return handler.handle();
     }

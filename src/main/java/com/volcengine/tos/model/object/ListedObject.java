@@ -1,7 +1,8 @@
 package com.volcengine.tos.model.object;
 
-import com.volcengine.tos.model.acl.Owner;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.volcengine.tos.model.acl.Owner;
 
 @Deprecated
 public class ListedObject {
@@ -74,11 +75,23 @@ public class ListedObject {
         return this;
     }
 
+    @Deprecated
     public String getType() {
         return type;
     }
 
+    @Deprecated
     public ListedObject setType(String type) {
+        this.type = type;
+        return this;
+    }
+
+    public String getObjectType() {
+        return type;
+    }
+
+    @JsonIgnore
+    public ListedObject setObjectType(String type) {
         this.type = type;
         return this;
     }
@@ -92,7 +105,7 @@ public class ListedObject {
                 ", size=" + size +
                 ", owner=" + owner +
                 ", storageClass='" + storageClass + '\'' +
-                ", type='" + type + '\'' +
+                ", objectType='" + type + '\'' +
                 '}';
     }
 }

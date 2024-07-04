@@ -2,10 +2,11 @@ package com.volcengine.tos.model.object;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.volcengine.tos.model.GenericInput;
 
 import java.util.Map;
 
-public class FetchObjectInput {
+public class FetchObjectInput extends GenericInput {
     @JsonIgnore
     private String bucket;
     @JsonIgnore

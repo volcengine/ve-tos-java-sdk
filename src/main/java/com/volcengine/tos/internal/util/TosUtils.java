@@ -3,15 +3,28 @@ package com.volcengine.tos.internal.util;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.volcengine.tos.TosClientException;
+import com.volcengine.tos.internal.Consts;
+import okhttp3.ConnectionPool;
+import okhttp3.Dispatcher;
+import okhttp3.OkHttpClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.security.cert.X509Certificate;
 import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
 import static com.volcengine.tos.internal.Consts.*;
@@ -68,6 +81,10 @@ public class TosUtils {
             SUPPORTED_REGION.put("ap-southeast-1", Arrays.asList("tos-ap-southeast-1.volces.com"));
             return SUPPORTED_REGION;
         }
+    }
+
+    public static String genUuid() {
+        return new UUID(System.currentTimeMillis(), System.nanoTime()).toString();
     }
 
     public static String encodeHeader(String str) {
@@ -283,5 +300,55 @@ public class TosUtils {
             meta.put(key, value);
         }
         return meta;
+    }
+
+    public static OkHttpClient.Builder ignoreCertificate(OkHttpClient.Builder builder) throws TosClientException {
+        TosUtils.getLogger().info("tos: ignore ssl certificate verification");
+        try {
+            final TrustManager[] trustAllCerts = new TrustManager[]{
+                    new X509TrustManager() {
+                        @Override
+                        public void checkClientTrusted(X509Certificate[] chain, String authType) {
+                        }
+
+                        @Override
+                        public void checkServerTrusted(X509Certificate[] chain, String authType) {
+                        }
+
+                        @Override
+                        public X509Certificate[] getAcceptedIssuers() {
+                            return new X509Certificate[]{};
+                        }
+                    }
+            };
+            final SSLContext sslContext = SSLContext.getInstance("SSL");
+            sslContext.init(null, trustAllCerts, new SecureRandom());
+            final SSLSocketFactory sslSocketFactory = sslContext.getSocketFactory();
+
+            builder.sslSocketFactory(sslSocketFactory, (X509TrustManager) trustAllCerts[0]);
+            builder.hostnameVerifier((hostname, session) -> true);
+        } catch (NoSuchAlgorithmException | KeyManagementException e) {
+            throw new TosClientException("tos: set ignoreCertificate failed", e);
+        }
+        return builder;
+    }
+
+    public static OkHttpClient defaultOkHttpClient() {
+        OkHttpClient.Builder builder = new OkHttpClient.Builder();
+        Dispatcher dispatcher = new Dispatcher();
+        dispatcher.setMaxRequests(Consts.DEFAULT_MAX_CONNECTIONS);
+        dispatcher.setMaxRequestsPerHost(Consts.DEFAULT_MAX_CONNECTIONS);
+        ConnectionPool connectionPool = new ConnectionPool(Consts.DEFAULT_MAX_CONNECTIONS,
+                Consts.DEFAULT_IDLE_CONNECTION_TIME_MILLS, TimeUnit.MILLISECONDS);
+        builder = TosUtils.ignoreCertificate(builder);
+        return builder.dispatcher(dispatcher)
+                .connectionPool(connectionPool)
+                .retryOnConnectionFailure(false)
+                .readTimeout(Consts.DEFAULT_READ_TIMEOUT_MILLS, TimeUnit.MILLISECONDS)
+                .writeTimeout(Consts.DEFAULT_WRITE_TIMEOUT_MILLS, TimeUnit.MILLISECONDS)
+                .connectTimeout(Consts.DEFAULT_CONNECT_TIMEOUT_MILLS, TimeUnit.MILLISECONDS)
+                .followRedirects(false)
+                .followSslRedirects(false)
+                .build();
     }
 }

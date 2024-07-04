@@ -1,6 +1,8 @@
 package com.volcengine.tos.model.bucket;
 
-public class GetBucketMirrorBackInput {
+import com.volcengine.tos.model.GenericInput;
+
+public class GetBucketMirrorBackInput extends GenericInput {
     private String bucket;
 
     public String getBucket() {

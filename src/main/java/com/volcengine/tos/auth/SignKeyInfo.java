@@ -3,15 +3,15 @@ package com.volcengine.tos.auth;
 public class SignKeyInfo {
     private String date;
     private String region;
-    private Credential credential;
+    private String sk;
 
     public SignKeyInfo() {
     }
 
-    SignKeyInfo(String date, String region, Credential credential){
+    SignKeyInfo(String date, String region, String sk) {
         this.date = date;
         this.region = region;
-        this.credential = credential;
+        this.sk = sk;
     }
 
     public String getDate() {
@@ -32,12 +32,12 @@ public class SignKeyInfo {
         return this;
     }
 
-    public Credential getCredential() {
-        return credential;
+    public String getSk() {
+        return sk;
     }
 
-    public SignKeyInfo setCredential(Credential credential) {
-        this.credential = credential;
+    public SignKeyInfo setSk(String sk) {
+        this.sk = sk;
         return this;
     }
 
@@ -46,7 +46,7 @@ public class SignKeyInfo {
         return "SignKeyInfo{" +
                 "date='" + date + '\'' +
                 ", region='" + region + '\'' +
-                ", credential=" + credential +
+                ", sk=" + sk +
                 '}';
     }
 }

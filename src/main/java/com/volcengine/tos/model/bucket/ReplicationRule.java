@@ -12,10 +12,14 @@ public class ReplicationRule {
     private StatusType status;
     @JsonProperty("PrefixSet")
     private List<String> prefixSet;
+    @JsonProperty("Tags")
+    private List<Tag> tags;
     @JsonProperty("Destination")
     private Destination destination;
     @JsonProperty("HistoricalObjectReplication")
     private StatusType historicalObjectReplication;
+    @JsonProperty("AccessControlTranslation")
+    private AccessControlTranslation accessControlTranslation;
     @JsonProperty("Progress")
     private Progress progress;
 
@@ -46,6 +50,15 @@ public class ReplicationRule {
         return this;
     }
 
+    public List<Tag> getTags() {
+        return tags;
+    }
+
+    public ReplicationRule setTags(List<Tag> tags) {
+        this.tags = tags;
+        return this;
+    }
+
     public Destination getDestination() {
         return destination;
     }
@@ -64,6 +77,15 @@ public class ReplicationRule {
         return this;
     }
 
+    public AccessControlTranslation getAccessControlTranslation() {
+        return accessControlTranslation;
+    }
+
+    public ReplicationRule setAccessControlTranslation(AccessControlTranslation accessControlTranslation) {
+        this.accessControlTranslation = accessControlTranslation;
+        return this;
+    }
+
     public Progress getProgress() {
         return progress;
     }
@@ -79,8 +101,10 @@ public class ReplicationRule {
                 "id='" + id + '\'' +
                 ", status=" + status +
                 ", prefixSet=" + prefixSet +
+                ", tags=" + tags +
                 ", destination=" + destination +
                 ", historicalObjectReplication=" + historicalObjectReplication +
+                ", accessControlTranslation=" + accessControlTranslation +
                 ", progress=" + progress +
                 '}';
     }
@@ -93,8 +117,10 @@ public class ReplicationRule {
         private String id;
         private StatusType status;
         private List<String> prefixSet;
+        private List<Tag> tags;
         private Destination destination;
         private StatusType historicalObjectReplication;
+        private AccessControlTranslation accessControlTranslation;
         private Progress progress;
 
         private ReplicationRuleBuilder() {
@@ -115,6 +141,11 @@ public class ReplicationRule {
             return this;
         }
 
+        public ReplicationRuleBuilder tags(List<Tag> tags) {
+            this.tags = tags;
+            return this;
+        }
+
         public ReplicationRuleBuilder destination(Destination destination) {
             this.destination = destination;
             return this;
@@ -122,6 +153,11 @@ public class ReplicationRule {
 
         public ReplicationRuleBuilder historicalObjectReplication(StatusType historicalObjectReplication) {
             this.historicalObjectReplication = historicalObjectReplication;
+            return this;
+        }
+
+        public ReplicationRuleBuilder accessControlTranslation(AccessControlTranslation accessControlTranslation) {
+            this.accessControlTranslation = accessControlTranslation;
             return this;
         }
 
@@ -135,9 +171,11 @@ public class ReplicationRule {
             replicationRule.setId(id);
             replicationRule.setStatus(status);
             replicationRule.setPrefixSet(prefixSet);
+            replicationRule.setTags(tags);
             replicationRule.setDestination(destination);
             replicationRule.setHistoricalObjectReplication(historicalObjectReplication);
             replicationRule.setProgress(progress);
+            replicationRule.setAccessControlTranslation(accessControlTranslation);
             return replicationRule;
         }
     }

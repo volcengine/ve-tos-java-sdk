@@ -1,6 +1,7 @@
 package com.volcengine.tos;
 
 import com.volcengine.tos.auth.Credentials;
+import com.volcengine.tos.credential.CredentialsProvider;
 import com.volcengine.tos.transport.TransportConfig;
 
 public interface TOSV2Builder {
@@ -34,6 +35,8 @@ public interface TOSV2Builder {
      */
     TOSV2 build(String region, String endpoint, Credentials credentials);
 
+    TOSV2 build(String region, String endpoint, CredentialsProvider credentialsProvider);
+
     /**
      * use the specific TOS region, endpoint, accessKeyId, secretKeyId and customer client configuration
      * to create a new client instance.
@@ -55,6 +58,8 @@ public interface TOSV2Builder {
      * @return
      */
     TOSV2 build(String region, String endpoint, Credentials credentials, TransportConfig conf);
+
+    TOSV2 build(String region, String endpoint, CredentialsProvider credentialsProvider, TransportConfig conf);
 
     /**
      * use the specific TOS region, endpoint, accessKeyId, secretKeyId and security token from STS

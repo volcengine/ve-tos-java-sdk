@@ -1,8 +1,10 @@
 package com.volcengine.tos.model.object;
 
+import com.volcengine.tos.model.GenericInput;
+
 import java.util.Map;
 
-public class HeadObjectV2Input {
+public class HeadObjectV2Input extends GenericInput {
     private String bucket;
     private String key;
     private String versionID;

@@ -2,8 +2,9 @@ package com.volcengine.tos.model.bucket;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.volcengine.tos.model.GenericInput;
 
-public class PutBucketRealTimeLogInput {
+public class PutBucketRealTimeLogInput extends GenericInput {
     @JsonIgnore
     private String bucket;
     @JsonProperty("RealTimeLogConfiguration")

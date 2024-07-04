@@ -8,30 +8,68 @@ import com.volcengine.tos.comm.HttpMethod;
 import com.volcengine.tos.comm.HttpStatus;
 import com.volcengine.tos.comm.MimeType;
 import com.volcengine.tos.comm.TosHeader;
+import com.volcengine.tos.comm.common.BucketType;
 import com.volcengine.tos.comm.event.DataTransferListener;
 import com.volcengine.tos.comm.ratelimit.RateLimiter;
 import com.volcengine.tos.internal.model.*;
 import com.volcengine.tos.internal.util.*;
 import com.volcengine.tos.internal.util.aborthook.DefaultAbortTosObjectInputStreamHook;
 import com.volcengine.tos.internal.util.ratelimit.RateLimitedInputStream;
+import com.volcengine.tos.model.GenericInput;
+import com.volcengine.tos.model.bucket.HeadBucketV2Input;
+import com.volcengine.tos.model.bucket.HeadBucketV2Output;
 import com.volcengine.tos.model.object.*;
 
 import java.io.ByteArrayInputStream;
 import java.io.FileInputStream;
 import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
+import java.lang.reflect.Field;
+import java.net.URLDecoder;
+import java.net.URLEncoder;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class TosObjectRequestHandler {
+    private TosBucketRequestHandler bucketRequestHandler;
     private RequestHandler objectHandler;
     private TosRequestFactory factory;
     private boolean clientAutoRecognizeContentType;
     private boolean enableCrcCheck;
+    private boolean disableEncodingMeta;
+    private final BucketCacheLock[] bucketCacheLocks;
+
+    private static class BucketCache {
+        BucketType bucketType;
+        long lastUpdateTimeNanos;
+        double timeout;
+    }
+
+    private static class BucketCacheLock {
+        Map<String, BucketCache> bucketTypes;
+        ReadWriteLock lock;
+    }
 
     public TosObjectRequestHandler(Transport transport, TosRequestFactory factory) {
+        this(transport, factory, null);
+    }
+
+    public TosObjectRequestHandler(Transport transport, TosRequestFactory factory, TosBucketRequestHandler bucketRequestHandler) {
         this.objectHandler = new RequestHandler(transport);
         this.factory = factory;
+        this.bucketRequestHandler = bucketRequestHandler;
+        this.bucketCacheLocks = new BucketCacheLock[16];
+        for (int i = 0; i < this.bucketCacheLocks.length; i++) {
+            BucketCacheLock bucketCacheLock = new BucketCacheLock();
+            bucketCacheLock.bucketTypes = new HashMap<>();
+            bucketCacheLock.lock = new ReentrantReadWriteLock();
+            this.bucketCacheLocks[i] = bucketCacheLock;
+        }
     }
 
     public TosObjectRequestHandler setTransport(Transport transport) {
@@ -77,13 +115,85 @@ public class TosObjectRequestHandler {
         return this;
     }
 
+    public TosObjectRequestHandler setDisableEncodingMeta(boolean disableEncodingMeta) {
+        this.disableEncodingMeta = disableEncodingMeta;
+        return this;
+    }
+
+    private RequestBuilder handleGenericInput(RequestBuilder builder, GenericInput input) {
+        if (StringUtils.isNotEmpty(input.getRequestHost())) {
+            builder = builder.withHeader(TosHeader.HEADER_HOST, input.getRequestHost());
+        }
+        if (input.getRequestDate() != null) {
+            builder = builder.withHeader(SigningUtils.v4Date, SigningUtils.iso8601Layout.format(input.getRequestDate().toInstant().atOffset(ZoneOffset.UTC)));
+        }
+        return builder;
+    }
+
+    private BucketType getBucketType(String bucket) {
+        if (this.bucketRequestHandler == null) {
+            return null;
+        }
+        BucketCacheLock bcl = this.bucketCacheLocks[Math.abs(bucket.hashCode()) % this.bucketCacheLocks.length];
+
+        bcl.lock.readLock().lock();
+        BucketCache bc = bcl.bucketTypes.get(bucket);
+        bcl.lock.readLock().unlock();
+
+        if (bc != null && (System.nanoTime() - bc.lastUpdateTimeNanos < bc.timeout)) {
+            return bc.bucketType;
+        }
+
+        bcl.lock.writeLock().lock();
+        try {
+            bc = bcl.bucketTypes.get(bucket);
+            if (bc != null && (System.nanoTime() - bc.lastUpdateTimeNanos < bc.timeout)) {
+                return bc.bucketType;
+            }
+            HeadBucketV2Output output = this.bucketRequestHandler.headBucket(new HeadBucketV2Input().setBucket(bucket));
+            bc = new BucketCache();
+            bc.bucketType = output.getBucketType();
+            bc.lastUpdateTimeNanos = System.nanoTime();
+            bc.timeout = 15 * 60 * 1e9;
+            bcl.bucketTypes.put(bucket, bc);
+            return bc.bucketType;
+        } catch (TosServerException ex) {
+            if (bc != null) {
+                bcl.bucketTypes.remove(bucket);
+            }
+            TosUtils.getLogger().warn("try to get bucket type failed", ex);
+            throw ex;
+        } finally {
+            bcl.lock.writeLock().unlock();
+        }
+    }
+
     public GetFileStatusOutput getFileStatus(GetFileStatusInput input) throws TosException {
         ParamsChecker.ensureNotNull(input, "GetFileStatusInput");
         ensureValidBucketName(input.getBucket());
         ensureValidKey(input.getKey());
+        BucketType bucketType = this.getBucketType(input.getBucket());
+        if (bucketType != null && bucketType.getType().equals(BucketType.BUCKET_TYPE_HNS.getType())) {
+            HeadObjectV2Input hinput = new HeadObjectV2Input().setBucket(input.getBucket())
+                    .setKey(input.getKey());
+            hinput.setRequestDate(input.getRequestDate());
+            hinput.setRequestHost(input.getRequestHost());
+            HeadObjectV2Output output = this.headObject(hinput);
+            GetFileStatusOutput goutput = new GetFileStatusOutput();
+            goutput.setRequestInfo(output.getRequestInfo());
+            goutput.setKey(input.getKey());
+            goutput.setLastModified(output.getLastModified());
+            goutput.setCrc64(output.getHashCrc64ecma());
+            if (output.getRequestInfo().getHeader() != null) {
+                goutput.setCrc32(output.getRequestInfo().getHeader().get(TosHeader.HEADER_CRC32.toLowerCase()));
+            }
+            goutput.setSize(output.getContentLength());
+            return goutput;
+        }
 
         RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), null)
                 .withQuery("stat", "");
+        builder = this.handleGenericInput(builder, input);
         TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
         return objectHandler.doRequest(req, HttpStatus.OK, this::buildGetFileStatusOutput);
     }
@@ -119,7 +229,7 @@ public class TosObjectRequestHandler {
         if (input.getDstType() != null) {
             builder = builder.withQuery(TosHeader.QUERY_DOC_DST_TYPE, input.getDstType().toString());
         }
-
+        builder = this.handleGenericInput(builder, input);
         TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
         try {
             TosResponse response = objectHandler.doRequest(req, getExpectedCodes(input.getAllSettedHeaders()));
@@ -161,6 +271,7 @@ public class TosObjectRequestHandler {
                 content = new CheckCrc64AutoInputStream(content, new CRC64Checksum(), serverCrc64ecma);
             }
         }
+
         return new GetObjectV2Output(basicOutput, new TosObjectInputStream(content))
                 .setHook(new DefaultAbortTosObjectInputStreamHook(content, response.getSource()));
     }
@@ -171,24 +282,57 @@ public class TosObjectRequestHandler {
         ensureValidKey(input.getKey());
         RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), input.getAllSettedHeaders())
                 .withQuery("versionId", input.getVersionID());
+        builder = this.handleGenericInput(builder, input);
         TosRequest req = this.factory.build(builder, HttpMethod.HEAD, null);
         return objectHandler.doRequest(req, getExpectedCodes(input.getAllSettedHeaders()),
-                response -> new HeadObjectV2Output(new GetObjectBasicOutput()
-                        .setRequestInfo(response.RequestInfo()).parseFromTosResponse(response)));
+                response -> {
+                    HeadObjectV2Output output = new HeadObjectV2Output(new GetObjectBasicOutput()
+                            .setRequestInfo(response.RequestInfo()).parseFromTosResponse(response));
+                    String symlinkTargetSize = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_SYMLINK_TARGET_SIZE);
+                    return StringUtils.isNotEmpty(symlinkTargetSize) ? output.setSymlinkTargetSize(Long.parseLong(symlinkTargetSize)) : output;
+                });
     }
 
     public DeleteObjectOutput deleteObject(DeleteObjectInput input) throws TosException {
         ParamsChecker.ensureNotNull(input, "DeleteObjectInput");
         ensureValidBucketName(input.getBucket());
         ensureValidKey(input.getKey());
-        RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), null)
+        if (!input.isRecursive()) {
+            RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), null)
                 .withQuery("versionId", input.getVersionID());
-        TosRequest req = this.factory.build(builder, HttpMethod.DELETE, null);
-        return objectHandler.doRequest(req, HttpStatus.NO_CONTENT,
-                response -> new DeleteObjectOutput().setRequestInfo(response.RequestInfo())
-                        .setDeleteMarker(Boolean.parseBoolean(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_DELETE_MARKER)))
-                        .setVersionID(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_VERSIONID))
-        );
+            builder = this.handleGenericInput(builder, input);
+            TosRequest req = this.factory.build(builder, HttpMethod.DELETE, null);
+            return objectHandler.doRequest(req, HttpStatus.NO_CONTENT,
+                    response -> new DeleteObjectOutput().setRequestInfo(response.RequestInfo())
+                            .setDeleteMarker(Boolean.parseBoolean(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_DELETE_MARKER)))
+                            .setVersionID(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_VERSIONID))
+            );
+        }
+
+        BucketType bucketType = this.getBucketType(input.getBucket());
+        boolean hns = bucketType != null && bucketType.getType().equals(BucketType.BUCKET_TYPE_HNS.getType());
+        if (hns && this.isRecursiveByServer(input)) {
+            RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), null)
+                    .withQuery("versionId", input.getVersionID())
+                    .withQuery("recursive", "true");
+            builder = this.handleGenericInput(builder, input);
+            TosRequest req = this.factory.build(builder, HttpMethod.DELETE, null);
+            return objectHandler.doRequest(req, HttpStatus.NO_CONTENT,
+                    response -> new DeleteObjectOutput().setRequestInfo(response.RequestInfo())
+            );
+        }
+
+        return new RecursiveDeleter(input, hns, this).deleteRecursive();
+    }
+
+    private boolean isRecursiveByServer(DeleteObjectInput input) {
+        try {
+            Field f = input.getClass().getDeclaredField("recursiveByServer");
+            f.setAccessible(true);
+            return f.getBoolean(input);
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     public DeleteMultiObjectsV2Output deleteMultiObjects(DeleteMultiObjectsV2Input input) throws TosException {
@@ -201,6 +345,7 @@ public class TosObjectRequestHandler {
         TosMarshalResult marshalResult = PayloadConverter.serializePayloadAndComputeMD5(input);
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null)
                 .withHeader(TosHeader.HEADER_CONTENT_MD5, marshalResult.getContentMD5()).withQuery("delete", "");
+        builder = this.handleGenericInput(builder, input);
         TosRequest req = this.factory.build(builder, HttpMethod.POST, new ByteArrayInputStream(marshalResult.getData()))
                 .setContentLength(marshalResult.getData().length);
         return objectHandler.doRequest(req, HttpStatus.OK, response -> PayloadConverter.parsePayload(response.getInputStream(),
@@ -218,13 +363,13 @@ public class TosObjectRequestHandler {
                 .withContentLength(input.getContentLength())
                 .withHeader(TosHeader.HEADER_CALLBACK, input.getCallback())
                 .withHeader(TosHeader.HEADER_CALLBACK_VAR, input.getCallbackVar())
-                .withHeader(TosHeader.HEADER_X_IF_MATCH, input.getIfMatch());
-
+                .withHeader(TosHeader.HEADER_X_IF_MATCH, input.getIfMatch())
+                .withHeader(TosHeader.HEADER_TAGGING, input.getTagging());
         if (input.isForbidOverwrite()) {
             builder = builder.withHeader(TosHeader.HEADER_FORBID_OVERWRITE, "true");
         }
-
         addContentType(builder, input.getKey());
+        builder = this.handleGenericInput(builder, input);
         TosRequest req = this.factory.build(builder, HttpMethod.PUT, content)
                 .setEnableCrcCheck(this.enableCrcCheck)
                 .setRateLimiter(input.getRateLimiter())
@@ -261,6 +406,10 @@ public class TosObjectRequestHandler {
 
     public PutObjectOutput putObject(PutObjectInput input) throws TosException {
         ParamsChecker.ensureNotNull(input, "PutObjectInput");
+        if (input.getPutObjectBasicInput() != null) {
+            input.getPutObjectBasicInput().setRequestHost(input.getRequestHost());
+            input.getPutObjectBasicInput().setRequestDate(input.getRequestDate());
+        }
         return putObject(input.getPutObjectBasicInput(), input.getContent());
     }
 
@@ -271,10 +420,31 @@ public class TosObjectRequestHandler {
         }
         ensureValidBucketName(input.getBucket());
         ensureValidKey(input.getKey());
+
+        BucketType bucketType = this.getBucketType(input.getBucket());
+        if (bucketType != null && bucketType.getType().equals(BucketType.BUCKET_TYPE_HNS.getType())) {
+            ModifyObjectInput minput = new ModifyObjectInput().setBucket(input.getBucket())
+                    .setKey(input.getKey()).setOffset(input.getOffset()).setContent(input.getContent())
+                    .setContentLength(input.getContentLength()).setDataTransferListener(input.getDataTransferListener())
+                    .setRateLimiter(input.getRateLimiter());
+            minput.setRequestDate(input.getRequestDate());
+            minput.setRequestHost(input.getRequestHost());
+            if (input.getOptions() != null) {
+                long trafficLimit = input.getOptions().getTrafficLimit();
+                if (trafficLimit > 0) {
+                    minput.setTrafficLimit(trafficLimit);
+                }
+            }
+            ModifyObjectOutput output = this.modifyObject(minput, input.getPreHashCrc64ecma(), this.enableCrcCheck);
+            return new AppendObjectOutput().setRequestInfo(output.getRequestInfo())
+                    .setNextAppendOffset(output.getNextModifyOffset()).setHashCrc64ecma(output.getHashCrc64ecma());
+        }
+
         // append not support chunked, need to set contentLength
         if (input.getContentLength() <= 0) {
             throw new TosClientException("content length should be set in appendObject method.", null);
         }
+
         RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), input.getAllSettedHeaders())
                 .withQuery("append", "")
                 .withQuery("offset", String.valueOf(input.getOffset()))
@@ -282,6 +452,7 @@ public class TosObjectRequestHandler {
                 .withHeader(TosHeader.HEADER_X_IF_MATCH, input.getIfMatch());
 
         addContentType(builder, input.getKey());
+        builder = this.handleGenericInput(builder, input);
         TosRequest req = this.factory.build(builder, HttpMethod.POST, input.getContent())
                 // appendObject should not retry
                 .setRetryableOnServerException(false).setRetryableOnClientException(false)
@@ -312,6 +483,7 @@ public class TosObjectRequestHandler {
         RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(),
                 input.getAllSettedHeaders()).withQuery("metadata", "").withQuery("versionId", input.getVersionID());
         addContentType(builder, input.getKey());
+        builder = this.handleGenericInput(builder, input);
         TosRequest req = this.factory.build(builder, HttpMethod.POST, null);
         return objectHandler.doRequest(req, HttpStatus.OK,
                 response -> new SetObjectMetaOutput().setRequestInfo(response.RequestInfo())
@@ -328,6 +500,7 @@ public class TosObjectRequestHandler {
                 .withQuery("max-keys", TosUtils.convertInteger(input.getMaxKeys()))
                 .withQuery("reverse", String.valueOf(input.isReverse()))
                 .withQuery("encoding-type", input.getEncodingType());
+        builder = this.handleGenericInput(builder, input);
         TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
         return objectHandler.doRequest(req, HttpStatus.OK, response -> PayloadConverter.parsePayload(response.getInputStream(),
                 new TypeReference<ListObjectsV2Output>() {
@@ -349,10 +522,23 @@ public class TosObjectRequestHandler {
         if (input.isFetchMeta()) {
             builder = builder.withQuery("fetch-meta", "true");
         }
+        builder = this.handleGenericInput(builder, input);
         TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
-        return objectHandler.doRequest(req, HttpStatus.OK, response -> PayloadConverter.parsePayload(response.getInputStream(),
+        ListObjectsType2Output output = objectHandler.doRequest(req, HttpStatus.OK, response -> PayloadConverter.parsePayload(response.getInputStream(),
                 new TypeReference<ListObjectsType2Output>() {
                 }).setRequestInfo(response.RequestInfo()));
+        if (output.getContents() != null && output.getContents().size() > 0 && this.disableEncodingMeta) {
+            for (ListedObjectV2 obj : output.getContents()) {
+                try {
+                    Field f = obj.getClass().getDeclaredField("disableEncodingMeta");
+                    f.setAccessible(true);
+                    f.set(obj, true);
+                } catch (Exception e) {
+                }
+            }
+        }
+
+        return output;
     }
 
     public ListObjectsType2Output listObjectsType2UntilFinished(ListObjectsType2Input input) {
@@ -413,6 +599,7 @@ public class TosObjectRequestHandler {
                 .withQuery("encoding-type", input.getEncodingType())
                 .withQuery("version-id-marker", input.getVersionIDMarker())
                 .withQuery("versions", "");
+        builder = this.handleGenericInput(builder, input);
         TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
         return objectHandler.doRequest(req, HttpStatus.OK,
                 response -> PayloadConverter.parsePayload(response.getInputStream(),
@@ -429,6 +616,7 @@ public class TosObjectRequestHandler {
         ensureValidKey(input.getSrcKey());
         RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), input.getAllSettedHeaders())
                 .withQuery("versionId", input.getSrcVersionID());
+        builder = this.handleGenericInput(builder, input);
         TosRequest req = this.factory.buildWithCopy(builder, HttpMethod.PUT, input.getSrcBucket(), input.getSrcKey());
         return objectHandler.doRequest(req, HttpStatus.OK, this::buildCopyObjectV2Output);
     }
@@ -449,7 +637,7 @@ public class TosObjectRequestHandler {
                     new TypeReference<ServerExceptionJson>() {
                     });
             throw new TosServerException(response.getStatusCode(), errMsg.getCode(), errMsg.getMessage(),
-                    errMsg.getRequestID(), errMsg.getHostID()).setEc(errMsg.getEc());
+                    errMsg.getRequestID(), errMsg.getHostID()).setEc(errMsg.getEc()).setKey(errMsg.getKey());
         }
     }
 
@@ -465,6 +653,7 @@ public class TosObjectRequestHandler {
                 .withQuery("partNumber", TosUtils.convertInteger(input.getPartNumber()))
                 .withQuery("uploadId", input.getUploadID())
                 .withQuery("versionId", input.getSourceVersionID());
+        builder = this.handleGenericInput(builder, input);
         TosRequest req = this.factory.buildWithCopy(builder, HttpMethod.PUT, input.getSourceBucket(), input.getSourceKey());
         return objectHandler.doRequest(req, HttpStatus.OK, response -> buildUploadPartCopyV2Output(input, response));
     }
@@ -483,7 +672,7 @@ public class TosObjectRequestHandler {
                     new TypeReference<ServerExceptionJson>() {
                     });
             throw new TosServerException(response.getStatusCode(), errMsg.getCode(), errMsg.getMessage(),
-                    errMsg.getRequestID(), errMsg.getHostID()).setEc(errMsg.getEc());
+                    errMsg.getRequestID(), errMsg.getHostID()).setEc(errMsg.getEc()).setKey(errMsg.getKey());
         }
     }
 
@@ -504,6 +693,7 @@ public class TosObjectRequestHandler {
             content = res.getData();
             builder.withHeader(TosHeader.HEADER_CONTENT_MD5, res.getContentMD5());
         }
+        builder = this.handleGenericInput(builder, input);
         TosRequest req = this.factory.build(builder, HttpMethod.PUT, new ByteArrayInputStream(content)).setContentLength(content.length);
         return objectHandler.doRequest(req, HttpStatus.OK, response -> new PutObjectACLOutput().requestInfo(response.RequestInfo()));
     }
@@ -514,6 +704,7 @@ public class TosObjectRequestHandler {
         ensureValidKey(input.getKey());
         RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), null)
                 .withQuery("acl", "").withQuery("versionId", input.getVersionID());
+        builder = this.handleGenericInput(builder, input);
         TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
         return objectHandler.doRequest(req, HttpStatus.OK, this::buildGetObjectACLV2Output);
     }
@@ -534,6 +725,7 @@ public class TosObjectRequestHandler {
         RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), null)
                 .withQuery("tagging", "").withQuery("versionId", input.getVersionID())
                 .withHeader(TosHeader.HEADER_CONTENT_MD5, marshalResult.getContentMD5());
+        builder = this.handleGenericInput(builder, input);
         TosRequest req = this.factory.build(builder, HttpMethod.PUT, new ByteArrayInputStream(marshalResult.getData()))
                 .setContentLength(marshalResult.getData().length);
         return objectHandler.doRequest(req, HttpStatus.OK, response -> new PutObjectTaggingOutput()
@@ -546,6 +738,7 @@ public class TosObjectRequestHandler {
         ensureValidKey(input.getKey());
         RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), null)
                 .withQuery("tagging", "").withQuery("versionId", input.getVersionID());
+        builder = this.handleGenericInput(builder, input);
         TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
         return objectHandler.doRequest(req, HttpStatus.OK, res -> PayloadConverter.parsePayload(res.getInputStream(),
                         new TypeReference<GetObjectTaggingOutput>() {
@@ -559,6 +752,7 @@ public class TosObjectRequestHandler {
         ensureValidKey(input.getKey());
         RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), null)
                 .withQuery("tagging", "").withQuery("versionId", input.getVersionID());
+        builder = this.handleGenericInput(builder, input);
         TosRequest req = this.factory.build(builder, HttpMethod.DELETE, null);
         return objectHandler.doRequest(req, HttpStatus.NO_CONTENT, res -> new DeleteObjectTaggingOutput()
                 .setRequestInfo(res.RequestInfo()).setVersionID(res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_VERSIONID)));
@@ -572,6 +766,7 @@ public class TosObjectRequestHandler {
         TosMarshalResult marshalResult = PayloadConverter.serializePayloadAndComputeMD5(input);
         RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), input.getAllSettedHeaders())
                 .withQuery("fetch", "").withHeader(TosHeader.HEADER_CONTENT_MD5, marshalResult.getContentMD5());
+        builder = this.handleGenericInput(builder, input);
         TosRequest req = this.factory.build(builder, HttpMethod.POST, new ByteArrayInputStream(marshalResult.getData()))
                 .setContentLength(marshalResult.getData().length);
         return objectHandler.doRequest(req, HttpStatus.OK, response -> PayloadConverter.parsePayload(response.getInputStream(),
@@ -591,6 +786,7 @@ public class TosObjectRequestHandler {
         TosMarshalResult marshalResult = PayloadConverter.serializePayloadAndComputeMD5(input);
         RequestBuilder builder = this.factory.init(input.getBucket(), "", input.getAllSettedHeaders())
                 .withQuery("fetchTask", "").withHeader(TosHeader.HEADER_CONTENT_MD5, marshalResult.getContentMD5());
+        builder = this.handleGenericInput(builder, input);
         TosRequest req = this.factory.build(builder, HttpMethod.POST, new ByteArrayInputStream(marshalResult.getData()))
                 .setContentLength(marshalResult.getData().length);
         return objectHandler.doRequest(req, HttpStatus.OK, response -> PayloadConverter.parsePayload(response.getInputStream(),
@@ -598,16 +794,40 @@ public class TosObjectRequestHandler {
                 }).setRequestInfo(response.RequestInfo()));
     }
 
+    public GetFetchTaskOutput getFetchTask(GetFetchTaskInput input) throws TosException {
+        ParamsChecker.ensureNotNull(input, "GetFetchTaskInput");
+        ensureValidBucketName(input.getBucket());
+        if (StringUtils.isEmpty(input.getTaskId())) {
+            throw new TosClientException("empty task id", null);
+        }
+        RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("fetchTask", "").withQuery("taskId", input.getTaskId());
+        builder = this.handleGenericInput(builder, input);
+        TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
+        GetFetchTaskOutput output = objectHandler.doRequest(req, HttpStatus.OK, response -> PayloadConverter.parsePayload(response.getInputStream(),
+                new TypeReference<GetFetchTaskOutput>() {
+                }).setRequestInfo(response.RequestInfo()));
+        if (output.getTask() != null && output.getTask().getMeta() != null && output.getTask().getMeta().size() > 0 && disableEncodingMeta) {
+            try {
+                Field f = output.getTask().getClass().getDeclaredField("disableEncodingMeta");
+                f.setAccessible(true);
+                f.set(output.getTask(), true);
+            } catch (Exception e) {
+            }
+        }
+        return output;
+    }
+
     public CreateMultipartUploadOutput createMultipartUpload(CreateMultipartUploadInput input) throws TosException {
         ParamsChecker.ensureNotNull(input, "CreateMultipartUploadInput");
         ensureValidBucketName(input.getBucket());
         ensureValidKey(input.getKey());
         RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), input.getAllSettedHeaders())
-                .withQuery("uploads", "");
+                .withQuery("uploads", "").withHeader(TosHeader.HEADER_TAGGING, input.getTagging());
         addContentType(builder, input.getKey());
         if (input.isForbidOverwrite()) {
             builder = builder.withHeader(TosHeader.HEADER_FORBID_OVERWRITE, "true");
         }
+        builder = this.handleGenericInput(builder, input);
         TosRequest req = this.factory.build(builder, HttpMethod.POST, null).setRetryableOnClientException(false);
         return objectHandler.doRequest(req, HttpStatus.OK, this::buildCreateMultipartUploadOutput);
     }
@@ -643,6 +863,7 @@ public class TosObjectRequestHandler {
                 .withQuery("uploadId", input.getUploadID())
                 .withQuery("partNumber", TosUtils.convertInteger(input.getPartNumber()))
                 .withContentLength(contentLength);
+        builder = this.handleGenericInput(builder, input);
         TosRequest req = this.factory.build(builder, HttpMethod.PUT, content)
                 .setEnableCrcCheck(this.enableCrcCheck).setRateLimiter(input.getRateLimiter())
                 .setDataTransferListener(input.getDataTransferListener())
@@ -653,6 +874,10 @@ public class TosObjectRequestHandler {
 
     public UploadPartV2Output uploadPart(UploadPartV2Input input) throws TosException {
         ParamsChecker.ensureNotNull(input, "UploadPartV2Input");
+        if (input.getUploadPartBasicInput() != null) {
+            input.getUploadPartBasicInput().setRequestDate(input.getRequestDate());
+            input.getUploadPartBasicInput().setRequestHost(input.getRequestHost());
+        }
         return uploadPart(input.getUploadPartBasicInput(), input.getContentLength(), input.getContent());
     }
 
@@ -680,6 +905,7 @@ public class TosObjectRequestHandler {
             builder.withHeader(TosHeader.HEADER_COMPLETE_ALL, Consts.USE_COMPLETE_ALL);
         }
         builder.withHeader(TosHeader.HEADER_CONTENT_MD5, contentMd5);
+        builder = this.handleGenericInput(builder, input);
         TosRequest req = this.factory.build(builder, HttpMethod.POST, new ByteArrayInputStream(data))
                 .setContentLength(data.length).setRetryableOnClientException(false);
         List<Integer> unexpectedCodes = new ArrayList<>();
@@ -726,6 +952,7 @@ public class TosObjectRequestHandler {
         ensureValidKey(input.getKey());
         RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), null)
                 .withQuery("uploadId", input.getUploadID());
+        builder = this.handleGenericInput(builder, input);
         TosRequest req = this.factory.build(builder, HttpMethod.DELETE, null).setRetryableOnClientException(false);
         return objectHandler.doRequest(req, HttpStatus.NO_CONTENT,
                 response -> new AbortMultipartUploadOutput().setRequestInfo(response.RequestInfo())
@@ -745,6 +972,7 @@ public class TosObjectRequestHandler {
                 .withQuery("max-parts", TosUtils.convertInteger(input.getMaxParts()))
                 .withQuery("part-number-marker", TosUtils.convertInteger(input.getPartNumberMarker()))
                 .withQuery("encoding-type", input.getEncodingType());
+        builder = this.handleGenericInput(builder, input);
         TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
         return objectHandler.doRequest(req, HttpStatus.OK,
                 response -> PayloadConverter.parsePayload(response.getInputStream(),
@@ -767,6 +995,7 @@ public class TosObjectRequestHandler {
                 .withQuery("upload-id-marker", input.getUploadIDMarker())
                 .withQuery("max-uploads", TosUtils.convertInteger(input.getMaxUploads()))
                 .withQuery("encoding-type", input.getEncodingType());
+        builder = this.handleGenericInput(builder, input);
         TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
         return objectHandler.doRequest(req, HttpStatus.OK,
                 response -> PayloadConverter.parsePayload(response.getInputStream(),
@@ -782,6 +1011,7 @@ public class TosObjectRequestHandler {
         ensureValidKey(input.getNewKey());
         RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), null)
                 .withQuery("name", input.getNewKey()).withQuery("rename", "");
+        builder = this.handleGenericInput(builder, input);
         TosRequest req = this.factory.build(builder, HttpMethod.PUT, null);
         return objectHandler.doRequest(req, HttpStatus.NO_CONTENT, response -> new RenameObjectOutput()
                 .setRequestInfo(response.RequestInfo()));
@@ -796,10 +1026,109 @@ public class TosObjectRequestHandler {
                 .withHeader(TosHeader.HEADER_CONTENT_MD5, marshalResult.getContentMD5())
                 .withQuery("restore", "")
                 .withQuery("versionId", input.getVersionID());
+        builder = this.handleGenericInput(builder, input);
         TosRequest req = this.factory.build(builder, HttpMethod.POST, new ByteArrayInputStream(marshalResult.getData()))
                 .setContentLength(marshalResult.getData().length);
         return objectHandler.doRequest(req, restoreObjectExceptedCodes(), response -> new RestoreObjectOutput()
                 .setRequestInfo(response.RequestInfo()));
+    }
+
+    public PutSymlinkOutput putSymlink(PutSymlinkInput input) throws TosException {
+        ParamsChecker.ensureNotNull(input, "PutSymlinkInput");
+        ensureValidBucketName(input.getBucket());
+        ensureValidKey(input.getKey());
+        if (StringUtils.isEmpty(input.getSymlinkTargetKey())) {
+            throw new TosClientException("empty symlink target key", null);
+        }
+        RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), null)
+                .withQuery("symlink", "")
+                .withHeader(TosHeader.HEADER_SYMLINK_BUCKET, input.getSymlinkTargetBucket())
+                .withHeader(TosHeader.HEADER_ACL, input.getAcl() == null ? null : input.getAcl().toString())
+                .withHeader(TosHeader.HEADER_STORAGE_CLASS, input.getStorageClass() == null ? null : input.getStorageClass().toString());
+
+        try {
+            builder = builder.withHeader(TosHeader.HEADER_SYMLINK_TARGET, URLEncoder.encode(input.getSymlinkTargetKey(), "UTF-8"));
+        } catch (UnsupportedEncodingException e) {
+            throw new TosClientException("encoding symlink target key failed", e);
+        }
+
+        if (input.isForbidOverwrite()) {
+            builder = builder.withHeader(TosHeader.HEADER_FORBID_OVERWRITE, "true");
+        }
+        if (input.getMeta() != null) {
+            for (Map.Entry<String, String> entry : input.getMeta().entrySet()) {
+                String key = entry.getKey();
+                String value = entry.getValue();
+                if (StringUtils.isNotEmpty(value)) {
+                    builder = builder.withHeader(TosHeader.HEADER_META_PREFIX + key, value);
+                }
+            }
+        }
+        builder = this.handleGenericInput(builder, input);
+        TosRequest req = this.factory.build(builder, HttpMethod.PUT, null).setContentLength(0);
+        return objectHandler.doRequest(req, HttpStatus.OK, res -> new PutSymlinkOutput()
+                .setRequestInfo(res.RequestInfo()).setVersionID(res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_VERSIONID)));
+    }
+
+    public GetSymlinkOutput getSymlink(GetSymlinkInput input) throws TosException {
+        ParamsChecker.ensureNotNull(input, "GetSymlinkInput");
+        ensureValidBucketName(input.getBucket());
+        ensureValidKey(input.getKey());
+        RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), null)
+                .withQuery("symlink", "").withQuery("versionId", input.getVersionID());
+        builder = this.handleGenericInput(builder, input);
+        TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
+
+        return objectHandler.doRequest(req, HttpStatus.OK, res -> {
+            String symlinkTargetKey = null;
+            try {
+                symlinkTargetKey = URLDecoder.decode(res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_SYMLINK_TARGET), "UTF-8");
+            } catch (UnsupportedEncodingException e) {
+                throw new TosClientException("decode symlink target key failed", e);
+            }
+            return new GetSymlinkOutput()
+                    .setRequestInfo(res.RequestInfo())
+                    .setVersionID(res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_VERSIONID))
+                    .setSymlinkTargetKey(symlinkTargetKey)
+                    .setSymlinkTargetBucket(res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_SYMLINK_BUCKET))
+                    .setLastModified(DateConverter.rfc1123StringToDate(res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_LAST_MODIFIED)));
+        });
+    }
+
+    public ModifyObjectOutput modifyObject(ModifyObjectInput input, String preHashCrc64ecma, boolean enableCrcCheck) {
+        ParamsChecker.ensureNotNull(input, "ModifyObjectInput");
+        ensureValidBucketName(input.getBucket());
+        ensureValidKey(input.getKey());
+        InputStream content = ensureNotNullContent(input.getContent());
+        RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), null)
+                .withQuery("modify", "")
+                .withQuery("offset", String.valueOf(input.getOffset()))
+                .withContentLength(input.getContentLength());
+
+        if (input.getTrafficLimit() > 0) {
+            builder = builder.withHeader(TosHeader.HEADER_TRAFFIC_LIMIT, String.valueOf(input.getTrafficLimit()));
+        }
+
+        builder = this.handleGenericInput(builder, input);
+        TosRequest req = this.factory.build(builder, HttpMethod.POST, content)
+                // modifyobject should not retry
+                .setRetryableOnServerException(false).setRetryableOnClientException(false)
+                .setRateLimiter(input.getRateLimiter())
+                .setEnableCrcCheck(enableCrcCheck)
+                .setCrc64InitValue(CRC64Utils.unsignedLongStringToLong(preHashCrc64ecma))
+                .setDataTransferListener(input.getDataTransferListener());
+
+
+        return objectHandler.doRequest(req, HttpStatus.OK, res -> {
+            String nextModifyOffset = res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_NEXT_MODIFY_OFFSET);
+            try {
+                return new ModifyObjectOutput().setRequestInfo(res.RequestInfo())
+                        .setNextModifyOffset(Long.parseLong(nextModifyOffset))
+                        .setHashCrc64ecma(res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_CRC64));
+            } catch (NumberFormatException nfe) {
+                throw new TosClientException("tos: server return unexpected Next-Modify-Offset header: " + nextModifyOffset, nfe);
+            }
+        });
     }
 
     private List<Integer> restoreObjectExceptedCodes() {

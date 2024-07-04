@@ -2,9 +2,10 @@ package com.volcengine.tos.model.bucket;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.volcengine.tos.model.GenericInput;
 import com.volcengine.tos.model.object.TagSet;
 
-public class PutBucketTaggingInput {
+public class PutBucketTaggingInput extends GenericInput {
     @JsonIgnore
     private String bucket;
 
