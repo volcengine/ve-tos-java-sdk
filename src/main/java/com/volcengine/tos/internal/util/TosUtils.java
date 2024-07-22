@@ -41,7 +41,7 @@ public class TosUtils {
     @Deprecated
     private static final long MAX_PRE_SIGNED_TTL = 604800;
 
-    private static final long DEFAULT_PRE_SIGNED_TTL = 3600;
+    public static final long DEFAULT_PRE_SIGNED_TTL = 3600;
 
     private static Map<String, List<String>> SUPPORTED_REGION = null;
 

@@ -66,11 +66,12 @@ public class EcsCredentialsProvider implements CredentialsProvider, Closeable {
                 }
             }
         };
+        this.refreshThread.setDaemon(true);
         this.refreshThread.start();
     }
 
     @Override
-    public Credentials getCredentials() {
+    public Credentials getCredentials(int expires) {
         EcsCredentials credentials = this.ecsCredentials;
         if (credentials != null && credentials.isValid()) {
             return credentials;
@@ -128,7 +129,7 @@ public class EcsCredentialsProvider implements CredentialsProvider, Closeable {
 
     private static class EcsCredentials implements Credentials {
         @JsonIgnore
-        boolean immortal;
+        volatile boolean immortal;
         @JsonIgnore
         long lastUpdateTimeNanos;
         @JsonIgnore

@@ -95,7 +95,7 @@ public class TosPreSignedRequestHandler {
         String securityToken = null;
         if (this.signer != null) {
             if (this.signer.getCredentialsProvider() != null) {
-                com.volcengine.tos.credential.Credentials cred = this.signer.getCredentialsProvider().getCredentials();
+                com.volcengine.tos.credential.Credentials cred = this.signer.getCredentialsProvider().getCredentials((int) ttl);
                 ak = cred.getAk();
                 sk = cred.getSk();
                 securityToken = cred.getSecurityToken();
@@ -204,7 +204,7 @@ public class TosPreSignedRequestHandler {
         String securityToken = null;
         if (this.signer != null) {
             if (this.signer.getCredentialsProvider() != null) {
-                com.volcengine.tos.credential.Credentials cred = this.signer.getCredentialsProvider().getCredentials();
+                com.volcengine.tos.credential.Credentials cred = this.signer.getCredentialsProvider().getCredentials((int) ttl);
                 ak = cred.getAk();
                 sk = cred.getSk();
                 securityToken = cred.getSecurityToken();

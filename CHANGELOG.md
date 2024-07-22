@@ -1,5 +1,7 @@
 ## Release Note
 
+### 2024.7.15 Version 2.8.2
+
 ### 2024.6.1 Version 2.8.1
 
 - 支持 DeleteObject 递归删除

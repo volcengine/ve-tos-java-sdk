@@ -13,7 +13,7 @@ More details can be found in [https://www.volcengine.com/docs/6349/79895]()
 <dependency>
     <groupId>com.volcengine</groupId>
     <artifactId>ve-tos-java-sdk</artifactId>
-    <version>2.8.1</version>
+    <version>2.8.2</version>
 </dependency>
 ```
 

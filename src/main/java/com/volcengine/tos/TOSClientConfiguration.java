@@ -2,7 +2,11 @@ package com.volcengine.tos;
 
 import com.volcengine.tos.auth.Credentials;
 import com.volcengine.tos.credential.CredentialsProvider;
+import com.volcengine.tos.credential.EcsCredentialsProvider;
+import com.volcengine.tos.credential.EnvCredentialsProvider;
+import com.volcengine.tos.credential.StaticCredentialsProvider;
 import com.volcengine.tos.internal.Consts;
+import com.volcengine.tos.internal.CredentialsProviderWrapper;
 import com.volcengine.tos.transport.TransportConfig;
 
 import java.util.HashMap;
@@ -76,6 +80,14 @@ public class TOSClientConfiguration {
     }
 
     public TOSClientConfiguration setCredentialsProvider(CredentialsProvider credentialsProvider) {
+        if (credentialsProvider != null) {
+            if (!(credentialsProvider instanceof StaticCredentialsProvider)
+                    && !(credentialsProvider instanceof EnvCredentialsProvider)
+                    && !(credentialsProvider instanceof EcsCredentialsProvider)
+                    && !(credentialsProvider instanceof CredentialsProviderWrapper)) {
+                credentialsProvider = new CredentialsProviderWrapper(credentialsProvider);
+            }
+        }
         this.credentialsProvider = credentialsProvider;
         return this;
     }
@@ -253,7 +265,7 @@ public class TOSClientConfiguration {
             tosClientConfiguration.endpoint = this.endpoint;
             tosClientConfiguration.transportConfig = this.transportConfig;
             tosClientConfiguration.credentials = this.credentials;
-            tosClientConfiguration.credentialsProvider = this.credentialsProvider;
+            tosClientConfiguration.setCredentialsProvider(this.credentialsProvider);
             tosClientConfiguration.region = this.region;
             tosClientConfiguration.clientAutoRecognizeContentType = this.clientAutoRecognizeContentType;
             tosClientConfiguration.isCustomDomain = this.isCustomDomain;
