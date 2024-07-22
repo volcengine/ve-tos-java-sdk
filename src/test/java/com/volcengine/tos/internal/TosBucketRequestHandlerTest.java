@@ -372,7 +372,7 @@ public class TosBucketRequestHandlerTest {
                 PrivateSource privateSource = new PrivateSource()
                         .setSourceEndpoint(new CommonSourceEndpoint()
                                 .setPrimary(Arrays.asList(new EndpointCredentialProvider()
-                                        .setEndpoint("www.domain4.com").setBucketName("test-bucket").setCredentialProvider(new CredentialProvider().setRole("TosArchiveTOSInventory")))));
+                                        .setEndpoint("http://www.domain4.com").setBucketName("test-bucket").setCredentialProvider(new CredentialProvider().setRole("TosArchiveTOSInventory")))));
                 getHandler().putBucketMirrorBack(new PutBucketMirrorBackInput()
                         .setBucket(Consts.bucket).setRules(Arrays.asList(new MirrorBackRule().setId("2")
                                 .setCondition(condition).setRedirect(new Redirect().setPrivateSource(privateSource)))));

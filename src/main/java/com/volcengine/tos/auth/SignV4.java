@@ -50,7 +50,6 @@ public class SignV4 implements Signer {
 
     public SignV4(CredentialsProvider credentialsProvider, String region) {
         ParamsChecker.ensureNotNull(credentialsProvider, "CredentialsProvider");
-        ParamsChecker.ensureNotNull(credentialsProvider.getCredentials(), "CredentialsProvider.Credentials");
         ParamsChecker.ensureNotNull(region, "Region");
         this.credentialsProvider = credentialsProvider;
         this.region = region;
@@ -113,7 +112,7 @@ public class SignV4 implements Signer {
         String sk;
         String securityToken;
         if (this.credentialsProvider != null) {
-            com.volcengine.tos.credential.Credentials cred = this.credentialsProvider.getCredentials();
+            com.volcengine.tos.credential.Credentials cred = this.credentialsProvider.getCredentials((int) TosUtils.DEFAULT_PRE_SIGNED_TTL);
             ak = cred.getAk();
             sk = cred.getSk();
             securityToken = cred.getSecurityToken();
@@ -159,7 +158,7 @@ public class SignV4 implements Signer {
         String sk;
         String securityToken;
         if (this.credentialsProvider != null) {
-            com.volcengine.tos.credential.Credentials cred = this.credentialsProvider.getCredentials();
+            com.volcengine.tos.credential.Credentials cred = this.credentialsProvider.getCredentials((int) (ttl.toMillis() / 1000) + 1);
             ak = cred.getAk();
             sk = cred.getSk();
             securityToken = cred.getSecurityToken();

@@ -158,74 +158,73 @@ public class GetObjectBasicOutput {
     }
 
     public GetObjectBasicOutput parseFromTosResponse(TosResponse response) {
-        this.contentLength = response.getContentLength();
-        this.contentType = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_CONTENT_TYPE);
-        this.contentMD5 = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_CONTENT_MD5);
-        this.contentLanguage = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_CONTENT_LANGUAGE);
-        this.contentEncoding = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_CONTENT_ENCODING);
-        this.contentDisposition = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_CONTENT_DISPOSITION);
-        this.lastModified = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_LAST_MODIFIED);
-        this.cacheControl = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_CACHE_CONTROL);
-        this.expires = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_EXPIRES);
-        this.etag = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_ETAG);
-        this.versionID = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_VERSIONID);
-        this.deleteMarker = Boolean.parseBoolean(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_DELETE_MARKER));
-        this.objectType = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_OBJECT_TYPE);
-        this.storageClass = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_STORAGE_CLASS);
-        this.customMetadata = parseCustomMetadata(response.getHeaders());
-        this.ssecAlgorithm = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_SSE_CUSTOMER_ALGORITHM);
-        this.ssecKeyMD5 = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_SSE_CUSTOMER_KEY_MD5);
-        this.websiteRedirectLocation = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_WEBSITE_REDIRECT_LOCATION);
-        this.hashCrc64ecma = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_CRC64);
-        this.storageClass = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_STORAGE_CLASS);
-        this.contentRange = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_CONTENT_RANGE);
-        this.replicationStatus = ReplicationStatusType.parse(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_REPLICATION_STATUS));
-        this.isDirectory = Boolean.parseBoolean(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_DIRECTORY));
-        String taggingCount = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_TAGGING_COUNT);
-        if (StringUtils.isNotEmpty(taggingCount)) {
-            try {
+        try {
+            this.contentLength = response.getContentLength();
+            this.contentType = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_CONTENT_TYPE);
+            this.contentMD5 = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_CONTENT_MD5);
+            this.contentLanguage = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_CONTENT_LANGUAGE);
+            this.contentEncoding = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_CONTENT_ENCODING);
+            this.contentDisposition = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_CONTENT_DISPOSITION);
+            this.lastModified = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_LAST_MODIFIED);
+            this.cacheControl = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_CACHE_CONTROL);
+            this.expires = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_EXPIRES);
+            this.etag = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_ETAG);
+            this.versionID = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_VERSIONID);
+            this.deleteMarker = Boolean.parseBoolean(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_DELETE_MARKER));
+            this.objectType = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_OBJECT_TYPE);
+            this.storageClass = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_STORAGE_CLASS);
+            this.customMetadata = parseCustomMetadata(response.getHeaders());
+            this.ssecAlgorithm = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_SSE_CUSTOMER_ALGORITHM);
+            this.ssecKeyMD5 = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_SSE_CUSTOMER_KEY_MD5);
+            this.websiteRedirectLocation = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_WEBSITE_REDIRECT_LOCATION);
+            this.hashCrc64ecma = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_CRC64);
+            this.storageClass = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_STORAGE_CLASS);
+            this.contentRange = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_CONTENT_RANGE);
+            this.replicationStatus = ReplicationStatusType.parse(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_REPLICATION_STATUS));
+            this.isDirectory = Boolean.parseBoolean(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_DIRECTORY));
+            String taggingCount = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_TAGGING_COUNT);
+            if (StringUtils.isNotEmpty(taggingCount)) {
                 this.taggingCount = Integer.parseInt(taggingCount);
-            } catch (Exception ex) {
-                // ingore
             }
-        }
 
-
-        String restore = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_RESTORE);
-        if (StringUtils.isNotEmpty(restore)) {
-            restore = restore.trim();
-            if (restore.equals("ongoing-request=\"true\"")) {
-                RestoreInfo restoreInfo = new RestoreInfo();
-                RestoreInfo.RestoreStatus status = new RestoreInfo.RestoreStatus();
-                status.setOngoingRequest(true);
-                restoreInfo.setRestoreStatus(status);
-                RestoreInfo.RestoreParam param = new RestoreInfo.RestoreParam();
-                param.setRequestDate(DateConverter.rfc1123StringToDate(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_RESTORE_EXPIRY_DATE)));
-                param.setExpiryDays(Integer.valueOf(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_RESTORE_EXPIRY_DAYS)));
-                param.setTier(TierType.parse(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_RESTORE_TIER)));
-                restoreInfo.setRestoreParam(param);
-                this.restoreInfo = restoreInfo;
-            } else {
-                String pattern = "ongoing-request=\"false\", expiry-date=\"";
-                int idx;
-                if ((idx = restore.indexOf(pattern)) >= 0) {
-                    String expiryDate = restore.substring(idx);
-                    if (expiryDate.length() > 0 && expiryDate.charAt(expiryDate.length() - 1) == '\\') {
-                        expiryDate = expiryDate.substring(0, expiryDate.length() - 1);
-                    }
+            String restore = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_RESTORE);
+            if (StringUtils.isNotEmpty(restore)) {
+                restore = restore.trim();
+                if (restore.equals("ongoing-request=\"true\"")) {
                     RestoreInfo restoreInfo = new RestoreInfo();
                     RestoreInfo.RestoreStatus status = new RestoreInfo.RestoreStatus();
-                    status.setExpiryDate(DateConverter.rfc1123StringToDate(expiryDate));
+                    status.setOngoingRequest(true);
                     restoreInfo.setRestoreStatus(status);
+                    RestoreInfo.RestoreParam param = new RestoreInfo.RestoreParam();
+                    param.setRequestDate(DateConverter.rfc1123StringToDate(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_RESTORE_EXPIRY_DATE)));
+                    param.setExpiryDays(Integer.parseInt(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_RESTORE_EXPIRY_DAYS)));
+                    param.setTier(TierType.parse(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_RESTORE_TIER)));
+                    restoreInfo.setRestoreParam(param);
                     this.restoreInfo = restoreInfo;
+                } else {
+                    String pattern = "ongoing-request=\"false\", expiry-date=\"";
+                    int idx;
+                    if ((idx = restore.lastIndexOf(pattern)) >= 0) {
+                        String expiryDate = restore.substring(idx + pattern.length());
+                        if (expiryDate.length() > 0 && (expiryDate.charAt(expiryDate.length() - 1) == '\\') || expiryDate.charAt(expiryDate.length() - 1) == '\"') {
+                            expiryDate = expiryDate.substring(0, expiryDate.length() - 1);
+                        }
+                        RestoreInfo restoreInfo = new RestoreInfo();
+                        RestoreInfo.RestoreStatus status = new RestoreInfo.RestoreStatus();
+                        status.setExpiryDate(DateConverter.rfc1123StringToDate(expiryDate));
+                        restoreInfo.setRestoreStatus(status);
+                        this.restoreInfo = restoreInfo;
+                    }
                 }
             }
+        } catch (Exception ex) {
+            // ingore
         }
 
         return this;
     }
 
-    private Map<String, String> parseCustomMetadata(Map<String, String> headers){
+    private Map<String, String> parseCustomMetadata(Map<String, String> headers) {
         if (headers == null) {
             return null;
         }
@@ -242,6 +241,7 @@ public class GetObjectBasicOutput {
         }
         return meta;
     }
+
     @Override
     public String toString() {
         return "GetObjectBasicOutput{" +

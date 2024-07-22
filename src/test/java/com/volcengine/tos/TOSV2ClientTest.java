@@ -6,9 +6,7 @@ import com.volcengine.tos.comm.HttpMethod;
 import com.volcengine.tos.comm.HttpStatus;
 import com.volcengine.tos.comm.common.*;
 import com.volcengine.tos.credential.Credentials;
-import com.volcengine.tos.credential.EcsCredentialsProvider;
-import com.volcengine.tos.credential.EnvCredentialsProvider;
-import com.volcengine.tos.credential.StaticCredentialsProvider;
+import com.volcengine.tos.credential.*;
 import com.volcengine.tos.internal.util.StringUtils;
 import com.volcengine.tos.internal.util.TosUtils;
 import com.volcengine.tos.model.acl.*;
@@ -1268,7 +1266,7 @@ public class TOSV2ClientTest {
             Thread t = new Thread() {
                 @Override
                 public void run() {
-                    Credentials c = provider.getCredentials();
+                    Credentials c = provider.getCredentials(-1);
                     map.put(key, c);
                 }
             };
@@ -1587,5 +1585,36 @@ public class TOSV2ClientTest {
                 throw new RuntimeException(ex);
             }
         }
+    }
+
+    @Test
+    void testCustomizeCredentialsProvider() {
+        final TOSV2 cli = new TOSV2ClientBuilder().build(TOSClientConfiguration.builder().region(Consts.region).endpoint(Consts.endpoint)
+                .transportConfig(new TransportConfig().setWriteTimeoutMills(30000).setReadTimeoutMills(30000).setMaxRetryCount(0))
+                .credentialsProvider(new CredentialsProvider() {
+                    @Override
+                    public Credentials getCredentials(int expires) {
+
+                        return new Credentials() {
+                            @Override
+                            public String getAk() {
+                                return Consts.accessKey;
+                            }
+
+                            @Override
+                            public String getSk() {
+                                return Consts.secretKey;
+                            }
+
+                            @Override
+                            public String getSecurityToken() {
+                                return "";
+                            }
+                        };
+                    }
+                }).build());
+
+        ListBucketsV2Output output = cli.listBuckets(new ListBucketsV2Input());
+        Assert.assertTrue(output.getRequestInfo().getRequestId().length() > 0);
     }
 }

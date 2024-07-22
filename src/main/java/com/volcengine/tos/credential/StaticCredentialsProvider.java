@@ -13,7 +13,7 @@ public class StaticCredentialsProvider implements CredentialsProvider {
     }
 
     @Override
-    public Credentials getCredentials() {
+    public Credentials getCredentials(int expires) {
         return credentials;
     }
 }

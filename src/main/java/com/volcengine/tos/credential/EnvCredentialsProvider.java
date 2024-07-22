@@ -10,7 +10,7 @@ public class EnvCredentialsProvider implements CredentialsProvider {
     }
 
     @Override
-    public Credentials getCredentials() {
+    public Credentials getCredentials(int expires) {
         return credentials;
     }
 }
