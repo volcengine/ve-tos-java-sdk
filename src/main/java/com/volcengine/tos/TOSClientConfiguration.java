@@ -26,6 +26,7 @@ public class TOSClientConfiguration {
      * 客户端对上传对象开启 CRC 校验
      */
     private boolean enableCrc = Consts.DEFAULT_ENABLE_CRC;
+    private boolean disableTrailerHeader = Consts.DEFAULT_DISABLE_TRAILER_HEADER;
 
     /**
      * 是否是自定义域名
@@ -112,6 +113,14 @@ public class TOSClientConfiguration {
         return this;
     }
 
+    public boolean isDisableTrailerHeader() {
+        return disableTrailerHeader;
+    }
+
+    public void setDisableTrailerHeader(boolean disableTrailerHeader) {
+        this.disableTrailerHeader = disableTrailerHeader;
+    }
+
     public boolean isCustomDomain() {
         return isCustomDomain;
     }
@@ -183,6 +192,7 @@ public class TOSClientConfiguration {
         private TransportConfig transportConfig = TransportConfig.builder().build();
         private boolean clientAutoRecognizeContentType = Consts.DEFAULT_AUTO_RECOGNIZE_CONTENT_TYPE;
         private boolean enableCrc = Consts.DEFAULT_ENABLE_CRC;
+        private boolean disableTrailerHeader = Consts.DEFAULT_DISABLE_TRAILER_HEADER;
         private boolean isCustomDomain = false;
         private boolean disableEncodingMeta;
         private String userAgentProductName;
@@ -229,6 +239,11 @@ public class TOSClientConfiguration {
             return this;
         }
 
+        public TosClientConfigurationBuilder disableTrailerHeader(boolean disableTrailerHeader) {
+            this.disableTrailerHeader = disableTrailerHeader;
+            return this;
+        }
+
         public TosClientConfigurationBuilder isCustomDomain(boolean isCustomDomain) {
             this.isCustomDomain = isCustomDomain;
             return this;
@@ -262,6 +277,7 @@ public class TOSClientConfiguration {
         public TOSClientConfiguration build() {
             TOSClientConfiguration tosClientConfiguration = new TOSClientConfiguration();
             tosClientConfiguration.enableCrc = this.enableCrc;
+            tosClientConfiguration.disableTrailerHeader = this.disableTrailerHeader;
             tosClientConfiguration.endpoint = this.endpoint;
             tosClientConfiguration.transportConfig = this.transportConfig;
             tosClientConfiguration.credentials = this.credentials;

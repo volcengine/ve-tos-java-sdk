@@ -20,13 +20,11 @@ import com.volcengine.tos.model.bucket.HeadBucketV2Input;
 import com.volcengine.tos.model.bucket.HeadBucketV2Output;
 import com.volcengine.tos.model.object.*;
 
-import java.io.ByteArrayInputStream;
-import java.io.FileInputStream;
-import java.io.InputStream;
-import java.io.UnsupportedEncodingException;
+import java.io.*;
 import java.lang.reflect.Field;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
+import java.nio.channels.FileChannel;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -41,6 +39,7 @@ public class TosObjectRequestHandler {
     private TosRequestFactory factory;
     private boolean clientAutoRecognizeContentType;
     private boolean enableCrcCheck;
+    private boolean useTrailerHeader;
     private boolean disableEncodingMeta;
     private final BucketCacheLock[] bucketCacheLocks;
 
@@ -112,6 +111,11 @@ public class TosObjectRequestHandler {
 
     public TosObjectRequestHandler setEnableCrcCheck(boolean enableCrcCheck) {
         this.enableCrcCheck = enableCrcCheck;
+        return this;
+    }
+
+    public TosObjectRequestHandler setUseTrailerHeader(boolean useTrailerHeader) {
+        this.useTrailerHeader = useTrailerHeader;
         return this;
     }
 
@@ -230,10 +234,21 @@ public class TosObjectRequestHandler {
             builder = builder.withQuery(TosHeader.QUERY_DOC_DST_TYPE, input.getDstType().toString());
         }
         builder = this.handleGenericInput(builder, input);
+        boolean useTrailerHeader = this.useTrailerHeader;
+        // 如果是 Range 下载，则启用 Trailer Header 机制，否则不启用 Trailer Header 机制；
+        if (StringUtils.isEmpty(input.getRange()) && (input.getOptions() == null || StringUtils.isEmpty(input.getOptions().getRange()))) {
+            useTrailerHeader = false;
+        }
+
+        if (useTrailerHeader) {
+            builder.withHeader(TosHeader.HEADER_ACCEPT_ENCODING, Consts.TOS_RAW_TRAILER);
+            builder.withHeader(TosHeader.HEADER_TRAILER, TosHeader.HEADER_HASH_RANGE_CRC64ECMA);
+        }
+
         TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
         try {
             TosResponse response = objectHandler.doRequest(req, getExpectedCodes(input.getAllSettedHeaders()));
-            return buildGetObjectV2Output(response, input.getRateLimiter(), input.getDataTransferListener());
+            return buildGetObjectV2Output(response, input.getRateLimiter(), input.getDataTransferListener(), useTrailerHeader);
         } catch (TosException ex) {
             throw ex.setRequestUrl(req.toURL().toString());
         }
@@ -254,7 +269,7 @@ public class TosObjectRequestHandler {
     }
 
     private GetObjectV2Output buildGetObjectV2Output(TosResponse response, RateLimiter rateLimiter,
-                                                     DataTransferListener dataTransferListener) {
+                                                     DataTransferListener dataTransferListener, boolean useTrailerHeader) {
         GetObjectBasicOutput basicOutput = new GetObjectBasicOutput()
                 .setRequestInfo(response.RequestInfo()).parseFromTosResponse(response);
         InputStream content = response.getInputStream();
@@ -264,7 +279,10 @@ public class TosObjectRequestHandler {
         if (dataTransferListener != null) {
             content = new SimpleDataTransferListenInputStream(content, dataTransferListener, response.getContentLength());
         }
-        if (this.enableCrcCheck && response.getStatusCode() != HttpStatus.PARTIAL_CONTENT) {
+        if (useTrailerHeader && this.checkTrailerHeaderFromServer(response)) {
+            content = new TosRawTrailerInputStream(content, basicOutput.getContentLength(),
+                    response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_TRAILER));
+        } else if (this.enableCrcCheck && response.getStatusCode() != HttpStatus.PARTIAL_CONTENT) {
             // 开启 crc 校验且非 Range 下载
             String serverCrc64ecma = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_CRC64);
             if (StringUtils.isNotEmpty(serverCrc64ecma)) {
@@ -274,6 +292,11 @@ public class TosObjectRequestHandler {
 
         return new GetObjectV2Output(basicOutput, new TosObjectInputStream(content))
                 .setHook(new DefaultAbortTosObjectInputStreamHook(content, response.getSource()));
+    }
+
+    private boolean checkTrailerHeaderFromServer(TosResponse response) {
+        String contentEncoding = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_CONTENT_ENCODING);
+        return StringUtils.isNotEmpty(contentEncoding) && contentEncoding.startsWith(Consts.TOS_RAW_TRAILER);
     }
 
     public HeadObjectV2Output headObject(HeadObjectV2Input input) throws TosException {
@@ -360,7 +383,6 @@ public class TosObjectRequestHandler {
         ensureValidKey(input.getKey());
         content = ensureNotNullContent(content);
         RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), input.getAllSettedHeaders())
-                .withContentLength(input.getContentLength())
                 .withHeader(TosHeader.HEADER_CALLBACK, input.getCallback())
                 .withHeader(TosHeader.HEADER_CALLBACK_VAR, input.getCallbackVar())
                 .withHeader(TosHeader.HEADER_X_IF_MATCH, input.getIfMatch())
@@ -368,15 +390,81 @@ public class TosObjectRequestHandler {
         if (input.isForbidOverwrite()) {
             builder = builder.withHeader(TosHeader.HEADER_FORBID_OVERWRITE, "true");
         }
+
         addContentType(builder, input.getKey());
         builder = this.handleGenericInput(builder, input);
+        boolean useTrailerHeader = this.prepareTrailerHeader(builder, input.getOptions(), input.getContentLength(), content);
         TosRequest req = this.factory.build(builder, HttpMethod.PUT, content)
                 .setEnableCrcCheck(this.enableCrcCheck)
                 .setRateLimiter(input.getRateLimiter())
                 .setDataTransferListener(input.getDataTransferListener())
-                .setReadLimit(input.getReadLimit());
+                .setReadLimit(input.getReadLimit())
+                .setUseTrailerHeader(useTrailerHeader);
         setRetryStrategy(req, content);
         return objectHandler.doRequest(req, HttpStatus.OK, this::buildPutObjectOutput);
+    }
+
+    private boolean prepareTrailerHeader(RequestBuilder builder, ObjectMetaRequestOptions options, long contentLength, InputStream content) {
+        if (contentLength >= 0) {
+            builder.withContentLength(contentLength);
+        } else if (StringUtils.isNotEmpty(builder.getHeaders().get(TosHeader.HEADER_CONTENT_LENGTH))) {
+            try {
+                long cl = Long.parseLong(builder.getHeaders().get(TosHeader.HEADER_CONTENT_LENGTH));
+                builder.withContentLength(cl >= 0 ? cl : -1L);
+            } catch (NumberFormatException e) {
+                TosUtils.getLogger().debug("tos: try to get content length from header failed, ", e);
+            }
+        }
+
+        if (content instanceof FileInputStream && contentLength < 0) {
+            // 文件流，尝试获取文件长度
+            try {
+                FileChannel channel = ((FileInputStream) content).getChannel();
+                builder.withContentLength(channel.size());
+            } catch (IOException e) {
+                TosUtils.getLogger().debug("tos: try to get content length from file failed, ", e);
+            }
+        }
+        builder.setSkipTryResolveContentLength(true);
+        if (!this.checkUseTrailerHeader(options, builder.getContentLength())) {
+            return false;
+        }
+        builder.withHeader(TosHeader.HEADER_CONTENT_SHA256, Consts.STREAMING_UNSIGNED_PAYLOAD_TRAILER);
+        builder.withHeader(TosHeader.HEADER_TRAILER, TosHeader.HEADER_CRC64);
+        if (options == null || StringUtils.isEmpty(options.getContentEncoding())) {
+            builder.withHeader(TosHeader.HEADER_CONTENT_ENCODING, Consts.TOS_CHUNKED);
+        } else {
+            builder.withHeader(TosHeader.HEADER_CONTENT_ENCODING, Consts.TOS_CHUNKED + "," + options.getContentEncoding());
+        }
+
+        // has content length, calc real content length
+        if (builder.getContentLength() > 0) {
+            builder.withHeader(TosHeader.HEADER_DECODED_CONTENT_LENGTH, String.valueOf(builder.getContentLength()));
+            builder.getHeaders().remove(TosHeader.HEADER_CONTENT_LENGTH);
+            // data content length
+            // length of hex data content length
+            // length of hex 0
+            // length of crc64 header
+            // length of :
+            // length of base64
+            // total length of /r/n
+            builder.withContentLength(builder.getContentLength() + Long.toHexString(builder.getContentLength()).length() + 1 + TosHeader.HEADER_CRC64.length() + 1 + 12 + 10);
+        }
+        return true;
+    }
+
+    private boolean checkUseTrailerHeader(ObjectMetaRequestOptions options, long contentLength) {
+        // 上传 0 字节数据时，不启用 Trailer Header 机制
+        if (contentLength == 0) {
+            return false;
+        }
+
+        boolean useTrailerHeader = this.useTrailerHeader;
+        // 请求参数携带了 ContentMD5 或 ContentSHA256，则不启用 Trailer Header 机制
+        if (options != null && (StringUtils.isNotEmpty(options.getContentMD5()) || StringUtils.isNotEmpty(options.getContentSHA256()))) {
+            useTrailerHeader = false;
+        }
+        return useTrailerHeader;
     }
 
     private InputStream ensureNotNullContent(InputStream content) {
@@ -401,6 +489,8 @@ public class TosObjectRequestHandler {
                 .setSseCustomerAlgorithm(res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_SSE_CUSTOMER_ALGORITHM))
                 .setSseCustomerKeyMD5(res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_SSE_CUSTOMER_KEY_MD5))
                 .setSseCustomerKey(res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_SSE_CUSTOMER_KEY))
+                .setServerSideEncryption(res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_SSE))
+                .setServerSideEncryptionKeyID(res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_SSE_KEY_ID))
                 .setCallbackResult(callbackResult);
     }
 
@@ -631,7 +721,11 @@ public class TosObjectRequestHandler {
             return output.setRequestInfo(response.RequestInfo())
                     .setVersionID(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_VERSIONID))
                     .setSourceVersionID(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_COPY_SOURCE_VERSION_ID))
-                    .setHashCrc64ecma(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_CRC64));
+                    .setHashCrc64ecma(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_CRC64))
+                    .setSsecAlgorithm(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_SSE_CUSTOMER_ALGORITHM))
+                    .setSsecKeyMD5(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_SSE_CUSTOMER_KEY_MD5))
+                    .setServerSideEncryption(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_SSE))
+                    .setServerSideEncryptionKeyID(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_SSE_KEY_ID));
         } catch (TosClientException e) {
             ServerExceptionJson errMsg = PayloadConverter.parsePayload(rspMsg,
                     new TypeReference<ServerExceptionJson>() {
@@ -666,6 +760,10 @@ public class TosObjectRequestHandler {
                     });
             return new UploadPartCopyV2Output().requestInfo(response.RequestInfo())
                     .copySourceVersionID(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_COPY_SOURCE_VERSION_ID))
+                    .setServerSideEncryptionKeyID(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_SSE))
+                    .setServerSideEncryptionKeyID(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_SSE_KEY_ID))
+                    .setSsecAlgorithm(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_SSE_CUSTOMER_ALGORITHM))
+                    .setSsecKeyMD5(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_SSE_CUSTOMER_KEY_MD5))
                     .partNumber(input.getPartNumber()).etag(out.getEtag()).lastModified(out.getLastModified());
         } catch (TosClientException e) {
             ServerExceptionJson errMsg = PayloadConverter.parsePayload(rspMsg,
@@ -841,7 +939,9 @@ public class TosObjectRequestHandler {
                 .setEncodingType(upload.getEncodingType())
                 .setSseCustomerAlgorithm(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_SSE_CUSTOMER_ALGORITHM))
                 .setSseCustomerMD5(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_SSE_CUSTOMER_KEY_MD5))
-                .setSseCustomerKey(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_SSE_CUSTOMER_KEY));
+                .setSseCustomerKey(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_SSE_CUSTOMER_KEY))
+                .setServerSideEncryption(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_SSE))
+                .setServerSideEncryptionKeyID(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_SSE_KEY_ID));
     }
 
     private UploadPartV2Output buildUploadPartV2Output(TosResponse res, int partNumber) {
@@ -849,6 +949,8 @@ public class TosObjectRequestHandler {
                 .setPartNumber(partNumber).setEtag(res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_ETAG))
                 .setSsecAlgorithm(res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_SSE_CUSTOMER_ALGORITHM))
                 .setSsecKeyMD5(res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_SSE_CUSTOMER_KEY_MD5))
+                .setServerSideEncryption(res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_SSE))
+                .setServerSideEncryptionKeyID(res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_SSE_KEY_ID))
                 .setHashCrc64ecma(res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_CRC64));
     }
 
@@ -861,13 +963,16 @@ public class TosObjectRequestHandler {
         ensureValidKey(input.getKey());
         RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), input.getAllSettedHeaders())
                 .withQuery("uploadId", input.getUploadID())
-                .withQuery("partNumber", TosUtils.convertInteger(input.getPartNumber()))
-                .withContentLength(contentLength);
+                .withQuery("partNumber", TosUtils.convertInteger(input.getPartNumber()));
         builder = this.handleGenericInput(builder, input);
+
+        boolean useTrailerHeader = this.prepareTrailerHeader(builder, input.getOptions(), contentLength, content);
         TosRequest req = this.factory.build(builder, HttpMethod.PUT, content)
                 .setEnableCrcCheck(this.enableCrcCheck).setRateLimiter(input.getRateLimiter())
                 .setDataTransferListener(input.getDataTransferListener())
-                .setReadLimit(input.getReadLimit());
+                .setReadLimit(input.getReadLimit())
+                .setUseTrailerHeader(useTrailerHeader);
+
         setRetryStrategy(req, content);
         return objectHandler.doRequest(req, HttpStatus.OK, response -> buildUploadPartV2Output(response, input.getPartNumber()));
     }
@@ -942,6 +1047,8 @@ public class TosObjectRequestHandler {
         }
         return output.setRequestInfo(response.RequestInfo())
                 .setVersionID(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_VERSIONID))
+                .setServerSideEncryption(TosHeader.HEADER_SSE)
+                .setServerSideEncryptionKeyID(TosHeader.HEADER_SSE_KEY_ID)
                 .setHashCrc64ecma(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_CRC64));
     }
 

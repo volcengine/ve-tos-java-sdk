@@ -20,6 +20,7 @@ public interface TosHeader {
     String HEADER_IF_MATCH = "If-Match";
     String HEADER_IF_NONE_MATCH = "If-None-Match";
     String HEADER_RANGE = "Range";
+    String HEADER_ACCEPT_ENCODING = "Accept-Encoding";
     String HEADER_CONTENT_RANGE = "Content-Range";
     String HEADER_LOCATION = "Location";
     String HEADER_RETRY_AFTER = "Retry-After";
@@ -30,6 +31,10 @@ public interface TosHeader {
      * TOS Header
      */
     String HEADER_CONTENT_SHA256 = "X-Tos-Content-Sha256";
+    String HEADER_TRAILER = "x-tos-trailer";
+    String HEADER_HASH_RANGE_CRC64ECMA = "x-tos-hash-range-crc64ecma";
+    String HEADER_DECODED_CONTENT_LENGTH = "x-tos-decoded-content-length";
+    String HEADER_RAW_CONTENT_LENGTH = "x-tos-raw-content-length";
     String HEADER_VERSIONID = "X-Tos-Version-Id";
     String HEADER_DELETE_MARKER = "X-Tos-Delete-Marker";
     String HEADER_STORAGE_CLASS = "X-Tos-Storage-Class";
@@ -40,6 +45,7 @@ public interface TosHeader {
     String HEADER_SSE_CUSTOMER_KEY_MD5 = "X-Tos-Server-Side-Encryption-Customer-Key-MD5";
     String HEADER_SSE_CUSTOMER_KEY = "X-Tos-Server-Side-Encryption-Customer-Key";
     String HEADER_SSE = "x-tos-server-side-encryption";
+    String HEADER_SSE_KEY_ID = "x-tos-server-side-encryption-kms-key-id";
     String HEADER_CRC64 = "x-tos-hash-crc64ecma";
     String HEADER_CRC32 = "x-tos-hash-crc32c";
     String HEADER_REQUEST_ID = "X-Tos-Request-Id";

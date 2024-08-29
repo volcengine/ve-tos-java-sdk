@@ -41,6 +41,8 @@ class RequestHandler {
             throw new UnexpectedStatusCodeException(res.getStatusCode(), expectedCode, res.getRequesID());
         } catch (IOException e) {
             throw new TosClientException("tos: close body failed", e);
+        } catch (TosException e) {
+            throw e.setRequestUrl(request.toURL().toString());
         }
     }
 
@@ -67,7 +69,9 @@ class RequestHandler {
             }
             throw new UnexpectedStatusCodeException(res.getStatusCode(), expectedCode, res.getRequesID());
         } catch (IOException e) {
-            throw new TosClientException("tos: close body failed", e);
+            throw new TosClientException("tos: close body failed", e).setRequestUrl(request.toURL().toString());
+        } catch (TosException e) {
+            throw e.setRequestUrl(request.toURL().toString());
         }
     }
 

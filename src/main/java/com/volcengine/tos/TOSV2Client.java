@@ -81,6 +81,7 @@ public class TOSV2Client implements TOSV2 {
         this.objectRequestHandler = new TosObjectRequestHandler(this.transport, this.factory, this.bucketRequestHandler)
                 .setClientAutoRecognizeContentType(this.config.isClientAutoRecognizeContentType())
                 .setEnableCrcCheck(this.config.isEnableCrc())
+                .setUseTrailerHeader(!this.config.isDisableTrailerHeader())
                 .setDisableEncodingMeta(this.config.isDisableEncodingMeta());
         this.fileRequestHandler = new TosFileRequestHandler(objectRequestHandler, this.transport, this.factory)
                 .setEnableCrcCheck(this.config.isEnableCrc());

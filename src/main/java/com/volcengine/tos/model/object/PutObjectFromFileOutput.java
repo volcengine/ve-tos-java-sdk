@@ -71,6 +71,24 @@ public class PutObjectFromFileOutput {
         return this;
     }
 
+    public String getServerSideEncryptionKeyID() {
+        return this.putObjectOutput.getServerSideEncryptionKeyID();
+    }
+
+    public PutObjectFromFileOutput setServerSideEncryptionKeyID(String serverSideEncryptionKeyID) {
+        this.putObjectOutput.setServerSideEncryptionKeyID(serverSideEncryptionKeyID);
+        return this;
+    }
+
+    public String getServerSideEncryption() {
+        return this.putObjectOutput.getServerSideEncryption();
+    }
+
+    public PutObjectFromFileOutput setServerSideEncryption(String serverSideEncryption) {
+        this.putObjectOutput.setServerSideEncryption(serverSideEncryption);
+        return this;
+    }
+
     @Override
     public String toString() {
         return "PutObjectFromFileOutput{" +
@@ -81,6 +99,8 @@ public class PutObjectFromFileOutput {
                 ", sseCustomerAlgorithm='" + getSseCustomerAlgorithm() + '\'' +
                 ", sseCustomerKeyMD5='" + getSseCustomerKeyMD5() + '\'' +
                 ", sseCustomerKey='" + getSseCustomerKey() + '\'' +
+                ", serverSideEncryption='" + getServerSideEncryption() + '\'' +
+                ", serverSideEncryptionKeyID='" + getServerSideEncryptionKeyID() + '\'' +
                 '}';
     }
 

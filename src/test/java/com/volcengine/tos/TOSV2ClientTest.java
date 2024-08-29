@@ -7,6 +7,7 @@ import com.volcengine.tos.comm.HttpStatus;
 import com.volcengine.tos.comm.common.*;
 import com.volcengine.tos.credential.Credentials;
 import com.volcengine.tos.credential.*;
+import com.volcengine.tos.internal.util.FileUtils;
 import com.volcengine.tos.internal.util.StringUtils;
 import com.volcengine.tos.internal.util.TosUtils;
 import com.volcengine.tos.model.acl.*;
@@ -19,15 +20,18 @@ import okhttp3.*;
 import okhttp3.mockwebserver.MockResponse;
 import okhttp3.mockwebserver.MockWebServer;
 import okio.BufferedSink;
+import org.apache.commons.codec.binary.Hex;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InterruptedIOException;
+import java.io.*;
 import java.lang.reflect.Field;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
@@ -1245,6 +1249,19 @@ public class TOSV2ClientTest {
         } catch (TosServerException ex) {
             Assert.assertTrue(ex.getRequestID().length() > 0);
         }
+
+        ListBucketsV2Output output = client.listBuckets(input);
+        Assert.assertTrue(output.getRequestInfo().getRequestId().length() > 0);
+
+        input.setRequestHost("www.baidu.com");
+        try {
+            client.listBuckets(input);
+            Assert.assertTrue(false);
+        } catch (TosServerException ex) {
+            Assert.assertTrue(ex.getRequestID().length() > 0);
+            Assert.assertEquals(ex.getStatusCode(), 403);
+        }
+
     }
 
     @Test
@@ -1616,5 +1633,203 @@ public class TOSV2ClientTest {
 
         ListBucketsV2Output output = cli.listBuckets(new ListBucketsV2Input());
         Assert.assertTrue(output.getRequestInfo().getRequestId().length() > 0);
+    }
+
+    @Test
+    void teatReadByTrailerHeader() throws IOException {
+        for (boolean disableTrailerHeader : new boolean[]{true, false}) {
+            TOSV2 cli = new TOSV2ClientBuilder().build(TOSClientConfiguration.builder().region(Consts.region).endpoint(Consts.endpoint)
+                    .transportConfig(new TransportConfig().setWriteTimeoutMills(30000).setReadTimeoutMills(30000).setMaxRetryCount(0))
+                    .credentialsProvider(new StaticCredentialsProvider(Consts.accessKey, Consts.secretKey))
+                    .disableTrailerHeader(disableTrailerHeader).build());
+            String key = "read-by-trailer-header-" + System.currentTimeMillis();
+            PutObjectOutput poutput;
+            GetObjectV2Output goutput;
+            // small file
+            poutput = cli.putObject(new PutObjectInput().setBucket(Consts.bucket).setKey(key)
+                    .setContent(new ByteArrayInputStream("hello".getBytes()))
+                    .setOptions(new ObjectMetaRequestOptions().setContentEncoding("gzip")));
+            Assert.assertTrue(poutput.getRequestInfo().getRequestId().length() > 0);
+            goutput = cli.getObject(new GetObjectV2Input().setBucket(Consts.bucket).setKey(key).setRange("bytes=1-3"));
+            Assert.assertTrue(goutput.getRequestInfo().getRequestId().length() > 0);
+            Assert.assertEquals(goutput.getContentLength(), 3);
+            Assert.assertEquals(goutput.getContentEncoding(), "gzip");
+            Assert.assertEquals(StringUtils.toString(goutput.getContent(), ""), "ell");
+
+            poutput = cli.putObject(new PutObjectInput().setBucket(Consts.bucket).setKey(key)
+                    .setContent(new ByteArrayInputStream("hello".getBytes()))
+                    .setOptions(new ObjectMetaRequestOptions().setContentEncoding("gzip")));
+            Assert.assertTrue(poutput.getRequestInfo().getRequestId().length() > 0);
+            goutput = cli.getObject(new GetObjectV2Input().setBucket(Consts.bucket).setKey(key).setRange("bytes=0-" + ("hello".length() - 1)));
+            Assert.assertTrue(goutput.getRequestInfo().getRequestId().length() > 0);
+            Assert.assertEquals(goutput.getContentLength(), "hello".length());
+            Assert.assertEquals(goutput.getContentEncoding(), "gzip");
+            Assert.assertEquals(StringUtils.toString(goutput.getContent(), ""), "hello");
+
+            // big file
+            String sampleFilePath = "src/test/resources/uploadPartTest.zip";
+            UploadFileV2Output uoutput = cli.uploadFile(new UploadFileV2Input().setBucket(Consts.bucket).setKey(key)
+                    .setFilePath(sampleFilePath).setTaskNum(3).setEnableCheckpoint(true));
+            Assert.assertTrue(uoutput.getRequestInfo().getRequestId().length() > 0);
+            goutput = cli.getObject(new GetObjectV2Input().setBucket(Consts.bucket).setKey(key).setRange("bytes=100-65536"));
+            Assert.assertTrue(goutput.getRequestInfo().getRequestId().length() > 0);
+            Assert.assertEquals(goutput.getContentLength(), 65536 - 100 + 1);
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            int readOnce;
+            byte[] b = new byte[1024];
+            while ((readOnce = goutput.getContent().read(b)) != -1) {
+                bos.write(b, 0, readOnce);
+            }
+            byte[] dataFromServer = bos.toByteArray();
+            ByteArrayOutputStream bos2 = new ByteArrayOutputStream();
+            try (FileInputStream fis = new FileInputStream(sampleFilePath)) {
+                fis.skip(100);
+                int remaining = 65536 - 100 + 1;
+                int off = 3;
+                while ((readOnce = fis.read(b, off, b.length - 3)) != -1) {
+                    if (remaining <= readOnce) {
+                        bos2.write(b, off, remaining);
+                        break;
+                    }
+                    remaining -= readOnce;
+                    bos2.write(b, off, readOnce);
+                }
+            }
+            byte[] dataFromLocal = bos2.toByteArray();
+            Assert.assertEquals(dataFromServer, dataFromLocal);
+            Assert.assertTrue(StringUtils.isEmpty(goutput.getContentEncoding()));
+        }
+    }
+
+    @Test
+    void testWriteByTrailerHeader() throws IOException, NoSuchAlgorithmException {
+        for (boolean disableTrailerHeader : new boolean[]{true, false}) {
+            TOSV2 cli = new TOSV2ClientBuilder().build(TOSClientConfiguration.builder().region(Consts.region).endpoint(Consts.endpoint)
+                    .transportConfig(new TransportConfig().setWriteTimeoutMills(30000).setReadTimeoutMills(30000).setMaxRetryCount(0))
+                    .credentialsProvider(new StaticCredentialsProvider(Consts.accessKey, Consts.secretKey))
+                    .disableTrailerHeader(disableTrailerHeader).build());
+            String key = "write-by-trailer-header-" + System.currentTimeMillis();
+            PutObjectOutput poutput;
+            GetObjectV2Output goutput;
+            // transfer chunked
+            poutput = cli.putObject(new PutObjectInput().setBucket(Consts.bucket).setKey(key)
+                    .setContent(new ByteArrayInputStream("hello".getBytes())));
+            Assert.assertTrue(poutput.getRequestInfo().getRequestId().length() > 0);
+            goutput = cli.getObject(new GetObjectV2Input().setBucket(Consts.bucket).setKey(key));
+            Assert.assertTrue(goutput.getRequestInfo().getRequestId().length() > 0);
+            Assert.assertEquals(StringUtils.toString(goutput.getContent(), ""), "hello");
+
+            // empty content by transfer chunked
+            poutput = cli.putObject(new PutObjectInput().setBucket(Consts.bucket).setKey(key).setContent(new ByteArrayInputStream(new byte[0])));
+            Assert.assertTrue(poutput.getRequestInfo().getRequestId().length() > 0);
+
+            goutput = cli.getObject(new GetObjectV2Input().setBucket(Consts.bucket).setKey(key));
+            Assert.assertTrue(goutput.getRequestInfo().getRequestId().length() > 0);
+            Assert.assertEquals(goutput.getContentLength(), 0);
+
+            File tempFile = File.createTempFile("write-by-trailer-header", "write-by-trailer-header");
+            tempFile.deleteOnExit();
+            String data = "";
+            for (int i = 0; i < 10; i++) {
+                data += UUID.randomUUID().toString();
+            }
+            Path path = tempFile.toPath();
+            Files.write(path, data.getBytes(), StandardOpenOption.CREATE);
+
+            // file upload by transfer chunked
+            try (BufferedInputStream bis = new BufferedInputStream(new FileInputStream(tempFile))) {
+                poutput = cli.putObject(new PutObjectInput().setBucket(Consts.bucket).setKey(key).setContent(bis));
+                Assert.assertTrue(poutput.getRequestInfo().getRequestId().length() > 0);
+            }
+
+            goutput = cli.getObject(new GetObjectV2Input().setBucket(Consts.bucket).setKey(key));
+            Assert.assertTrue(goutput.getRequestInfo().getRequestId().length() > 0);
+            Assert.assertEquals(StringUtils.toString(goutput.getContent(), ""), data);
+
+
+            // specify length
+            poutput = cli.putObject(new PutObjectInput().setBucket(Consts.bucket).setKey(key).setContent(new ByteArrayInputStream("hello".getBytes())).setContentLength(3));
+            Assert.assertTrue(poutput.getRequestInfo().getRequestId().length() > 0);
+
+            goutput = cli.getObject(new GetObjectV2Input().setBucket(Consts.bucket).setKey(key));
+            Assert.assertTrue(goutput.getRequestInfo().getRequestId().length() > 0);
+            Assert.assertEquals(StringUtils.toString(goutput.getContent(), ""), "hel");
+
+            // use file input stream
+            try (FileInputStream fis = new FileInputStream(tempFile)) {
+                poutput = cli.putObject(new PutObjectInput().setBucket(Consts.bucket).setKey(key).setContent(fis));
+                Assert.assertTrue(poutput.getRequestInfo().getRequestId().length() > 0);
+            }
+
+            goutput = cli.getObject(new GetObjectV2Input().setBucket(Consts.bucket).setKey(key));
+            Assert.assertTrue(goutput.getRequestInfo().getRequestId().length() > 0);
+            Assert.assertEquals(StringUtils.toString(goutput.getContent(), ""), data);
+
+            // use file input stream and specify length
+            try (FileInputStream fis = new FileInputStream(tempFile)) {
+                poutput = cli.putObject(new PutObjectInput().setBucket(Consts.bucket).setKey(key)
+                        .setOptions(new ObjectMetaRequestOptions().setContentEncoding("deflate")).setContent(fis).setContentLength(10));
+                Assert.assertTrue(poutput.getRequestInfo().getRequestId().length() > 0);
+            }
+
+            goutput = cli.getObject(new GetObjectV2Input().setBucket(Consts.bucket).setKey(key));
+            Assert.assertTrue(goutput.getRequestInfo().getRequestId().length() > 0);
+            Assert.assertEquals(goutput.getContentEncoding(), "deflate");
+            Assert.assertEquals(StringUtils.toString(goutput.getContent(), ""), data.substring(0, 10));
+
+            // file upload by transfer chunked with limit
+            try (FileInputStream fis = new FileInputStream(tempFile)) {
+                InputStream in = FileUtils.getBoundedFileContent(fis, tempFile, tempFile.getPath(), 3, 10);
+                poutput = cli.putObject(new PutObjectInput().setBucket(Consts.bucket).setKey(key).setContent(in));
+                Assert.assertTrue(poutput.getRequestInfo().getRequestId().length() > 0);
+            }
+
+            goutput = cli.getObject(new GetObjectV2Input().setBucket(Consts.bucket).setKey(key));
+            Assert.assertTrue(goutput.getRequestInfo().getRequestId().length() > 0);
+            String data2 = StringUtils.toString(goutput.getContent(), "");
+            Assert.assertEquals(data2, data.substring(3, 3 + 10));
+
+            // empty content
+            poutput = cli.putObject(new PutObjectInput().setBucket(Consts.bucket).setKey(key).setContent(null).setContentLength(0));
+            Assert.assertTrue(poutput.getRequestInfo().getRequestId().length() > 0);
+
+            goutput = cli.getObject(new GetObjectV2Input().setBucket(Consts.bucket).setKey(key));
+            Assert.assertTrue(goutput.getRequestInfo().getRequestId().length() > 0);
+            Assert.assertEquals(goutput.getContentLength(), 0);
+
+            String sampleFilePath = "src/test/resources/uploadPartTest.zip";
+            UploadFileV2Output uoutput = cli.uploadFile(new UploadFileV2Input().setBucket(Consts.bucket).setKey(key)
+                    .setFilePath(sampleFilePath).setTaskNum(3).setEnableCheckpoint(true));
+            Assert.assertTrue(uoutput.getRequestInfo().getRequestId().length() > 0);
+
+            File tempFile2 = File.createTempFile("write-by-trailer-header", "write-by-trailer-header");
+            tempFile2.deleteOnExit();
+            GetObjectToFileOutput ggoutput = cli.getObjectToFile(new GetObjectToFileInput().setBucket(Consts.bucket)
+                    .setKey(key).setFilePath(tempFile2.getPath()));
+            Assert.assertTrue(ggoutput.getRequestInfo().getRequestId().length() > 0);
+
+            MessageDigest srcMd5;
+            try (FileInputStream inputStream = new FileInputStream(sampleFilePath)) {
+                srcMd5 = MessageDigest.getInstance("MD5");
+                byte[] buffer = new byte[8192];
+                int length;
+                while ((length = inputStream.read(buffer)) != -1) {
+                    srcMd5.update(buffer, 0, length);
+                }
+
+            }
+
+            MessageDigest dstMd5;
+            try (FileInputStream inputStream = new FileInputStream(tempFile2.getPath())) {
+                dstMd5 = MessageDigest.getInstance("MD5");
+                byte[] buffer = new byte[8192];
+                int length;
+                while ((length = inputStream.read(buffer)) != -1) {
+                    dstMd5.update(buffer, 0, length);
+                }
+            }
+
+            Assert.assertEquals(new String(Hex.encodeHex(srcMd5.digest())), new String(Hex.encodeHex(dstMd5.digest())));
+        }
     }
 }

@@ -18,6 +18,8 @@ public class CompleteMultipartUploadV2Output {
     @JsonProperty("CompletedParts")
     private List<UploadedPartV2> uploadedPartV2List;
     private String versionID;
+    private String serverSideEncryption;
+    private String serverSideEncryptionKeyID;
     private String hashCrc64ecma;
     private String callbackResult;
 
@@ -75,6 +77,24 @@ public class CompleteMultipartUploadV2Output {
         return this;
     }
 
+    public String getServerSideEncryption() {
+        return serverSideEncryption;
+    }
+
+    public CompleteMultipartUploadV2Output setServerSideEncryption(String serverSideEncryption) {
+        this.serverSideEncryption = serverSideEncryption;
+        return this;
+    }
+
+    public String getServerSideEncryptionKeyID() {
+        return serverSideEncryptionKeyID;
+    }
+
+    public CompleteMultipartUploadV2Output setServerSideEncryptionKeyID(String serverSideEncryptionKeyID) {
+        this.serverSideEncryptionKeyID = serverSideEncryptionKeyID;
+        return this;
+    }
+
     public String getHashCrc64ecma() {
         return hashCrc64ecma;
     }
@@ -112,6 +132,8 @@ public class CompleteMultipartUploadV2Output {
                 ", location='" + location + '\'' +
                 ", uploadedPartV2List=" + uploadedPartV2List +
                 ", versionID='" + versionID + '\'' +
+                ", serverSideEncryption='" + serverSideEncryption + '\'' +
+                ", serverSideEncryptionKeyID='" + serverSideEncryptionKeyID + '\'' +
                 ", hashCrc64ecma='" + hashCrc64ecma + '\'' +
                 ", callbackResult='" + callbackResult + '\'' +
                 '}';

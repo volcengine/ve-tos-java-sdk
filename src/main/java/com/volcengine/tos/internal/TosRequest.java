@@ -23,6 +23,7 @@ public class TosRequest {
      * only used for putObject/uploadPart/appendObject
      */
     private boolean enableCrcCheck;
+    private boolean useTrailerHeader;
     /**
      * only used for appendObject
      */
@@ -207,6 +208,15 @@ public class TosRequest {
 
     public TosRequest setEnableCrcCheck(boolean enableCrcCheck) {
         this.enableCrcCheck = enableCrcCheck;
+        return this;
+    }
+
+    public boolean isUseTrailerHeader() {
+        return useTrailerHeader;
+    }
+
+    public TosRequest setUseTrailerHeader(boolean useTrailerHeader) {
+        this.useTrailerHeader = useTrailerHeader;
         return this;
     }
 

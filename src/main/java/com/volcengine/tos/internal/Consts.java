@@ -11,12 +11,16 @@ public interface Consts {
     String SCHEME_HTTP = "http";
     String SCHEME_HTTPS = "https";
     String SDK_NAME = "ve-tos-java-sdk";
-    String SDK_VERSION = "v2.8.2";
+    String SDK_VERSION = "v2.8.3";
     String OS_NAME = System.getProperty("os.name");
     String OS_ARCH = System.getProperty("os.arch");
     String JAVA_VERSION = System.getProperty("java.version", "0");
 
     String SDK_LOG_NAMESPACE = "com.volcengine.tos";
+    String TOS_CHUNKED = "tos-chunked";
+    String STREAMING_UNSIGNED_PAYLOAD_TRAILER = "STREAMING-UNSIGNED-PAYLOAD-TRAILER";
+    String TOS_RAW_TRAILER = "tos-raw-trailer";
+    int DEFAULT_TOS_CHUNK_SIZE = 64 * 1024;
 
     int MIN_PART_NUM = 1;
     int MAX_PART_NUM = 10000;
@@ -62,6 +66,7 @@ public interface Consts {
 
     boolean DEFAULT_AUTO_RECOGNIZE_CONTENT_TYPE = true;
     boolean DEFAULT_ENABLE_CRC = true;
+    boolean DEFAULT_DISABLE_TRAILER_HEADER = true;
     boolean DEFAULT_ENABLE_VERIFY_SSL = true;
 
     int DEFAULT_MAX_CONNECTIONS = 1024;

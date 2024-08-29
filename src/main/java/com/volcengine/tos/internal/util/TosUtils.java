@@ -302,6 +302,16 @@ public class TosUtils {
         return meta;
     }
 
+    public static byte[] longToByteArray(long value) {
+        byte[] byteArray = new byte[8];
+
+        for (int i = 0; i < byteArray.length; i++) {
+            byteArray[i] = (byte) (value >> 8 * (byteArray.length - 1 - i));
+        }
+
+        return byteArray;
+    }
+
     public static OkHttpClient.Builder ignoreCertificate(OkHttpClient.Builder builder) throws TosClientException {
         TosUtils.getLogger().info("tos: ignore ssl certificate verification");
         try {

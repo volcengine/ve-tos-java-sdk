@@ -38,7 +38,7 @@ public class EcsCredentialsProvider implements CredentialsProvider, Closeable {
         if (StringUtils.isEmpty(roleName)) {
             throw new TosClientException("ecs role name is empty", null);
         }
-        if (StringUtils.isEmpty(roleName)) {
+        if (StringUtils.isEmpty(url)) {
             this.url = DEFAULT_META_SERVICE_URL;
         } else {
             this.url = url;

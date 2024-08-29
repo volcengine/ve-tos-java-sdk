@@ -36,6 +36,7 @@ public class RequestBuilder {
     private boolean autoRecognizeContentType = true;
     private String preHashCrc64ecma;
     private boolean disableEncodingMeta;
+    private boolean skipTryResolveContentLength;
 
     public RequestBuilder(){}
 
@@ -118,6 +119,10 @@ public class RequestBuilder {
         this.autoRecognizeContentType = autoRecognizeContentType;
     }
 
+    public long getContentLength() {
+        return this.contentLength;
+    }
+
     public RequestBuilder withContentLength(long length){
         this.contentLength = length;
         return this;
@@ -164,9 +169,16 @@ public class RequestBuilder {
         return this;
     }
 
+    public RequestBuilder setSkipTryResolveContentLength(boolean skipTryResolveContentLength) {
+        this.skipTryResolveContentLength = skipTryResolveContentLength;
+        return this;
+    }
+
     private TosRequest build(String method, InputStream stream) throws IOException {
         TosRequest request = genTosRequest(method, stream);
-        if (request.getContent() != null){
+        if (this.skipTryResolveContentLength) {
+            request.setContentLength(this.contentLength);
+        } else if (request.getContent() != null) {
             tryResolveContentLength(request);
         }
         Map<String, String> headers = request.getHeaders();
@@ -182,7 +194,7 @@ public class RequestBuilder {
         } else if (StringUtils.isNotEmpty(headers.get(TosHeader.HEADER_CONTENT_LENGTH))) {
             try{
                 long cl = Long.parseLong(headers.get(TosHeader.HEADER_CONTENT_LENGTH));
-                request.setContentLength(cl > 0 ? cl : -1L);
+                request.setContentLength(cl >= 0 ? cl : -1L);
             } catch (NumberFormatException e) {
                 TosUtils.getLogger().debug("tos: try to get content length from header failed, ", e);
                 request.setContentLength(-1L);

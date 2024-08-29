@@ -13,6 +13,8 @@ public class Condition {
     private String keySuffix;
     @JsonProperty("AllowHost")
     private List<String> allowHost;
+    @JsonProperty("HttpMethod")
+    private List<String> httpMethod;
 
     public int getHttpCode() {
         return httpCode;
@@ -50,13 +52,23 @@ public class Condition {
         return this;
     }
 
+    public List<String> getHttpMethod() {
+        return httpMethod;
+    }
+
+    public Condition setHttpMethod(List<String> httpMethod) {
+        this.httpMethod = httpMethod;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "Condition{" +
                 "httpCode=" + httpCode +
                 ", keyPrefix='" + keyPrefix + '\'' +
                 ", keySuffix='" + keySuffix + '\'' +
-                ", allowHost=" + allowHost +
+                ", allowHost=" + allowHost + '\'' +
+                ", httpMethod=" + httpMethod + '\'' +
                 '}';
     }
 
@@ -69,6 +81,7 @@ public class Condition {
         private String keyPrefix;
         private String keySuffix;
         private List<String> allowHost;
+        private List<String> httpMethod;
 
         private ConditionBuilder() {
         }
@@ -93,12 +106,18 @@ public class Condition {
             return this;
         }
 
+        public ConditionBuilder httpMethod(List<String> httpMethod) {
+            this.httpMethod = httpMethod;
+            return this;
+        }
+
         public Condition build() {
             Condition condition = new Condition();
             condition.setHttpCode(httpCode);
             condition.setKeyPrefix(keyPrefix);
             condition.setKeySuffix(keySuffix);
             condition.setAllowHost(allowHost);
+            condition.setHttpMethod(httpMethod);
             return condition;
         }
     }
