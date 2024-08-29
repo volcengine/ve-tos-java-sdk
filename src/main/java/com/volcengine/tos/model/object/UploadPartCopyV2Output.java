@@ -10,6 +10,10 @@ public class UploadPartCopyV2Output {
     private String etag;
     private Date lastModified;
     private String copySourceVersionID;
+    private String ssecAlgorithm;
+    private String ssecKeyMD5;
+    private String serverSideEncryption;
+    private String serverSideEncryptionKeyID;
 
     public RequestInfo getRequestInfo() {
         return requestInfo;
@@ -38,6 +42,42 @@ public class UploadPartCopyV2Output {
         return this;
     }
 
+    public String getSsecAlgorithm() {
+        return ssecAlgorithm;
+    }
+
+    public UploadPartCopyV2Output setSsecAlgorithm(String ssecAlgorithm) {
+        this.ssecAlgorithm = ssecAlgorithm;
+        return this;
+    }
+
+    public String getSsecKeyMD5() {
+        return ssecKeyMD5;
+    }
+
+    public UploadPartCopyV2Output setSsecKeyMD5(String ssecKeyMD5) {
+        this.ssecKeyMD5 = ssecKeyMD5;
+        return this;
+    }
+
+    public String getServerSideEncryption() {
+        return serverSideEncryption;
+    }
+
+    public UploadPartCopyV2Output setServerSideEncryption(String serverSideEncryption) {
+        this.serverSideEncryption = serverSideEncryption;
+        return this;
+    }
+
+    public String getServerSideEncryptionKeyID() {
+        return serverSideEncryptionKeyID;
+    }
+
+    public UploadPartCopyV2Output setServerSideEncryptionKeyID(String serverSideEncryptionKeyID) {
+        this.serverSideEncryptionKeyID = serverSideEncryptionKeyID;
+        return this;
+    }
+
     public Date getLastModified() {
         return lastModified;
     }
@@ -62,6 +102,10 @@ public class UploadPartCopyV2Output {
                 "requestInfo=" + requestInfo +
                 ", partNumber=" + partNumber +
                 ", etag='" + etag + '\'' +
+                ", ssecAlgorithm='" + ssecAlgorithm + '\'' +
+                ", ssecKeyMD5='" + ssecKeyMD5 + '\'' +
+                ", serverSideEncryption='" + serverSideEncryption + '\'' +
+                ", serverSideEncryptionKeyID='" + serverSideEncryptionKeyID + '\'' +
                 ", lastModified=" + lastModified +
                 ", copySourceVersionID='" + copySourceVersionID + '\'' +
                 '}';

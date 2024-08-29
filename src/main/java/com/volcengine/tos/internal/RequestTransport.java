@@ -14,6 +14,7 @@ import com.volcengine.tos.internal.util.CRC64Utils;
 import com.volcengine.tos.internal.util.ParamsChecker;
 import com.volcengine.tos.internal.util.StringUtils;
 import com.volcengine.tos.internal.util.TosUtils;
+import com.volcengine.tos.internal.util.base64.Base64;
 import com.volcengine.tos.internal.util.dnscache.DnsCacheService;
 import com.volcengine.tos.internal.util.dnscache.DnsCacheServiceImpl;
 import com.volcengine.tos.internal.util.ratelimit.RateLimitedInputStream;
@@ -48,7 +49,7 @@ public class RequestTransport implements Transport, Closeable {
     private boolean disableEncodingMeta;
     private DnsCacheService dnsCacheService;
 
-    public RequestTransport(TransportConfig config){
+    public RequestTransport(TransportConfig config) {
         ParamsChecker.ensureNotNull(config, "TransportConfig");
         int maxConnections = config.getMaxConnections() > 0 ? config.getMaxConnections() : Consts.DEFAULT_MAX_CONNECTIONS;
         int maxIdleConnectionTimeMills = config.getIdleConnectionTimeMills() > 0 ?
@@ -76,7 +77,7 @@ public class RequestTransport implements Transport, Closeable {
             // will ignore it by the following method.
             builder = TosUtils.ignoreCertificate(builder);
         }
-        if (StringUtils.isNotEmpty(config.getProxyHost()) && config.getProxyPort() > 0 ) {
+        if (StringUtils.isNotEmpty(config.getProxyHost()) && config.getProxyPort() > 0) {
             addProxyConfig(config, builder);
         }
 
@@ -169,8 +170,8 @@ public class RequestTransport implements Transport, Closeable {
         int reqTimes = 1;
         wrapTosRequestContent(tosRequest);
         Request lastRequest = null;
-        for (int i = 0; i < maxRetries+1; i++, reqTimes++) {
-            try{
+        for (int i = 0; i < maxRetries + 1; i++, reqTimes++) {
+            try {
                 if (tosRequest.getContent() != null && (tosRequest.getContent() instanceof RetryCountNotifier)) {
                     ((RetryCountNotifier) tosRequest.getContent()).setRetryCount(i);
                 }
@@ -185,8 +186,10 @@ public class RequestTransport implements Transport, Closeable {
                 lastRequest = builder.build();
                 response = client.newCall(lastRequest).execute();
                 if (response.code() >= HttpStatus.INTERNAL_SERVER_ERROR
-                || response.code() == HttpStatus.TOO_MANY_REQUESTS) {
-                    // retry on 5xx, 429
+                        || response.code() == HttpStatus.TOO_MANY_REQUESTS
+                        || response.code() == HttpStatus.REQUEST_TIMEOUT
+                        || (response.code() == HttpStatus.BAD_REQUEST && "0005-00000044".equals(response.header(TosHeader.HEADER_EC)))) {
+                    // retry on 5xx, 429, 400+0005-00000044
                     if (tosRequest.isRetryableOnServerException()) {
                         // the request can be retried.
                         if (i != maxRetries) {
@@ -216,7 +219,7 @@ public class RequestTransport implements Transport, Closeable {
                 throw new TosClientException("tos: request interrupted", e);
             } catch (IOException e) {
                 if (tosRequest.isRetryableOnClientException() && !"mark/reset not supported".equals(e.toString())) {
-                    try{
+                    try {
                         if (i == maxRetries) {
                             // last time does not need to sleep
                             printAccessLogFailed(e);
@@ -245,7 +248,7 @@ public class RequestTransport implements Transport, Closeable {
         }
         long end = System.currentTimeMillis();
         ParamsChecker.ensureNotNull(response, "okhttp response");
-        printAccessLogSucceed(response.code(), response.header(TosHeader.HEADER_REQUEST_ID), end-start, reqTimes);
+        printAccessLogSucceed(response.code(), response.header(TosHeader.HEADER_REQUEST_ID), end - start, reqTimes);
         checkCrc(tosRequest, response);
         InputStream inputStream = response.body() == null ? null : response.body().byteStream();
         return new TosResponse().setStatusCode(response.code())
@@ -298,19 +301,18 @@ public class RequestTransport implements Transport, Closeable {
                     byte[] data = new byte[request.getContent().available()];
                     int exact = request.getContent().read(data);
                     if (exact != -1 && exact != data.length) {
-                        throw new IOException("expected "+data.length+" bytes, but got "+exact+" bytes.");
+                        throw new IOException("expected " + data.length + " bytes, but got " + exact + " bytes.");
                     }
                     builder.post(RequestBody.create(getMediaType(request), data));
-                } else if (request.getContent() != null){
+                } else if (request.getContent() != null) {
                     if (this.except100ContinueThreshold > 0 && (request.getContentLength() < 0
                             || request.getContentLength() > this.except100ContinueThreshold)) {
                         builder.addHeader(TosHeader.HEADER_EXPECT, "100-continue");
                     }
                     // only appendObject use, not support chunk
                     // make sure the content length is set
-                    builder.post(new WrappedTransportRequestBody(
-                            getMediaType(request), request.getContent(), request.getContentLength()));
-                } else if (request.getData() != null){
+                    builder.post(new WrappedTransportRequestBody(getMediaType(request), request));
+                } else if (request.getData() != null) {
                     if (this.except100ContinueThreshold > 0 && request.getData().length > this.except100ContinueThreshold) {
                         builder.addHeader(TosHeader.HEADER_EXPECT, "100-continue");
                     }
@@ -325,9 +327,8 @@ public class RequestTransport implements Transport, Closeable {
                             || request.getContentLength() > this.except100ContinueThreshold)) {
                         builder.addHeader(TosHeader.HEADER_EXPECT, "100-continue");
                     }
-                    builder.put(new WrappedTransportRequestBody(
-                            getMediaType(request), request.getContent(), request.getContentLength()));
-                } else if (request.getData() != null){
+                    builder.put(new WrappedTransportRequestBody(getMediaType(request), request));
+                } else if (request.getData() != null) {
                     if (this.except100ContinueThreshold > 0 && request.getData().length > this.except100ContinueThreshold) {
                         builder.addHeader(TosHeader.HEADER_EXPECT, "100-continue");
                     }
@@ -367,6 +368,10 @@ public class RequestTransport implements Transport, Closeable {
         // 确保 TosRequest 拿到的 InputStream 为外部传入，没有封装过，统一在此方法中进行封装
         InputStream originalInputStream = request.getContent();
         InputStream wrappedInputStream = null;
+        int readLimit = Consts.DEFAULT_TOS_BUFFER_STREAM_SIZE;
+        if (request.getReadLimit() > 0) {
+            readLimit = request.getReadLimit();
+        }
         if (originalInputStream.markSupported()) {
             // 流本身支持 mark&reset，不做封装
             wrappedInputStream = originalInputStream;
@@ -375,16 +380,11 @@ public class RequestTransport implements Transport, Closeable {
                 // 文件流封装成可重试的流
                 wrappedInputStream = new TosRepeatableFileInputStream((FileInputStream) originalInputStream);
             } else {
-                wrappedInputStream = new BufferedInputStream(originalInputStream, Consts.DEFAULT_TOS_BUFFER_STREAM_SIZE);
+                wrappedInputStream = new BufferedInputStream(originalInputStream, readLimit);
             }
         }
-        if (originalInputStream.markSupported()) {
-            int readLimit = Consts.DEFAULT_TOS_BUFFER_STREAM_SIZE;
-            if (request.getReadLimit() > 0) {
-                readLimit = request.getReadLimit();
-            }
-            wrappedInputStream.mark(readLimit);
-        }
+
+        wrappedInputStream.mark(readLimit);
         if (request.getRateLimiter() != null) {
             wrappedInputStream = new RateLimitedInputStream(wrappedInputStream, request.getRateLimiter());
         }
@@ -392,7 +392,8 @@ public class RequestTransport implements Transport, Closeable {
             wrappedInputStream = new SimpleDataTransferListenInputStream(wrappedInputStream,
                     request.getDataTransferListener(), request.getContentLength());
         }
-        if (request.isEnableCrcCheck()) {
+
+        if (request.isUseTrailerHeader() || request.isEnableCrcCheck()) {
             // 此封装需保证放最外层，因为上传后需要对上传结果的 crc 进行校验。
             CRC64Checksum checksum = new CRC64Checksum(request.getCrc64InitValue());
             wrappedInputStream = new TosCheckedInputStream(wrappedInputStream, checksum);
@@ -457,7 +458,9 @@ public class RequestTransport implements Transport, Closeable {
 class WrappedTransportRequestBody extends RequestBody implements Closeable {
     private InputStream content;
     private final MediaType contentType;
+    private final boolean useTrailerHeader;
     private long contentLength;
+    private long decodedContentLength;
     private volatile long totalBytesRead = 0;
 
     WrappedTransportRequestBody(final MediaType contentType, final InputStream content, final long contentLength) {
@@ -468,6 +471,24 @@ class WrappedTransportRequestBody extends RequestBody implements Closeable {
         if (this.contentLength < 0) {
             // chunked
             this.contentLength = -1L;
+        }
+        this.decodedContentLength = this.contentLength;
+        this.useTrailerHeader = false;
+    }
+
+    WrappedTransportRequestBody(MediaType contentType, TosRequest request) {
+        ParamsChecker.ensureNotNull(request.getContent(), "Content");
+        this.content = request.getContent();
+        this.contentType = contentType;
+        this.contentLength = request.getContentLength();
+        if (this.contentLength < 0) {
+            // chunked
+            this.contentLength = -1L;
+        }
+        this.useTrailerHeader = request.isUseTrailerHeader();
+        this.decodedContentLength = this.contentLength;
+        if (this.useTrailerHeader && request.getHeaders() != null && request.getHeaders().containsKey(TosHeader.HEADER_DECODED_CONTENT_LENGTH)) {
+            this.decodedContentLength = Long.parseLong(request.getHeaders().get(TosHeader.HEADER_DECODED_CONTENT_LENGTH));
         }
     }
 
@@ -485,11 +506,51 @@ class WrappedTransportRequestBody extends RequestBody implements Closeable {
     public void writeTo(BufferedSink sink) throws IOException {
         this.reset();
         if (this.contentLength < 0) {
-            writeAllWithChunked(sink);
+            if (this.useTrailerHeader) {
+                this.writeAllWithChunkedWithTrailerHeader(sink);
+                this.writeTosChunkedTrailer(sink);
+                this.writeTrailerHeader(sink);
+            } else {
+                writeAllWithChunked(sink);
+            }
         } else {
-            writeAll(sink);
+            long remaining = this.decodedContentLength;
+            if (this.useTrailerHeader) {
+                this.writeTosChunkedHeader(sink, remaining);
+                this.writeAll(sink, remaining);
+                this.writeTosChunkedTrailer(sink);
+                this.writeTrailerHeader(sink);
+            } else {
+                this.writeAll(sink, remaining);
+            }
         }
     }
+
+    void writeTosChunkedHeader(BufferedSink sink, long chunkSize) throws IOException {
+        sink.writeUtf8(Long.toHexString(chunkSize));
+        sink.writeByte('\r');
+        sink.writeByte('\n');
+    }
+
+    void writeTosChunkedTrailer(BufferedSink sink) throws IOException {
+        if (this.totalBytesRead > 0) {
+            sink.writeByte('\r');
+            sink.writeByte('\n');
+        }
+        this.writeTosChunkedHeader(sink, 0);
+    }
+
+    void writeTrailerHeader(BufferedSink sink) throws IOException {
+        sink.writeUtf8(TosHeader.HEADER_CRC64);
+        sink.writeUtf8(":");
+        long crc64 = ((CheckedInputStream) this.content).getChecksum().getValue();
+        sink.write(Base64.encodeBase64(TosUtils.longToByteArray(crc64)));
+        sink.writeByte('\r');
+        sink.writeByte('\n');
+        sink.writeByte('\r');
+        sink.writeByte('\n');
+    }
+
 
     void reset() throws IOException {
         if (totalBytesRead > 0 && this.content != null) {
@@ -505,12 +566,11 @@ class WrappedTransportRequestBody extends RequestBody implements Closeable {
         }
     }
 
-    private void writeAll(BufferedSink sink) throws IOException {
+    private void writeAll(BufferedSink sink, long remaining) throws IOException {
         int bytesRead = 0;
         byte[] tmp = new byte[Consts.DEFAULT_READ_BUFFER_SIZE];
-        long remaining = this.contentLength;
         while (remaining > 0) {
-            int maxToRead = tmp.length < remaining ? tmp.length: (int) remaining;
+            int maxToRead = tmp.length < remaining ? tmp.length : (int) remaining;
             bytesRead = this.content.read(tmp, 0, maxToRead);
             if (bytesRead == -1) {
                 // eof
@@ -528,6 +588,18 @@ class WrappedTransportRequestBody extends RequestBody implements Closeable {
         // chunked
         bytesRead = this.content.read(tmp);
         while (bytesRead != -1) {
+            sink.write(tmp, 0, bytesRead);
+            totalBytesRead += bytesRead;
+            bytesRead = this.content.read(tmp);
+        }
+    }
+
+    private void writeAllWithChunkedWithTrailerHeader(BufferedSink sink) throws IOException {
+        int bytesRead = 0;
+        byte[] tmp = new byte[Consts.DEFAULT_TOS_CHUNK_SIZE];
+        bytesRead = this.content.read(tmp);
+        while (bytesRead != -1) {
+            this.writeTosChunkedHeader(sink, bytesRead);
             sink.write(tmp, 0, bytesRead);
             totalBytesRead += bytesRead;
             bytesRead = this.content.read(tmp);

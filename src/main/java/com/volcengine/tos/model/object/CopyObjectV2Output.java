@@ -17,6 +17,11 @@ public class CopyObjectV2Output {
     private Date lastModified;
     private String hashCrc64ecma;
 
+    private String ssecAlgorithm;
+    private String ssecKeyMD5;
+    private String serverSideEncryption;
+    private String serverSideEncryptionKeyID;
+
     public RequestInfo getRequestInfo() {
         return requestInfo;
     }
@@ -71,6 +76,42 @@ public class CopyObjectV2Output {
         return this;
     }
 
+    public String getSsecAlgorithm() {
+        return ssecAlgorithm;
+    }
+
+    public CopyObjectV2Output setSsecAlgorithm(String ssecAlgorithm) {
+        this.ssecAlgorithm = ssecAlgorithm;
+        return this;
+    }
+
+    public String getSsecKeyMD5() {
+        return ssecKeyMD5;
+    }
+
+    public CopyObjectV2Output setSsecKeyMD5(String ssecKeyMD5) {
+        this.ssecKeyMD5 = ssecKeyMD5;
+        return this;
+    }
+
+    public String getServerSideEncryption() {
+        return serverSideEncryption;
+    }
+
+    public CopyObjectV2Output setServerSideEncryption(String serverSideEncryption) {
+        this.serverSideEncryption = serverSideEncryption;
+        return this;
+    }
+
+    public String getServerSideEncryptionKeyID() {
+        return serverSideEncryptionKeyID;
+    }
+
+    public CopyObjectV2Output setServerSideEncryptionKeyID(String serverSideEncryptionKeyID) {
+        this.serverSideEncryptionKeyID = serverSideEncryptionKeyID;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "CopyObjectV2Output{" +
@@ -80,6 +121,10 @@ public class CopyObjectV2Output {
                 ", copySourceVersionID='" + copySourceVersionID + '\'' +
                 ", lastModified=" + lastModified +
                 ", hashCrc64ecma='" + hashCrc64ecma + '\'' +
+                ", ssecAlgorithm='" + ssecAlgorithm + '\'' +
+                ", ssecKeyMD5='" + ssecKeyMD5 + '\'' +
+                ", serverSideEncryption='" + serverSideEncryption + '\'' +
+                ", serverSideEncryptionKeyID='" + serverSideEncryptionKeyID + '\'' +
                 '}';
     }
 }

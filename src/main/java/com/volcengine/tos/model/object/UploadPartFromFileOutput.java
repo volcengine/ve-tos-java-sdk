@@ -53,6 +53,24 @@ public class UploadPartFromFileOutput {
         return this;
     }
 
+    public String getServerSideEncryption() {
+        return this.uploadPartV2Output.getServerSideEncryption();
+    }
+
+    public UploadPartFromFileOutput setServerSideEncryption(String serverSideEncryption) {
+        this.uploadPartV2Output.setServerSideEncryption(serverSideEncryption);
+        return this;
+    }
+
+    public String getServerSideEncryptionKeyID() {
+        return this.uploadPartV2Output.getServerSideEncryptionKeyID();
+    }
+
+    public UploadPartFromFileOutput setServerSideEncryptionKeyID(String serverSideEncryptionKeyID) {
+        this.uploadPartV2Output.setServerSideEncryptionKeyID(serverSideEncryptionKeyID);
+        return this;
+    }
+
     public String getHashCrc64ecma() {
         return uploadPartV2Output.getHashCrc64ecma();
     }
@@ -80,6 +98,8 @@ public class UploadPartFromFileOutput {
                 ", etag='" + getEtag() + '\'' +
                 ", ssecAlgorithm='" + getSsecAlgorithm() + '\'' +
                 ", ssecKeyMD5='" + getSsecKeyMD5() + '\'' +
+                ", serverSideEncryption='" + getServerSideEncryption() + '\'' +
+                ", serverSideEncryptionKeyID='" + getServerSideEncryptionKeyID() + '\'' +
                 ", hashCrc64ecma=" + getHashCrc64ecma() +
                 '}';
     }

@@ -1,9 +1,11 @@
 package com.volcengine.tos.model.object;
 
+import com.volcengine.tos.TosClientException;
 import com.volcengine.tos.comm.TosHeader;
 import com.volcengine.tos.comm.common.ReplicationStatusType;
 import com.volcengine.tos.comm.common.StorageClassType;
 import com.volcengine.tos.comm.common.TierType;
+import com.volcengine.tos.internal.Consts;
 import com.volcengine.tos.internal.TosResponse;
 import com.volcengine.tos.internal.util.DateConverter;
 import com.volcengine.tos.internal.util.StringUtils;
@@ -24,6 +26,8 @@ public class GetObjectBasicOutput {
 
     private String ssecAlgorithm;
     private String ssecKeyMD5;
+    private String serverSideEncryption;
+    private String serverSideEncryptionKeyID;
     private String versionID;
     private String websiteRedirectLocation;
     private String objectType;
@@ -79,6 +83,14 @@ public class GetObjectBasicOutput {
 
     public String getSsecKeyMD5() {
         return ssecKeyMD5;
+    }
+
+    public String getServerSideEncryption() {
+        return serverSideEncryption;
+    }
+
+    public String getServerSideEncryptionKeyID() {
+        return serverSideEncryptionKeyID;
     }
 
     public String getVersionID() {
@@ -160,10 +172,26 @@ public class GetObjectBasicOutput {
     public GetObjectBasicOutput parseFromTosResponse(TosResponse response) {
         try {
             this.contentLength = response.getContentLength();
+            String rawContentLength;
+            if (StringUtils.isNotEmpty(rawContentLength = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_RAW_CONTENT_LENGTH))) {
+                try {
+                    this.contentLength = Long.parseLong(rawContentLength);
+                } catch (NumberFormatException nfe) {
+                    throw new TosClientException("server return unexpected x-tos-raw-content-length header: " + rawContentLength, nfe);
+                }
+            }
             this.contentType = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_CONTENT_TYPE);
             this.contentMD5 = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_CONTENT_MD5);
             this.contentLanguage = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_CONTENT_LANGUAGE);
             this.contentEncoding = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_CONTENT_ENCODING);
+            if (StringUtils.isNotEmpty(this.contentEncoding) && this.contentEncoding.startsWith(Consts.TOS_RAW_TRAILER)) {
+                String[] contentEncodings = this.contentEncoding.split(",", 2);
+                if (contentEncodings.length == 2) {
+                    this.contentEncoding = contentEncodings[1];
+                } else {
+                    this.contentEncoding = null;
+                }
+            }
             this.contentDisposition = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_CONTENT_DISPOSITION);
             this.lastModified = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_LAST_MODIFIED);
             this.cacheControl = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_CACHE_CONTROL);
@@ -176,6 +204,8 @@ public class GetObjectBasicOutput {
             this.customMetadata = parseCustomMetadata(response.getHeaders());
             this.ssecAlgorithm = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_SSE_CUSTOMER_ALGORITHM);
             this.ssecKeyMD5 = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_SSE_CUSTOMER_KEY_MD5);
+            this.serverSideEncryption = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_SSE);
+            this.serverSideEncryptionKeyID = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_SSE_KEY_ID);
             this.websiteRedirectLocation = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_WEBSITE_REDIRECT_LOCATION);
             this.hashCrc64ecma = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_CRC64);
             this.storageClass = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_STORAGE_CLASS);
@@ -252,6 +282,8 @@ public class GetObjectBasicOutput {
                 ", deleteMarker=" + deleteMarker +
                 ", ssecAlgorithm='" + ssecAlgorithm + '\'' +
                 ", ssecKeyMD5='" + ssecKeyMD5 + '\'' +
+                ", serverSideEncryption='" + serverSideEncryption + '\'' +
+                ", serverSideEncryptionKeyID='" + serverSideEncryptionKeyID + '\'' +
                 ", versionID='" + versionID + '\'' +
                 ", websiteRedirectLocation='" + websiteRedirectLocation + '\'' +
                 ", objectType='" + objectType + '\'' +

@@ -1,8 +1,8 @@
 package com.volcengine.tos.model.object;
 
-import com.volcengine.tos.model.RequestInfo;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.volcengine.tos.model.RequestInfo;
 
 
 public class PutObjectOutput {
@@ -18,6 +18,8 @@ public class PutObjectOutput {
     private String sseCustomerAlgorithm;
     private String sseCustomerKeyMD5;
     private String sseCustomerKey;
+    private String serverSideEncryption;
+    private String serverSideEncryptionKeyID;
 
     private String callbackResult;
 
@@ -95,6 +97,24 @@ public class PutObjectOutput {
         return this;
     }
 
+    public String getServerSideEncryptionKeyID() {
+        return serverSideEncryptionKeyID;
+    }
+
+    public PutObjectOutput setServerSideEncryptionKeyID(String serverSideEncryptionKeyID) {
+        this.serverSideEncryptionKeyID = serverSideEncryptionKeyID;
+        return this;
+    }
+
+    public String getServerSideEncryption() {
+        return serverSideEncryption;
+    }
+
+    public PutObjectOutput setServerSideEncryption(String serverSideEncryption) {
+        this.serverSideEncryption = serverSideEncryption;
+        return this;
+    }
+
     public String getCallbackResult() {
         return callbackResult;
     }
@@ -114,6 +134,8 @@ public class PutObjectOutput {
                 ", sseCustomerAlgorithm='" + sseCustomerAlgorithm + '\'' +
                 ", sseCustomerKeyMD5='" + sseCustomerKeyMD5 + '\'' +
                 ", sseCustomerKey='" + sseCustomerKey + '\'' +
+                ", serverSideEncryption='" + serverSideEncryption + '\'' +
+                ", serverSideEncryptionKeyID='" + serverSideEncryptionKeyID + '\'' +
                 ", callbackResult='" + callbackResult + '\'' +
                 '}';
     }

@@ -10,6 +10,8 @@ public class CreateMultipartUploadOutput {
     private String sseCustomerAlgorithm;
     private String sseCustomerMD5;
     private String sseCustomerKey;
+    private String serverSideEncryption;
+    private String serverSideEncryptionKeyID;
     private String encodingType;
 
     public RequestInfo getRequestInfo() {
@@ -75,6 +77,24 @@ public class CreateMultipartUploadOutput {
         return this;
     }
 
+    public String getServerSideEncryption() {
+        return serverSideEncryption;
+    }
+
+    public CreateMultipartUploadOutput setServerSideEncryption(String serverSideEncryption) {
+        this.serverSideEncryption = serverSideEncryption;
+        return this;
+    }
+
+    public String getServerSideEncryptionKeyID() {
+        return serverSideEncryptionKeyID;
+    }
+
+    public CreateMultipartUploadOutput setServerSideEncryptionKeyID(String serverSideEncryptionKeyID) {
+        this.serverSideEncryptionKeyID = serverSideEncryptionKeyID;
+        return this;
+    }
+
     public String getEncodingType() {
         return encodingType;
     }
@@ -94,6 +114,8 @@ public class CreateMultipartUploadOutput {
                 ", sseCustomerAlgorithm='" + sseCustomerAlgorithm + '\'' +
                 ", sseCustomerMD5='" + sseCustomerMD5 + '\'' +
                 ", sseCustomerKey='" + sseCustomerKey + '\'' +
+                ", serverSideEncryption='" + serverSideEncryption + '\'' +
+                ", serverSideEncryptionKeyID='" + serverSideEncryptionKeyID + '\'' +
                 ", encodingType='" + encodingType + '\'' +
                 '}';
     }

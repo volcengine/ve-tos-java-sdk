@@ -1,6 +1,14 @@
 ## Release Note
 
-### 2024.7.15 Version 2.8.2
+### 2024.7.31 Version 2.8.3
+
+- 支持上传下载使用 Trailer Header 签名算法
+- 修复 TosException 中 requestUrl 字段赋值不全的问题
+- 修复部分接口没有正确返回 SSE-KMS 加密相关字段的问题
+
+### 2024.7.22 Version 2.8.2
+
+- 修复 GetObject/HeadObject 获取已取回的归档/冷归档/深度冷归档对象时日期解析出错的问题
 
 ### 2024.6.1 Version 2.8.1
 

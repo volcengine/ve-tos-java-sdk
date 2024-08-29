@@ -64,6 +64,14 @@ public class GetObjectToFileOutput {
         return getObjectBasicOutput.getSsecKeyMD5();
     }
 
+    public String getServerSideEncryption() {
+        return getObjectBasicOutput.getServerSideEncryption();
+    }
+
+    public String getServerSideEncryptionKeyID() {
+        return getObjectBasicOutput.getServerSideEncryptionKeyID();
+    }
+
     public String getVersionID() {
         return getObjectBasicOutput.getVersionID();
     }
@@ -134,6 +142,8 @@ public class GetObjectToFileOutput {
                 ", deleteMarker=" + isDeleteMarker() +
                 ", ssecAlgorithm='" + getSsecAlgorithm() + '\'' +
                 ", ssecKeyMD5='" + getSsecKeyMD5() + '\'' +
+                ", serverSideEncryption='" + getServerSideEncryption() + '\'' +
+                ", serverSideEncryptionKeyID='" + getServerSideEncryptionKeyID() + '\'' +
                 ", versionID='" + getVersionID() + '\'' +
                 ", websiteRedirectLocation='" + getWebsiteRedirectLocation() + '\'' +
                 ", objectType='" + getObjectType() + '\'' +

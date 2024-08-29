@@ -125,6 +125,8 @@ public class ObjectMetaRequestOptions {
      */
     private String serverSideEncryption;
 
+    private String serverSideEncryptionKeyID;
+
     /**
      * for websiteRedirectLocation headers: "x-tos-website-redirect-location"
      */
@@ -193,6 +195,7 @@ public class ObjectMetaRequestOptions {
                 ", ssecKey='" + ssecKey + '\'' +
                 ", ssecKeyMD5='" + ssecKeyMD5 + '\'' +
                 ", serverSideEncryption='" + serverSideEncryption + '\'' +
+                ", serverSideEncryptionKeyID='" + serverSideEncryptionKeyID + '\'' +
                 ", websiteRedirectLocation='" + websiteRedirectLocation + '\'' +
                 ", storageClass=" + storageClass +
                 ", trafficLimit=" + trafficLimit +
@@ -306,6 +309,10 @@ public class ObjectMetaRequestOptions {
 
     public String getServerSideEncryption() {
         return headers.get(TosHeader.HEADER_SSE);
+    }
+
+    public String getServerSideEncryptionKeyID() {
+        return headers.get(TosHeader.HEADER_SSE_KEY_ID);
     }
 
     public String getWebsiteRedirectLocation() {
@@ -467,6 +474,11 @@ public class ObjectMetaRequestOptions {
         } else {
             throw new TosClientException("invalid serverSideEncryption input, only support AES256", null);
         }
+        return this;
+    }
+
+    public ObjectMetaRequestOptions setServerSideEncryptionKeyID(String serverSideEncryptionKeyID) {
+        withHeader(TosHeader.HEADER_SSE_KEY_ID, serverSideEncryptionKeyID);
         return this;
     }
 
@@ -644,6 +656,11 @@ public class ObjectMetaRequestOptions {
             } else {
                 throw new TosClientException("invalid serverSideEncryption input, only support AES256", null);
             }
+            return this;
+        }
+
+        public ObjectMetaRequestOptionsBuilder serverSideEncryptionKeyID(String serverSideEncryptionKeyID) {
+            withHeader(TosHeader.HEADER_SSE_KEY_ID, serverSideEncryptionKeyID);
             return this;
         }
 

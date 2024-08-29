@@ -8,6 +8,8 @@ public class UploadPartV2Output {
     private String etag;
     private String ssecAlgorithm;
     private String ssecKeyMD5;
+    private String serverSideEncryption;
+    private String serverSideEncryptionKeyID;
     private String hashCrc64ecma;
 
     public UploadPartV2Output setRequestInfo(RequestInfo requestInfo) {
@@ -60,6 +62,24 @@ public class UploadPartV2Output {
         return ssecKeyMD5;
     }
 
+    public String getServerSideEncryption() {
+        return serverSideEncryption;
+    }
+
+    public UploadPartV2Output setServerSideEncryption(String serverSideEncryption) {
+        this.serverSideEncryption = serverSideEncryption;
+        return this;
+    }
+
+    public String getServerSideEncryptionKeyID() {
+        return serverSideEncryptionKeyID;
+    }
+
+    public UploadPartV2Output setServerSideEncryptionKeyID(String serverSideEncryptionKeyID) {
+        this.serverSideEncryptionKeyID = serverSideEncryptionKeyID;
+        return this;
+    }
+
     public String getHashCrc64ecma() {
         return hashCrc64ecma;
     }
@@ -72,6 +92,8 @@ public class UploadPartV2Output {
                 ", etag='" + etag + '\'' +
                 ", ssecAlgorithm='" + ssecAlgorithm + '\'' +
                 ", ssecKeyMD5='" + ssecKeyMD5 + '\'' +
+                ", serverSideEncryption='" + serverSideEncryption + '\'' +
+                ", serverSideEncryptionKeyID='" + serverSideEncryptionKeyID + '\'' +
                 ", hashCrc64ecma=" + hashCrc64ecma +
                 '}';
     }
