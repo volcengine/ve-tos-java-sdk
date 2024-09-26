@@ -143,7 +143,7 @@ public class DownloadFileTaskHandler {
             combineCrcAndCheck();
         }
 
-        try{
+        try {
             renameFile();
             Util.postDownloadEvent(this.input.getDownloadEventListener(),
                     event.setDownloadEventType(DownloadEventType.DownloadEventRenameTempFileSucceed));
@@ -183,7 +183,7 @@ public class DownloadFileTaskHandler {
         DownloadEvent downloadEvent = new DownloadEvent().setBucket(input.getBucket()).setKey(input.getKey())
                 .setVersionID(input.getVersionID()).setFilePath(input.getFilePath());
         File file = new File(this.input.getTempFilePath());
-        try{
+        try {
             if (file.exists()) {
                 TosUtils.getLogger().debug("tos: temp file already exists.");
             } else {
@@ -202,9 +202,9 @@ public class DownloadFileTaskHandler {
     private void setCheckpoint(HeadObjectV2Output head) {
         DownloadFileCheckpoint checkpoint = null;
         if (this.input.isEnableCheckpoint()) {
-            try{
+            try {
                 checkpoint = loadCheckpointFromFile(input.getCheckpointFile());
-            } catch (IOException | ClassNotFoundException e){
+            } catch (IOException | ClassNotFoundException e) {
                 TosUtils.getLogger().debug("loadCheckpointFromFile failed, {}", e.toString());
                 Util.deleteCheckpointFile(input.getCheckpointFile());
             }
@@ -233,7 +233,7 @@ public class DownloadFileTaskHandler {
             createTempFile();
             checkpoint = initCheckpoint(head);
             if (input.isEnableCheckpoint()) {
-                try{
+                try {
                     checkpoint.writeToFile(input.getCheckpointFile());
                 } catch (IOException e) {
                     throw new TosClientException("tos: record to checkpoint file failed", e);
@@ -243,13 +243,14 @@ public class DownloadFileTaskHandler {
         this.checkpoint = checkpoint;
     }
 
-    private DownloadFileCheckpoint loadCheckpointFromFile(String checkpointFilePath) throws IOException, ClassNotFoundException{
+    private DownloadFileCheckpoint loadCheckpointFromFile(String checkpointFilePath) throws IOException, ClassNotFoundException {
         ParamsChecker.ensureNotNull(checkpointFilePath, "checkpointFilePath is null");
         File f = new File(checkpointFilePath);
-        try(FileInputStream checkpointFile = new FileInputStream(f)) {
-            byte[] data = new byte[(int)f.length()];
+        try (FileInputStream checkpointFile = new FileInputStream(f)) {
+            byte[] data = new byte[(int) f.length()];
             checkpointFile.read(data);
-            return TosUtils.getJsonMapper().readValue(data, new TypeReference<DownloadFileCheckpoint>(){});
+            return TosUtils.getJsonMapper().readValue(data, new TypeReference<DownloadFileCheckpoint>() {
+            });
         }
     }
 
@@ -282,10 +283,10 @@ public class DownloadFileTaskHandler {
             partNum++;
         }
         List<DownloadPartInfo> partInfoList = new ArrayList<>((int) partNum);
-        for(int i = 0; i < partNum; i++) {
-            partInfoList.add(new DownloadPartInfo().setPartNumber(i+1).setRangeStart(i * partSize).setRangeEnd((i+1) * partSize - 1));
+        for (int i = 0; i < partNum; i++) {
+            partInfoList.add(new DownloadPartInfo().setPartNumber(i + 1).setRangeStart(i * partSize).setRangeEnd((i + 1) * partSize - 1));
         }
-        partInfoList.get((int)partNum-1).setRangeEnd((partNum-1) * partSize + lastPartSize- 1);
+        partInfoList.get((int) partNum - 1).setRangeEnd((partNum - 1) * partSize + lastPartSize - 1);
         return partInfoList;
     }
 
@@ -318,7 +319,7 @@ public class DownloadFileTaskHandler {
         }
         String serverCrc64 = headObjectV2Output.getHashCrc64ecma();
         long crc = computeClientCrc();
-        if (!Utils.isSameHashCrc64Ecma(crc, serverCrc64)) {
+        if (StringUtils.isNotEmpty(serverCrc64) && !Utils.isSameHashCrc64Ecma(crc, serverCrc64)) {
             clearTmpFile();
             throw new TosClientException("tos: expect crc64 " + serverCrc64 + ", actual crc64 " + crc, null);
         }

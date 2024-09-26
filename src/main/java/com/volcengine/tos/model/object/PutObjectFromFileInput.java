@@ -106,6 +106,15 @@ public class PutObjectFromFileInput extends GenericInput {
         return this;
     }
 
+    public int getReadLimit() {
+        return putObjectBasicInput.getReadLimit();
+    }
+
+    public PutObjectFromFileInput setReadLimit(int readLimit) {
+        this.putObjectBasicInput.setReadLimit(readLimit);
+        return this;
+    }
+
     public boolean isForbidOverwrite() {
         return this.putObjectBasicInput.isForbidOverwrite();
     }
@@ -121,6 +130,24 @@ public class PutObjectFromFileInput extends GenericInput {
 
     public PutObjectFromFileInput setIfMatch(String ifMatch) {
         this.putObjectBasicInput.setIfMatch(ifMatch);
+        return this;
+    }
+
+    public String getTagging() {
+        return this.putObjectBasicInput.getTagging();
+    }
+
+    public PutObjectFromFileInput setTagging(String tagging) {
+        this.putObjectBasicInput.setTagging(tagging);
+        return this;
+    }
+
+    public long getObjectExpires() {
+        return this.putObjectBasicInput.getObjectExpires();
+    }
+
+    public PutObjectFromFileInput setObjectExpires(long objectExpires) {
+        this.putObjectBasicInput.setObjectExpires(objectExpires);
         return this;
     }
 

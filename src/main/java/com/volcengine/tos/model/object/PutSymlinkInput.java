@@ -4,6 +4,7 @@ import com.volcengine.tos.comm.common.ACLType;
 import com.volcengine.tos.comm.common.StorageClassType;
 import com.volcengine.tos.model.GenericInput;
 
+import java.util.Date;
 import java.util.Map;
 
 public class PutSymlinkInput extends GenericInput {
@@ -15,6 +16,13 @@ public class PutSymlinkInput extends GenericInput {
     private ACLType acl;
     private Map<String, String> meta;
     private StorageClassType storageClass;
+    private String cacheControl;
+    private String contentDisposition;
+    private String contentEncoding;
+    private String contentLanguage;
+    private String contentType;
+    private Date expires;
+    private String tagging;
 
     public String getBucket() {
         return bucket;
@@ -88,6 +96,70 @@ public class PutSymlinkInput extends GenericInput {
         return this;
     }
 
+
+    public String getCacheControl() {
+        return cacheControl;
+    }
+
+    public PutSymlinkInput setCacheControl(String cacheControl) {
+        this.cacheControl = cacheControl;
+        return this;
+    }
+
+    public String getContentDisposition() {
+        return contentDisposition;
+    }
+
+    public PutSymlinkInput setContentDisposition(String contentDisposition) {
+        this.contentDisposition = contentDisposition;
+        return this;
+    }
+
+    public String getContentEncoding() {
+        return contentEncoding;
+    }
+
+    public PutSymlinkInput setContentEncoding(String contentEncoding) {
+        this.contentEncoding = contentEncoding;
+        return this;
+    }
+
+    public String getContentLanguage() {
+        return contentLanguage;
+    }
+
+    public PutSymlinkInput setContentLanguage(String contentLanguage) {
+        this.contentLanguage = contentLanguage;
+        return this;
+    }
+
+    public String getContentType() {
+        return contentType;
+    }
+
+    public PutSymlinkInput setContentType(String contentType) {
+        this.contentType = contentType;
+        return this;
+    }
+
+    public Date getExpires() {
+        return expires;
+    }
+
+    public PutSymlinkInput setExpires(Date expires) {
+        this.expires = expires;
+        return this;
+    }
+
+    public String getTagging() {
+        return tagging;
+    }
+
+    public PutSymlinkInput setTagging(String tagging) {
+        this.tagging = tagging;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "PutSymlinkInput{" +
@@ -99,6 +171,13 @@ public class PutSymlinkInput extends GenericInput {
                 ", acl=" + acl +
                 ", meta=" + meta +
                 ", storageClass=" + storageClass +
+                ", cacheControl='" + cacheControl + '\'' +
+                ", contentDisposition='" + contentDisposition + '\'' +
+                ", contentEncoding='" + contentEncoding + '\'' +
+                ", contentLanguage='" + contentLanguage + '\'' +
+                ", contentType='" + contentType + '\'' +
+                ", expires=" + expires +
+                ", tagging='" + tagging + '\'' +
                 '}';
     }
 }

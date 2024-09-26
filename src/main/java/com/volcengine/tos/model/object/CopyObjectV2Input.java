@@ -76,6 +76,7 @@ public class CopyObjectV2Input extends GenericInput {
     private String ifMatch;
     private String tagging;
     private TaggingDirectiveType taggingDirective;
+    private long objectExpires = -1;
 
     private Map<String, String> headers;
 
@@ -132,6 +133,9 @@ public class CopyObjectV2Input extends GenericInput {
         }
         withHeader(TosHeader.HEADER_TAGGING, tagging);
         withHeader(TosHeader.HEADER_TAGGING_DIRECTIVE, taggingDirective == null ? null : taggingDirective.getType());
+        if (objectExpires >= 0) {
+            withHeader(TosHeader.HEADER_OBJECT_EXPIRES, Long.toString(objectExpires));
+        }
         return headers;
     }
 
@@ -282,6 +286,15 @@ public class CopyObjectV2Input extends GenericInput {
         return this;
     }
 
+    public long getObjectExpires() {
+        return objectExpires;
+    }
+
+    public CopyObjectV2Input setObjectExpires(long objectExpires) {
+        this.objectExpires = objectExpires;
+        return this;
+    }
+
     public static CopyObjectV2InputBuilder builder() {
         return new CopyObjectV2InputBuilder();
     }
@@ -303,6 +316,11 @@ public class CopyObjectV2Input extends GenericInput {
                 ", copySourceSSECKeyMD5='" + copySourceSSECKeyMD5 + '\'' +
                 ", metadataDirective=" + metadataDirective +
                 ", options=" + options +
+                ", forbidOverwrite=" + forbidOverwrite +
+                ", ifMatch='" + ifMatch + '\'' +
+                ", tagging='" + tagging + '\'' +
+                ", taggingDirective=" + taggingDirective +
+                ", objectExpires=" + objectExpires +
                 '}';
     }
 
@@ -325,6 +343,7 @@ public class CopyObjectV2Input extends GenericInput {
         private String ifMatch;
         private String tagging;
         private TaggingDirectiveType taggingDirective;
+        private long objectExpires = -1;
 
         private CopyObjectV2InputBuilder() {
         }
@@ -419,6 +438,11 @@ public class CopyObjectV2Input extends GenericInput {
             return this;
         }
 
+        public CopyObjectV2InputBuilder objectExpires(long objectExpires) {
+            this.objectExpires = objectExpires;
+            return this;
+        }
+
         public CopyObjectV2Input build() {
             CopyObjectV2Input copyObjectV2Input = new CopyObjectV2Input();
             copyObjectV2Input.setBucket(bucket);
@@ -439,6 +463,7 @@ public class CopyObjectV2Input extends GenericInput {
             copyObjectV2Input.setForbidOverwrite(forbidOverwrite);
             copyObjectV2Input.setTagging(tagging);
             copyObjectV2Input.setTaggingDirective(taggingDirective);
+            copyObjectV2Input.setObjectExpires(objectExpires);
             return copyObjectV2Input;
         }
     }

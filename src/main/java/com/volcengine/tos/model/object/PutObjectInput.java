@@ -141,6 +141,15 @@ public class PutObjectInput extends GenericInput {
         return this;
     }
 
+    public long getObjectExpires() {
+        return this.putObjectBasicInput.getObjectExpires();
+    }
+
+    public PutObjectInput setObjectExpires(long objectExpires) {
+        this.putObjectBasicInput.setObjectExpires(objectExpires);
+        return this;
+    }
+
     @Override
     public String toString() {
         return "PutObjectInput{" +
@@ -229,6 +238,16 @@ public class PutObjectInput extends GenericInput {
 
         public PutObjectInputBuilder ifMatch(String ifMatch) {
             this.putObjectBasicInput.setIfMatch(ifMatch);
+            return this;
+        }
+
+        public PutObjectInputBuilder tagging(String tagging) {
+            this.putObjectBasicInput.setTagging(tagging);
+            return this;
+        }
+
+        public PutObjectInputBuilder objectExpires(long objectExpires) {
+            this.putObjectBasicInput.setObjectExpires(objectExpires);
             return this;
         }
 

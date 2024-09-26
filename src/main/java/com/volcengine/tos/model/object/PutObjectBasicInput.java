@@ -21,6 +21,8 @@ public class PutObjectBasicInput extends GenericInput {
     private boolean forbidOverwrite;
     private String ifMatch;
     private String tagging;
+    private long objectExpires = -1;
+
 
     /** 客户端限速，单位 Byte/s **/
     private RateLimiter rateLimiter;
@@ -137,6 +139,15 @@ public class PutObjectBasicInput extends GenericInput {
         return this;
     }
 
+    public long getObjectExpires() {
+        return objectExpires;
+    }
+
+    public PutObjectBasicInput setObjectExpires(long objectExpires) {
+        this.objectExpires = objectExpires;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "PutObjectBasicInput{" +
@@ -151,6 +162,7 @@ public class PutObjectBasicInput extends GenericInput {
                 ", forbidOverwrite=" + forbidOverwrite +
                 ", ifMatch='" + ifMatch + '\'' +
                 ", tagging='" + tagging + '\'' +
+                ", objectExpires='" + objectExpires + '\'' +
                 ", rateLimiter=" + rateLimiter +
                 '}';
     }
@@ -171,6 +183,7 @@ public class PutObjectBasicInput extends GenericInput {
         private boolean forbidOverwrite;
         private String ifMatch;
         private String tagging;
+        private long objectExpires = -1;
 
         private PutObjectBasicInputBuilder() {
         }
@@ -230,6 +243,12 @@ public class PutObjectBasicInput extends GenericInput {
             return this;
         }
 
+        public PutObjectBasicInputBuilder objectExpires(long objectExpires) {
+            this.objectExpires = objectExpires;
+            return this;
+        }
+
+
         public PutObjectBasicInput build() {
             PutObjectBasicInput putObjectBasicInput = new PutObjectBasicInput();
             putObjectBasicInput.key = this.key;
@@ -243,6 +262,7 @@ public class PutObjectBasicInput extends GenericInput {
             putObjectBasicInput.forbidOverwrite = this.forbidOverwrite;
             putObjectBasicInput.ifMatch = this.ifMatch;
             putObjectBasicInput.tagging = this.tagging;
+            putObjectBasicInput.objectExpires = this.objectExpires;
             return putObjectBasicInput;
         }
     }

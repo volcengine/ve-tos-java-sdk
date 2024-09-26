@@ -26,6 +26,7 @@ public class AppendObjectInput extends GenericInput {
     private RateLimiter rateLimiter;
 
     private String ifMatch;
+    private long objectExpires = -1;
 
     public Map<String, String> getAllSettedHeaders() {
         return Objects.isNull(options) ? null : options.headers();
@@ -121,6 +122,15 @@ public class AppendObjectInput extends GenericInput {
         return this;
     }
 
+    public long getObjectExpires() {
+        return objectExpires;
+    }
+
+    public AppendObjectInput setObjectExpires(long objectExpires) {
+        this.objectExpires = objectExpires;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "AppendObjectInput{" +
@@ -132,7 +142,9 @@ public class AppendObjectInput extends GenericInput {
                 ", options=" + options +
                 ", dataTransferListener=" + dataTransferListener +
                 ", preHashCrc64ecma='" + preHashCrc64ecma + '\'' +
-                ", rateLimit=" + rateLimiter +
+                ", rateLimiter=" + rateLimiter +
+                ", ifMatch='" + ifMatch + '\'' +
+                ", objectExpires=" + objectExpires +
                 '}';
     }
 
@@ -151,6 +163,7 @@ public class AppendObjectInput extends GenericInput {
         private String preHashCrc64ecma;
         private RateLimiter rateLimiter;
         private String ifMatch;
+        private long objectExpires = -1;
 
         private AppendObjectInputBuilder() {
         }
@@ -205,6 +218,11 @@ public class AppendObjectInput extends GenericInput {
             return this;
         }
 
+        public AppendObjectInputBuilder objectExpires(long objectExpires) {
+            this.objectExpires = objectExpires;
+            return this;
+        }
+
         public AppendObjectInput build() {
             AppendObjectInput appendObjectInput = new AppendObjectInput();
             appendObjectInput.key = this.key;
@@ -217,6 +235,7 @@ public class AppendObjectInput extends GenericInput {
             appendObjectInput.rateLimiter = this.rateLimiter;
             appendObjectInput.options = this.options;
             appendObjectInput.ifMatch = this.ifMatch;
+            appendObjectInput.objectExpires = this.objectExpires;
             return appendObjectInput;
         }
     }

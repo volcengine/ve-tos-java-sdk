@@ -1,5 +1,11 @@
 ## Release Note
 
+### 2024.9.10 Version 2.8.4
+
+- PutSymlink 新增字段
+- RenameObject 新增 RecursiveMkdir、ForbidOverwrite
+- AppendObject 适配分层桶首次上传场景
+
 ### 2024.7.31 Version 2.8.3
 
 - 支持上传下载使用 Trailer Header 签名算法
