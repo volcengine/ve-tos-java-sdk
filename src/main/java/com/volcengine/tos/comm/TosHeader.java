@@ -81,6 +81,7 @@ public interface TosHeader {
     String HEADER_RESTORE_TIER = "x-tos-restore-tier";
     String HEADER_TAGGING = "x-tos-tagging";
     String HEADER_TAGGING_DIRECTIVE = "x-tos-tagging-directive";
+    String HEADER_OBJECT_EXPIRES = "x-tos-object-expires";
     String HEADER_WEBSITE_REDIRECT_LOCATION = "X-Tos-Website-Redirect-Location";
     String HEADER_CS_TYPE = "X-Tos-Cs-Type";
     String HEADER_META_PREFIX = "X-Tos-Meta-";
@@ -88,6 +89,7 @@ public interface TosHeader {
     String HEADER_PROJECT_NAME = "x-tos-project-name";
     String HEADER_REPLICATION_STATUS = "x-tos-replication-status";
     String HEADER_FORBID_OVERWRITE = "x-tos-forbid-overwrite";
+    String HEADER_RECURSIVE_MKDIR = "x-tos-recursive-mkdir";
     String HEADER_X_IF_MATCH = "x-tos-if-match";
     String HEADER_ALLOW_SAME_ACTION_OVERLAP = "x-tos-allow-same-action-overlap";
     String HEADER_SYMLINK_TARGET = "x-tos-symlink-target";

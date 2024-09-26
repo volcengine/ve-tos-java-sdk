@@ -145,6 +145,9 @@ public class TosFileRequestHandler {
                 .rateLimiter(input.getRateLimiter())
                 .contentLength(FileUtils.getFileLength(input.getFile(), input.getFilePath()))
                 .content(content)
+                .readLimit(input.getReadLimit())
+                .tagging(input.getTagging())
+                .objectExpires(input.getObjectExpires())
                 .build();
         pinput.setRequestDate(input.getRequestDate());
         pinput.setRequestHost(input.getRequestHost());

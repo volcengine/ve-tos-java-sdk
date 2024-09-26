@@ -12,6 +12,7 @@ public class CreateMultipartUploadInput extends GenericInput {
     private ObjectMetaRequestOptions options;
     private boolean forbidOverwrite;
     private String tagging;
+    private long objectExpires = -1;
 
     public String getBucket() {
         return bucket;
@@ -71,6 +72,15 @@ public class CreateMultipartUploadInput extends GenericInput {
         return this;
     }
 
+    public long getObjectExpires() {
+        return objectExpires;
+    }
+
+    public CreateMultipartUploadInput setObjectExpires(long objectExpires) {
+        this.objectExpires = objectExpires;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "CreateMultipartUploadInput{" +
@@ -80,6 +90,7 @@ public class CreateMultipartUploadInput extends GenericInput {
                 ", options=" + options +
                 ", forbidOverwrite=" + forbidOverwrite +
                 ", tagging='" + tagging + '\'' +
+                ", objectExpires=" + objectExpires +
                 '}';
     }
 
@@ -94,6 +105,7 @@ public class CreateMultipartUploadInput extends GenericInput {
         private ObjectMetaRequestOptions options;
         private boolean forbidOverwrite;
         private String tagging;
+        private long objectExpires = -1;
 
         private CreateMultipartUploadInputBuilder() {
         }
@@ -128,6 +140,11 @@ public class CreateMultipartUploadInput extends GenericInput {
             return this;
         }
 
+        public CreateMultipartUploadInputBuilder objectExpires(long objectExpires) {
+            this.objectExpires = objectExpires;
+            return this;
+        }
+
         public CreateMultipartUploadInput build() {
             CreateMultipartUploadInput createMultipartUploadInput = new CreateMultipartUploadInput();
             createMultipartUploadInput.setBucket(bucket);
@@ -136,6 +153,7 @@ public class CreateMultipartUploadInput extends GenericInput {
             createMultipartUploadInput.setOptions(options);
             createMultipartUploadInput.setForbidOverwrite(forbidOverwrite);
             createMultipartUploadInput.setTagging(tagging);
+            createMultipartUploadInput.setObjectExpires(objectExpires);
             return createMultipartUploadInput;
         }
     }

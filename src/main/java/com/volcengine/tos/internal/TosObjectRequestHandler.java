@@ -391,6 +391,10 @@ public class TosObjectRequestHandler {
             builder = builder.withHeader(TosHeader.HEADER_FORBID_OVERWRITE, "true");
         }
 
+        if (input.getObjectExpires() >= 0) {
+            builder = builder.withHeader(TosHeader.HEADER_OBJECT_EXPIRES, Long.toString(input.getObjectExpires()));
+        }
+
         addContentType(builder, input.getKey());
         builder = this.handleGenericInput(builder, input);
         boolean useTrailerHeader = this.prepareTrailerHeader(builder, input.getOptions(), input.getContentLength(), content);
@@ -513,6 +517,21 @@ public class TosObjectRequestHandler {
 
         BucketType bucketType = this.getBucketType(input.getBucket());
         if (bucketType != null && bucketType.getType().equals(BucketType.BUCKET_TYPE_HNS.getType())) {
+            if (input.getOffset() == 0 && input.getContentLength() >= 0) {
+                PutObjectInput pinput = new PutObjectInput().setBucket(input.getBucket())
+                        .setKey(input.getKey()).setContent(input.getContent())
+                        .setContentLength(input.getContentLength()).setDataTransferListener(input.getDataTransferListener())
+                        .setRateLimiter(input.getRateLimiter()).setIfMatch(input.getIfMatch())
+                        .setOptions(input.getOptions()).setForbidOverwrite(true);
+
+                pinput.setRequestDate(input.getRequestDate());
+                pinput.setRequestHost(input.getRequestHost());
+                PutObjectOutput poutput = this.putObject(pinput);
+                AppendObjectOutput aoutput = new AppendObjectOutput().setRequestInfo(poutput.getRequestInfo()).setHashCrc64ecma(poutput.getHashCrc64ecma());
+                aoutput.setNextAppendOffset(input.getContentLength());
+                return aoutput;
+            }
+
             ModifyObjectInput minput = new ModifyObjectInput().setBucket(input.getBucket())
                     .setKey(input.getKey()).setOffset(input.getOffset()).setContent(input.getContent())
                     .setContentLength(input.getContentLength()).setDataTransferListener(input.getDataTransferListener())
@@ -531,15 +550,19 @@ public class TosObjectRequestHandler {
         }
 
         // append not support chunked, need to set contentLength
-        if (input.getContentLength() <= 0) {
-            throw new TosClientException("content length should be set in appendObject method.", null);
-        }
+//        if (input.getContentLength() <= 0) {
+//            throw new TosClientException("content length should be set in appendObject method.", null);
+//        }
 
         RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), input.getAllSettedHeaders())
                 .withQuery("append", "")
                 .withQuery("offset", String.valueOf(input.getOffset()))
                 .withContentLength(input.getContentLength())
                 .withHeader(TosHeader.HEADER_X_IF_MATCH, input.getIfMatch());
+
+        if (input.getObjectExpires() >= 0) {
+            builder = builder.withHeader(TosHeader.HEADER_OBJECT_EXPIRES, Long.toString(input.getObjectExpires()));
+        }
 
         addContentType(builder, input.getKey());
         builder = this.handleGenericInput(builder, input);
@@ -572,6 +595,9 @@ public class TosObjectRequestHandler {
         ensureValidKey(input.getKey());
         RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(),
                 input.getAllSettedHeaders()).withQuery("metadata", "").withQuery("versionId", input.getVersionID());
+        if (input.getObjectExpires() >= 0) {
+            builder = builder.withHeader(TosHeader.HEADER_OBJECT_EXPIRES, Long.toString(input.getObjectExpires()));
+        }
         addContentType(builder, input.getKey());
         builder = this.handleGenericInput(builder, input);
         TosRequest req = this.factory.build(builder, HttpMethod.POST, null);
@@ -921,6 +947,9 @@ public class TosObjectRequestHandler {
         ensureValidKey(input.getKey());
         RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), input.getAllSettedHeaders())
                 .withQuery("uploads", "").withHeader(TosHeader.HEADER_TAGGING, input.getTagging());
+        if (input.getObjectExpires() >= 0) {
+            builder = builder.withHeader(TosHeader.HEADER_OBJECT_EXPIRES, String.valueOf(input.getObjectExpires()));
+        }
         addContentType(builder, input.getKey());
         if (input.isForbidOverwrite()) {
             builder = builder.withHeader(TosHeader.HEADER_FORBID_OVERWRITE, "true");
@@ -1118,6 +1147,15 @@ public class TosObjectRequestHandler {
         ensureValidKey(input.getNewKey());
         RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), null)
                 .withQuery("name", input.getNewKey()).withQuery("rename", "");
+
+        if (input.isForbidOverwrite()) {
+            builder = builder.withHeader(TosHeader.HEADER_FORBID_OVERWRITE, "true");
+        }
+
+        if (input.isRecursiveMkdir()) {
+            builder = builder.withHeader(TosHeader.HEADER_RECURSIVE_MKDIR, "true");
+        }
+
         builder = this.handleGenericInput(builder, input);
         TosRequest req = this.factory.build(builder, HttpMethod.PUT, null);
         return objectHandler.doRequest(req, HttpStatus.NO_CONTENT, response -> new RenameObjectOutput()
@@ -1147,6 +1185,7 @@ public class TosObjectRequestHandler {
         if (StringUtils.isEmpty(input.getSymlinkTargetKey())) {
             throw new TosClientException("empty symlink target key", null);
         }
+
         RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), null)
                 .withQuery("symlink", "")
                 .withHeader(TosHeader.HEADER_SYMLINK_BUCKET, input.getSymlinkTargetBucket())
@@ -1171,7 +1210,17 @@ public class TosObjectRequestHandler {
                 }
             }
         }
+
+        builder = builder.withHeader(TosHeader.HEADER_CACHE_CONTROL, input.getCacheControl())
+                .withHeader(TosHeader.HEADER_CONTENT_DISPOSITION, input.getContentDisposition())
+                .withHeader(TosHeader.HEADER_CONTENT_ENCODING, input.getContentEncoding())
+                .withHeader(TosHeader.HEADER_CONTENT_LANGUAGE, input.getContentLanguage())
+                .withHeader(TosHeader.HEADER_CONTENT_TYPE, input.getContentType())
+                .withHeader(TosHeader.HEADER_EXPIRES, DateConverter.dateToRFC1123String(input.getExpires()))
+                .withHeader(TosHeader.HEADER_TAGGING, input.getTagging());
+
         builder = this.handleGenericInput(builder, input);
+        addContentType(builder, input.getKey());
         TosRequest req = this.factory.build(builder, HttpMethod.PUT, null).setContentLength(0);
         return objectHandler.doRequest(req, HttpStatus.OK, res -> new PutSymlinkOutput()
                 .setRequestInfo(res.RequestInfo()).setVersionID(res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_VERSIONID)));

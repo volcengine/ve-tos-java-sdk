@@ -8,6 +8,7 @@ public class SetObjectMetaInput extends GenericInput {
     private String bucket;
     private String key;
     private String versionID;
+    private long objectExpires = -1;
 
     private ObjectMetaRequestOptions options;
 
@@ -47,6 +48,15 @@ public class SetObjectMetaInput extends GenericInput {
         return this;
     }
 
+    public long getObjectExpires() {
+        return objectExpires;
+    }
+
+    public SetObjectMetaInput setObjectExpires(long objectExpires) {
+        this.objectExpires = objectExpires;
+        return this;
+    }
+
     public Map<String, String> getAllSettedHeaders() {
         return options == null ? null : options.headers();
     }
@@ -57,6 +67,7 @@ public class SetObjectMetaInput extends GenericInput {
                 "bucket='" + bucket + '\'' +
                 ", key='" + key + '\'' +
                 ", versionID='" + versionID + '\'' +
+                ", objectExpires=" + objectExpires +
                 ", options=" + options +
                 '}';
     }
@@ -70,6 +81,7 @@ public class SetObjectMetaInput extends GenericInput {
         private String key;
         private String versionID;
         private ObjectMetaRequestOptions options;
+        private long objectExpires = -1;
 
         private SetObjectMetaInputBuilder() {
         }
@@ -94,12 +106,18 @@ public class SetObjectMetaInput extends GenericInput {
             return this;
         }
 
+        public SetObjectMetaInputBuilder objectExpires(long objectExpires) {
+            this.objectExpires = objectExpires;
+            return this;
+        }
+
         public SetObjectMetaInput build() {
             SetObjectMetaInput setObjectMetaInput = new SetObjectMetaInput();
             setObjectMetaInput.bucket = this.bucket;
             setObjectMetaInput.key = this.key;
             setObjectMetaInput.versionID = this.versionID;
             setObjectMetaInput.options = this.options;
+            setObjectMetaInput.objectExpires = this.objectExpires;
             return setObjectMetaInput;
         }
     }

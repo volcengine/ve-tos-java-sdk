@@ -87,10 +87,22 @@ public class ListedObjectV2 {
         return this;
     }
 
+    public String getObjectType() {
+        return type;
+    }
+
+    @JsonIgnore
+    public ListedObjectV2 setObjectType(String type) {
+        this.type = type;
+        return this;
+    }
+
+    @Deprecated
     public String getType() {
         return type;
     }
 
+    @Deprecated
     public ListedObjectV2 setType(String type) {
         this.type = type;
         return this;

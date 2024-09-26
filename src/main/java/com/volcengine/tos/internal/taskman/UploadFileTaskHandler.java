@@ -3,6 +3,7 @@ package com.volcengine.tos.internal.taskman;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.volcengine.tos.TosClientException;
 import com.volcengine.tos.TosException;
+import com.volcengine.tos.comm.HttpStatus;
 import com.volcengine.tos.comm.Utils;
 import com.volcengine.tos.comm.event.DataTransferStatus;
 import com.volcengine.tos.comm.event.DataTransferType;
@@ -123,7 +124,7 @@ public class UploadFileTaskHandler {
                 .setKey(this.checkpoint.getKey())
                 .setCheckpointFile(this.input.getCheckpointFile())
                 .setFilePath(this.input.getFilePath());
-        try{
+        try {
             comp = this.handler.completeMultipartUpload(input);
             if (enableCrcCheck) {
                 combineCrcAndCheck(comp.getHashCrc64ecma());
@@ -131,6 +132,12 @@ public class UploadFileTaskHandler {
             Util.postUploadEvent(this.input.getUploadEventListener(),
                     event.setUploadEventType(UploadEventType.UploadEventCompleteMultipartUploadSucceed));
         } catch (TosException e) {
+            // complete返回404，说明uploadId已经不存在，checkPoint文件无意义
+            if (e.getStatusCode() == HttpStatus.NOT_FOUND) {
+                if (this.input.isEnableCheckpoint()) {
+                    Util.deleteCheckpointFile(this.input.getCheckpointFile());
+                }
+            }
             Util.postUploadEvent(this.input.getUploadEventListener(),
                     event.setTosException(e).setUploadEventType(UploadEventType.UploadEventCompleteMultipartUploadFailed));
             throw e;
@@ -153,8 +160,8 @@ public class UploadFileTaskHandler {
 
     private boolean readyForComplete() {
         if (checkpoint == null || checkpoint.getBucket() == null
-        || checkpoint.getKey() == null || checkpoint.getUploadID() == null
-        || checkpoint.getUploadPartInfos() == null || uploadedParts == null) {
+                || checkpoint.getKey() == null || checkpoint.getUploadID() == null
+                || checkpoint.getUploadPartInfos() == null || uploadedParts == null) {
             return false;
         }
         if (uploadedParts.size() != checkpoint.getUploadPartInfos().size()) {
@@ -209,9 +216,9 @@ public class UploadFileTaskHandler {
     private void setCheckpoint(UploadFileInfo fileInfo) {
         UploadFileV2Checkpoint checkpoint = null;
         if (this.input.isEnableCheckpoint()) {
-            try{
+            try {
                 checkpoint = loadCheckpointFromFile(input.getCheckpointFile());
-            } catch (IOException | ClassNotFoundException e){
+            } catch (IOException | ClassNotFoundException e) {
                 Util.deleteCheckpointFile(input.getCheckpointFile());
             }
         }
@@ -234,7 +241,7 @@ public class UploadFileTaskHandler {
         if (checkpoint == null || !valid) {
             checkpoint = initCheckpoint(fileInfo);
             if (input.isEnableCheckpoint()) {
-                try{
+                try {
                     checkpoint.writeToFile(input.getCheckpointFile());
                 } catch (IOException e) {
                     throw new TosClientException("tos: record to checkpoint file failed", e);
@@ -244,7 +251,7 @@ public class UploadFileTaskHandler {
         this.checkpoint = checkpoint;
     }
 
-    private UploadFileInfo getUploadFileInfo(String uploadFilePath){
+    private UploadFileInfo getUploadFileInfo(String uploadFilePath) {
         File file = new File(uploadFilePath);
         return new UploadFileInfo().setFilePath(uploadFilePath).setFileSize(file.length()).setLastModified(file.lastModified());
     }
@@ -266,7 +273,7 @@ public class UploadFileTaskHandler {
                     .setKey(input.getKey()).setOptions(input.getOptions()).setEncodingType(input.getEncodingType()));
             Util.postUploadEvent(this.input.getUploadEventListener(), createMultipart.setUploadID(output.getUploadID())
                     .setUploadEventType(UploadEventType.UploadEventCreateMultipartUploadSucceed));
-        }catch (TosException e) {
+        } catch (TosException e) {
             Util.postUploadEvent(this.input.getUploadEventListener(), createMultipart.setTosException(e)
                     .setUploadEventType(UploadEventType.UploadEventCreateMultipartUploadFailed));
             throw e;
@@ -286,11 +293,11 @@ public class UploadFileTaskHandler {
             throw new TosClientException("unsupported part number, the maximum is 10000", null);
         }
         List<UploadPartInfo> partInfoList = new ArrayList<>((int) partNum);
-        for(int i = 0; i < partNum; i++) {
-            if (i < partNum-1) {
-                partInfoList.add(new UploadPartInfo().setPartSize(partSize).setPartNumber(i+1).setOffset(i * partSize));
+        for (int i = 0; i < partNum; i++) {
+            if (i < partNum - 1) {
+                partInfoList.add(new UploadPartInfo().setPartSize(partSize).setPartNumber(i + 1).setOffset(i * partSize));
             } else {
-                partInfoList.add(new UploadPartInfo().setPartSize(lastPartSize).setPartNumber(i+1).setOffset(i * partSize));
+                partInfoList.add(new UploadPartInfo().setPartSize(lastPartSize).setPartNumber(i + 1).setOffset(i * partSize));
             }
         }
         if (partNum == 0) {
@@ -300,13 +307,14 @@ public class UploadFileTaskHandler {
         return partInfoList;
     }
 
-    private UploadFileV2Checkpoint loadCheckpointFromFile(String checkpointFilePath) throws IOException, ClassNotFoundException{
+    private UploadFileV2Checkpoint loadCheckpointFromFile(String checkpointFilePath) throws IOException, ClassNotFoundException {
         ParamsChecker.ensureNotNull(checkpointFilePath, "checkpointFilePath is null");
         File f = new File(checkpointFilePath);
-        try(FileInputStream checkpointFile = new FileInputStream(f)) {
-            byte[] data = new byte[(int)f.length()];
+        try (FileInputStream checkpointFile = new FileInputStream(f)) {
+            byte[] data = new byte[(int) f.length()];
             checkpointFile.read(data);
-            return TosUtils.getJsonMapper().readValue(data, new TypeReference<UploadFileV2Checkpoint>(){});
+            return TosUtils.getJsonMapper().readValue(data, new TypeReference<UploadFileV2Checkpoint>() {
+            });
         }
     }
 

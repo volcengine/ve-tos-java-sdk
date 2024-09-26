@@ -3,6 +3,7 @@ package com.volcengine.tos.internal.taskman;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.volcengine.tos.TosClientException;
 import com.volcengine.tos.TosException;
+import com.volcengine.tos.comm.HttpStatus;
 import com.volcengine.tos.comm.event.CopyEventType;
 import com.volcengine.tos.internal.Consts;
 import com.volcengine.tos.internal.TosObjectRequestHandler;
@@ -114,7 +115,7 @@ public class ResumableCopyObjectTaskHandler {
             if (enableCrcCheck) {
                 String srcCrc64 = checkpoint.getCopySourceObjectInfo().getHashCrc64ecma();
                 String dstCrc64 = comp.getHashCrc64ecma();
-                if (!StringUtils.equals(srcCrc64, dstCrc64)) {
+                if (StringUtils.isNotEmpty(srcCrc64) && !StringUtils.equals(srcCrc64, dstCrc64)) {
                     throw new TosClientException("tos: expect crc64 " + srcCrc64 +
                             ", actual crc64 " + dstCrc64, null);
                 }
@@ -122,6 +123,12 @@ public class ResumableCopyObjectTaskHandler {
             Util.postCopyEvent(this.input.getCopyEventListener(),
                     event.setType(CopyEventType.CopyEventCompleteMultipartUploadSucceed));
         } catch (TosException e) {
+            // complete返回404，说明uploadId已经不存在，checkPoint文件无意义
+            if (e.getStatusCode() == HttpStatus.NOT_FOUND) {
+                if (this.input.isEnableCheckpoint()) {
+                    Util.deleteCheckpointFile(this.input.getCheckpointFile());
+                }
+            }
             Util.postCopyEvent(this.input.getCopyEventListener(),
                     event.setException(e).setType(CopyEventType.CopyEventCompleteMultipartUploadFailed));
             throw e;
@@ -184,9 +191,9 @@ public class ResumableCopyObjectTaskHandler {
     private void setCheckpoint(CopySourceObjectInfo copySourceObjectInfo) {
         ResumableCopyObjectCheckpoint checkpoint = null;
         if (this.input.isEnableCheckpoint()) {
-            try{
+            try {
                 checkpoint = loadCheckpointFromFile(input.getCheckpointFile());
-            } catch (IOException | ClassNotFoundException e){
+            } catch (IOException | ClassNotFoundException e) {
                 Util.deleteCheckpointFile(input.getCheckpointFile());
             }
         }
@@ -201,7 +208,7 @@ public class ResumableCopyObjectTaskHandler {
         if (checkpoint == null || !valid) {
             checkpoint = initCheckpoint(copySourceObjectInfo);
             if (input.isEnableCheckpoint()) {
-                try{
+                try {
                     checkpoint.writeToFile(input.getCheckpointFile());
                 } catch (IOException e) {
                     throw new TosClientException("tos: record to checkpoint file failed", e);
@@ -211,9 +218,9 @@ public class ResumableCopyObjectTaskHandler {
         this.checkpoint = checkpoint;
     }
 
-    private CopySourceObjectInfo getCopySourceObjectInfo(String bucket, String key){
+    private CopySourceObjectInfo getCopySourceObjectInfo(String bucket, String key) {
         // head source object
-        try{
+        try {
             HeadObjectV2Output head = this.handler.headObject(new HeadObjectV2Input().setBucket(bucket).setKey(key));
             GetObjectBasicOutput basicOutput = head.getHeadObjectBasicOutput();
             return new CopySourceObjectInfo().setObjectSize(head.getContentLength())
@@ -271,11 +278,11 @@ public class ResumableCopyObjectTaskHandler {
             throw new TosClientException("unsupported part number, the maximum is 10000", null);
         }
         List<CopyPartInfo> partInfoList = new ArrayList<>((int) partNum);
-        for(int i = 0; i < partNum; i++) {
-            if (i < partNum-1) {
-                partInfoList.add(new CopyPartInfo().setPartNumber(i+1).setCopySourceRangeStart(i * partSize).setCopySourceRangeEnd((i+1) * partSize - 1));
+        for (int i = 0; i < partNum; i++) {
+            if (i < partNum - 1) {
+                partInfoList.add(new CopyPartInfo().setPartNumber(i + 1).setCopySourceRangeStart(i * partSize).setCopySourceRangeEnd((i + 1) * partSize - 1));
             } else {
-                partInfoList.add(new CopyPartInfo().setPartNumber(i+1).setCopySourceRangeStart(i * partSize).setCopySourceRangeEnd((partNum-1) * partSize + lastPartSize- 1));
+                partInfoList.add(new CopyPartInfo().setPartNumber(i + 1).setCopySourceRangeStart(i * partSize).setCopySourceRangeEnd((partNum - 1) * partSize + lastPartSize - 1));
             }
         }
         if (partNum == 0) {
@@ -285,13 +292,14 @@ public class ResumableCopyObjectTaskHandler {
         return partInfoList;
     }
 
-    private ResumableCopyObjectCheckpoint loadCheckpointFromFile(String checkpointFilePath) throws IOException, ClassNotFoundException{
+    private ResumableCopyObjectCheckpoint loadCheckpointFromFile(String checkpointFilePath) throws IOException, ClassNotFoundException {
         ParamsChecker.ensureNotNull(checkpointFilePath, "checkpointFilePath is null");
         File f = new File(checkpointFilePath);
-        try(FileInputStream checkpointFile = new FileInputStream(f)) {
-            byte[] data = new byte[(int)f.length()];
+        try (FileInputStream checkpointFile = new FileInputStream(f)) {
+            byte[] data = new byte[(int) f.length()];
             checkpointFile.read(data);
-            return TosUtils.getJsonMapper().readValue(data, new TypeReference<ResumableCopyObjectCheckpoint>(){});
+            return TosUtils.getJsonMapper().readValue(data, new TypeReference<ResumableCopyObjectCheckpoint>() {
+            });
         }
     }
 }
