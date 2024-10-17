@@ -233,6 +233,9 @@ public class DirectoryBucketTest {
 
             if (output.getContents() != null) {
                 for (ListedObjectV2 obj : output.getContents()) {
+                    if (obj.getKey().equals(prefix)) {
+                        continue;
+                    }
                     client.deleteObject(new DeleteObjectInput().setBucket(bucket).setKey(obj.getKey()));
                 }
             }
@@ -330,47 +333,64 @@ public class DirectoryBucketTest {
 
                 // appendObject
                 String key2 = "append-object-" + System.currentTimeMillis();
+                AppendObjectOutput aoutput;
                 if (bucket.equals(Consts.bucket)) {
-                    poutput = client.putObject(new PutObjectInput().setBucket(bucket).setKey(key)
-                            .setContent(new ByteArrayInputStream("hiworld".getBytes())));
+                    aoutput = client.appendObject(new AppendObjectInput().setBucket(bucket).setKey(key2)
+                            .setContent(new ByteArrayInputStream("helloworld".getBytes())).setContentLength("helloworld".length())
+                            .setOptions(new ObjectMetaRequestOptions().setStorageClass(StorageClassType.STORAGE_CLASS_STANDARD))
+                            .setPreHashCrc64ecma("0")
+                            .setOffset(0));
+                    Assert.assertTrue(aoutput.getRequestInfo().getRequestId().length() > 0);
+                } else {
+                    // 对象已存在，且Size不为O，调用AppendObject，offset不一致
+                    try {
+                        client.appendObject(new AppendObjectInput().setBucket(bucket).setKey(key)
+                                .setContent(new ByteArrayInputStream("helloworld".getBytes())).setContentLength("helloworld".length())
+                                .setOptions(new ObjectMetaRequestOptions().setStorageClass(StorageClassType.STORAGE_CLASS_STANDARD))
+                                .setPreHashCrc64ecma("0")
+                                .setOffset(1));
+                        Assert.fail();
+                    } catch (TosServerException ex) {
+                        Assert.assertEquals(ex.getStatusCode(), 409);
+                    }
+                    // 首次上传使用AppendObject
+                    aoutput = client.appendObject(new AppendObjectInput().setBucket(bucket).setKey(key2)
+                            .setContent(new ByteArrayInputStream("helloworld".getBytes())).setContentLength("helloworld".length())
+                            .setOptions(new ObjectMetaRequestOptions().setStorageClass(StorageClassType.STORAGE_CLASS_STANDARD))
+                            .setPreHashCrc64ecma("0")
+                            .setOffset(0));
+                    Assert.assertTrue(aoutput.getRequestInfo().getRequestId().length() > 0);
+
+                    // 上传0字节对象后，调用appendObject
+                    poutput = client.putObject(new PutObjectInput().setBucket(bucket).setKey(key2)
+                            .setContent(null).setContentLength(0));
                     Assert.assertTrue(poutput.getRequestInfo().getRequestId().length() > 0);
 
-                    ggoutput = client.getObject(new GetObjectV2Input().setBucket(bucket).setKey(key));
-                    Assert.assertTrue(ggoutput.getRequestInfo().getRequestId().length() > 0);
-                    Assert.assertEquals(StringUtils.toString(ggoutput.getContent(), "content"), "hiworld");
-                    ggoutput.getContent().close();
-                } else {
+                    aoutput = client.appendObject(new AppendObjectInput().setBucket(bucket).setKey(key2)
+                            .setContent(new ByteArrayInputStream("helloworld".getBytes())).setContentLength("helloworld".length())
+                            .setOptions(new ObjectMetaRequestOptions().setStorageClass(StorageClassType.STORAGE_CLASS_STANDARD))
+                            .setPreHashCrc64ecma("0")
+                            .setOffset(0));
+                    Assert.assertTrue(aoutput.getRequestInfo().getRequestId().length() > 0);
+
+                    // 对象已存在，且Size不为O，调用AppendObject，offset为0
                     try {
-                        client.putObject(new PutObjectInput().setBucket(bucket).setKey(key)
-                                .setContent(new ByteArrayInputStream("hiworld".getBytes())));
-                        Assert.assertTrue(false);
-                    } catch (TosServerException ex) {
-                        Assert.assertEquals(ex.getStatusCode(), 405);
-                    }
-                    try {
+                        poutput = client.putObject(new PutObjectInput().setBucket(bucket).setKey(key2)
+                                .setContent(new ByteArrayInputStream("helloworld".getBytes())).setContentLength("helloworld".length()));
+                        Assert.assertTrue(poutput.getRequestInfo().getRequestId().length() > 0);
+
                         client.appendObject(new AppendObjectInput().setBucket(bucket).setKey(key2)
                                 .setContent(new ByteArrayInputStream("helloworld".getBytes())).setContentLength("helloworld".length())
                                 .setOptions(new ObjectMetaRequestOptions().setStorageClass(StorageClassType.STORAGE_CLASS_STANDARD))
                                 .setPreHashCrc64ecma("0")
                                 .setOffset(0));
-                        Assert.assertTrue(false);
+                        Assert.fail();
                     } catch (TosException ex) {
-                        Assert.assertEquals(ex.getStatusCode(), 404);
+                        Assert.assertEquals(ex.getMessage(), "tos: The object offset of this modify not matched.");
                     }
                 }
 
-                poutput = client.putObject(new PutObjectInput().setBucket(bucket).setKey(key2)
-                        .setContent(null).setContentLength(0));
-                Assert.assertTrue(poutput.getRequestInfo().getRequestId().length() > 0);
-
-                AppendObjectOutput aoutput = client.appendObject(new AppendObjectInput().setBucket(bucket).setKey(key2)
-                        .setContent(new ByteArrayInputStream("helloworld".getBytes())).setContentLength("helloworld".length())
-                        .setOptions(new ObjectMetaRequestOptions().setStorageClass(StorageClassType.STORAGE_CLASS_STANDARD))
-                        .setPreHashCrc64ecma("0")
-                        .setOffset(0));
-                Assert.assertTrue(aoutput.getRequestInfo().getRequestId().length() > 0);
                 long nextOffset = aoutput.getNextAppendOffset();
-
                 ggoutput = client.getObject(new GetObjectV2Input().setBucket(bucket).setKey(key2));
                 Assert.assertTrue(ggoutput.getRequestInfo().getRequestId().length() > 0);
                 Assert.assertEquals(StringUtils.toString(ggoutput.getContent(), "content"), "helloworld");
