@@ -322,7 +322,7 @@ public class TosObjectRequestHandler {
         ensureValidKey(input.getKey());
         if (!input.isRecursive()) {
             RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), null)
-                .withQuery("versionId", input.getVersionID());
+                    .withQuery("versionId", input.getVersionID());
             builder = this.handleGenericInput(builder, input);
             TosRequest req = this.factory.build(builder, HttpMethod.DELETE, null);
             return objectHandler.doRequest(req, HttpStatus.NO_CONTENT,
@@ -517,19 +517,26 @@ public class TosObjectRequestHandler {
 
         BucketType bucketType = this.getBucketType(input.getBucket());
         if (bucketType != null && bucketType.getType().equals(BucketType.BUCKET_TYPE_HNS.getType())) {
-            if (input.getOffset() == 0 && input.getContentLength() >= 0) {
-                PutObjectInput pinput = new PutObjectInput().setBucket(input.getBucket())
-                        .setKey(input.getKey()).setContent(input.getContent())
-                        .setContentLength(input.getContentLength()).setDataTransferListener(input.getDataTransferListener())
-                        .setRateLimiter(input.getRateLimiter()).setIfMatch(input.getIfMatch())
-                        .setOptions(input.getOptions()).setForbidOverwrite(true);
 
-                pinput.setRequestDate(input.getRequestDate());
-                pinput.setRequestHost(input.getRequestHost());
-                PutObjectOutput poutput = this.putObject(pinput);
-                AppendObjectOutput aoutput = new AppendObjectOutput().setRequestInfo(poutput.getRequestInfo()).setHashCrc64ecma(poutput.getHashCrc64ecma());
-                aoutput.setNextAppendOffset(input.getContentLength());
-                return aoutput;
+            if (input.getOffset() == 0 && input.getContentLength() >= 0) {
+                try {
+                    PutObjectInput pinput = new PutObjectInput().setBucket(input.getBucket())
+                            .setKey(input.getKey()).setContent(input.getContent())
+                            .setContentLength(input.getContentLength()).setDataTransferListener(input.getDataTransferListener())
+                            .setRateLimiter(input.getRateLimiter()).setIfMatch(input.getIfMatch())
+                            .setOptions(input.getOptions()).setForbidOverwrite(true);
+
+                    pinput.setRequestDate(input.getRequestDate());
+                    pinput.setRequestHost(input.getRequestHost());
+                    PutObjectOutput poutput = this.putObject(pinput);
+                    AppendObjectOutput aoutput = new AppendObjectOutput().setRequestInfo(poutput.getRequestInfo()).setHashCrc64ecma(poutput.getHashCrc64ecma());
+                    aoutput.setNextAppendOffset(input.getContentLength());
+                    return aoutput;
+                } catch (TosServerException e) {
+                    if (e.getStatusCode() != HttpStatus.CONFLICT || !Consts.EcObjForbidOverwriteErr.equals(e.getEc())) {
+                        throw e;
+                    }
+                }
             }
 
             ModifyObjectInput minput = new ModifyObjectInput().setBucket(input.getBucket())
