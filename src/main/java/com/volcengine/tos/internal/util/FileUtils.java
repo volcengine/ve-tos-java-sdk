@@ -47,7 +47,7 @@ public class FileUtils {
             throw new TosClientException("file offset is small than 0", null);
         }
         if (fileInputStream != null) {
-            try{
+            try {
                 fileInputStream.skip(offset);
                 return new TosRepeatableBoundedFileInputStream(fileInputStream, partSize);
             } catch (IOException e) {
@@ -55,7 +55,7 @@ public class FileUtils {
             }
         }
         if (file != null) {
-            try{
+            try {
                 FileInputStream fis = new FileInputStream(file);
                 fis.skip(offset);
                 return new TosRepeatableBoundedFileInputStream(fis, partSize);
@@ -64,7 +64,7 @@ public class FileUtils {
             }
         }
         if (filePath != null) {
-            try{
+            try {
                 FileInputStream fis = new FileInputStream(filePath);
                 fis.skip(offset);
                 return new TosRepeatableBoundedFileInputStream(fis, partSize);
@@ -83,10 +83,15 @@ public class FileUtils {
                 return buildNewPathWithKeyAndCreateDir(filePath, key);
             }
         } else {
-            if (filePath.endsWith(File.separator)){
+            if (filePath.endsWith(File.separator)) {
                 // if not exists aa/bb/, create dir
                 return buildNewPathWithKeyAndCreateDir(filePath, key);
             }
+
+            if (file.getParentFile() == null) {
+                throw new TosClientException("tos: the directory is not exist: " + file.getPath(), null);
+            }
+
             // if not exists aa/bb, create parent dir which is aa
             if (!file.getParentFile().exists() && !file.getParentFile().mkdirs()) {
                 throw new TosClientException("tos: can not create directory in: " + file.getParentFile().getPath(), null);
