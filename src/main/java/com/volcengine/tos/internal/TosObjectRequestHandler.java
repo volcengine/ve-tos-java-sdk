@@ -517,25 +517,39 @@ public class TosObjectRequestHandler {
 
         BucketType bucketType = this.getBucketType(input.getBucket());
         if (bucketType != null && bucketType.getType().equals(BucketType.BUCKET_TYPE_HNS.getType())) {
-
             if (input.getOffset() == 0 && input.getContentLength() >= 0) {
+                HeadObjectV2Output headOutput;
                 try {
-                    PutObjectInput pinput = new PutObjectInput().setBucket(input.getBucket())
-                            .setKey(input.getKey()).setContent(input.getContent())
-                            .setContentLength(input.getContentLength()).setDataTransferListener(input.getDataTransferListener())
-                            .setRateLimiter(input.getRateLimiter()).setIfMatch(input.getIfMatch())
-                            .setOptions(input.getOptions()).setForbidOverwrite(true);
+                    HeadObjectV2Input headInput = new HeadObjectV2Input().setBucket(input.getBucket()).setKey(input.getKey());
+                    headInput.setRequestDate(input.getRequestDate());
+                    headInput.setRequestHost(input.getRequestHost());
+                    headOutput = this.headObject(headInput);
 
-                    pinput.setRequestDate(input.getRequestDate());
-                    pinput.setRequestHost(input.getRequestHost());
-                    PutObjectOutput poutput = this.putObject(pinput);
-                    AppendObjectOutput aoutput = new AppendObjectOutput().setRequestInfo(poutput.getRequestInfo()).setHashCrc64ecma(poutput.getHashCrc64ecma());
-                    aoutput.setNextAppendOffset(input.getContentLength());
-                    return aoutput;
-                } catch (TosServerException e) {
-                    if (e.getStatusCode() != HttpStatus.CONFLICT || !Consts.EcObjForbidOverwriteErr.equals(e.getEc())) {
-                        throw e;
+                    if (headOutput.getContentLength() > 0L) {
+                        throw new TosClientException("tos: The object offset of this modify not matched.", null);
                     }
+
+                    if (StringUtils.isEmpty(input.getIfMatch())) {
+                        input.setIfMatch(headOutput.getEtag());
+                    }
+                } catch (TosServerException e) {
+                    // 对象不存在，转为 PutObject + ForbidOverwrite
+                    if (e.getStatusCode() == HttpStatus.NOT_FOUND && Consts.EcNoSuchObjectErr.equals(e.getEc())) {
+                        PutObjectInput pinput = new PutObjectInput().setBucket(input.getBucket())
+                                .setKey(input.getKey()).setContent(input.getContent())
+                                .setContentLength(input.getContentLength()).setDataTransferListener(input.getDataTransferListener())
+                                .setRateLimiter(input.getRateLimiter()).setIfMatch(input.getIfMatch())
+                                .setOptions(input.getOptions()).setForbidOverwrite(true);
+
+                        pinput.setRequestDate(input.getRequestDate());
+                        pinput.setRequestHost(input.getRequestHost());
+                        PutObjectOutput poutput = this.putObject(pinput);
+                        AppendObjectOutput aoutput = new AppendObjectOutput().setRequestInfo(poutput.getRequestInfo()).setHashCrc64ecma(poutput.getHashCrc64ecma());
+                        aoutput.setNextAppendOffset(input.getContentLength());
+                        return aoutput;
+                    }
+
+                    throw e;
                 }
             }
 

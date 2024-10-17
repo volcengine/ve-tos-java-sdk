@@ -11,7 +11,7 @@ public interface Consts {
     String SCHEME_HTTP = "http";
     String SCHEME_HTTPS = "https";
     String SDK_NAME = "ve-tos-java-sdk";
-    String SDK_VERSION = "v2.8.5";
+    String SDK_VERSION = "v2.8.6";
     String OS_NAME = System.getProperty("os.name");
     String OS_ARCH = System.getProperty("os.arch");
     String JAVA_VERSION = System.getProperty("java.version", "0");
@@ -83,4 +83,5 @@ public interface Consts {
 
     // EC Code
     String EcObjForbidOverwriteErr = "0017-00000004"; // 目标对象已经存在，不允许覆盖
+    String EcNoSuchObjectErr = "0017-00000003"; // 对象不存在
 }

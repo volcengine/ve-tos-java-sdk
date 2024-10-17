@@ -1,5 +1,9 @@
 ## Release Note
 
+### 2024.10.17 Version 2.8.6
+
+- 修复AppendObject 适配分层桶首次上传空对象场景
+
 ### 2024.10.09 Version 2.8.5
 
 - AppendObject 适配分层桶首次上传空对象场景
