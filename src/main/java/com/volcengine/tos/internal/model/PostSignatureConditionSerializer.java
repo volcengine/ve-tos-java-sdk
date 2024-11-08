@@ -14,7 +14,7 @@ public class PostSignatureConditionSerializer extends JsonSerializer<PostSignatu
     public void serialize(PostSignatureCondition value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
         if (value == null) {
             gen.writeNull();
-        } else if (value.getOperator() == null){
+        } else if (value.getOperator() == null) {
             gen.writeStartObject();
             gen.writeStringField(value.getKey(), value.getValue());
             gen.writeEndObject();
@@ -25,7 +25,11 @@ public class PostSignatureConditionSerializer extends JsonSerializer<PostSignatu
             gen.writeObject(Long.parseLong(value.getValue()));
             gen.writeEndArray();
         } else {
-            gen.writeArray(new String[]{value.getOperator(), value.getKey(), value.getValue()}, 0, 3);
+            String key = value.getKey();
+            if (key == null || !key.startsWith("$")) {
+                key = "$" + key;
+            }
+            gen.writeArray(new String[]{value.getOperator(), key, value.getValue()}, 0, 3);
         }
     }
 }

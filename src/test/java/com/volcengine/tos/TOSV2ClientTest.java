@@ -44,9 +44,44 @@ public class TOSV2ClientTest {
     private static TOSV2 client = new TOSV2ClientBuilder().build(TOSClientConfiguration.builder().region(Consts.region).endpoint(Consts.endpoint)
             .credentials(new StaticCredentials(Consts.accessKey, Consts.secretKey)).build());
 
+    static void testObjectCrud(TOSV2 clientCRUD, String bucket) {
+        String data = "1234567890abcdefghijklmnopqrstuvwxyz~!@#$%^&*()_+<>?,./   :'1234567890abcdefghijklmnopqrstuvwxyz~!@#$%^&*()_+<>?,./   :'";
+        InputStream stream = new ByteArrayInputStream(data.getBytes());
+        String key = "object-curd-" + System.currentTimeMillis();
+        try {
+            PutObjectOutput put = clientCRUD.putObject(bucket, key, stream);
+            GetObjectOutput got = clientCRUD.getObject(bucket, key);
+            // NOTICE: 注意在对象很大的时候不要这样一次性读取
+            Assert.assertEquals(crc32Check(data.getBytes()), crc32Check(StringUtils.toByteArray(got.getContent())));
+            Assert.assertEquals(put.getEtag(), got.getObjectMeta().getEtags());
+
+            HeadObjectOutput head = clientCRUD.headObject(bucket, key);
+            Assert.assertNotNull(head.getObjectMeta().getEtags());
+            Assert.assertEquals(head.getObjectMeta().getEtags(), got.getObjectMeta().getEtags());
+            Assert.assertEquals(head.getObjectMeta(), got.getObjectMeta());
+        } catch (TosException | IOException e) {
+            Consts.LOG.error(e.toString(), e);
+            Assert.fail();
+        } finally {
+            try {
+                clientCRUD.deleteObject(bucket, key);
+            } catch (TosException e) {
+                Consts.LOG.error(e.toString(), e);
+                Assert.fail();
+            }
+        }
+    }
+
+    static int crc32Check(byte[] data) {
+        CRC32 crc = new CRC32();
+        crc.reset();
+        crc.update(data);
+        return (int) crc.getValue();
+    }
+
     @Test
-    void ClientV1PreSignedURLTest(){
-        try{
+    void ClientV1PreSignedURLTest() {
+        try {
             TOSClient client = new TOSClient(Consts.endpoint, ClientOptions.withRegion(Consts.region),
                     ClientOptions.withCredentials(new StaticCredentials(Consts.accessKey, Consts.secretKey)));
             String signed = client.preSignedURL(HttpMethod.GET, Consts.bucket, "test.txt", Duration.ofHours(1));
@@ -59,7 +94,7 @@ public class TOSV2ClientTest {
 
             signed = client.preSignedURL(HttpMethod.GET, Consts.bucket, "/test.txt", Duration.ofHours(1));
             Consts.LOG.info("presigned url withPathAccessMode {}", signed);
-        } catch (TosException e){
+        } catch (TosException e) {
             Consts.LOG.error(e.toString(), e);
             Assert.fail();
         }
@@ -99,14 +134,14 @@ public class TOSV2ClientTest {
     @Test
     void ClientNotFoundBucketTest() {
         String notFoundBucket = "notfoundbucket";
-        try{
+        try {
             client.getObject(notFoundBucket, "a.txt");
-        } catch (TosException e){
+        } catch (TosException e) {
             Assert.assertNotNull(e);
             Assert.assertEquals(e.getCode(), Code.NO_SUCH_BUCKET);
             Assert.assertEquals(e.getStatusCode(), HttpStatus.NOT_FOUND);
         }
-        try{
+        try {
             String data = "1234567890abcdefghijklmnopqrstuvwxyz~!@#$%^&*()_+<>?,./   :'1234567890abcdefghijklmnopqrstuvwxyz~!@#$%^&*()_+<>?,./   :'";
             InputStream stream = new ByteArrayInputStream(data.getBytes());
             client.putObject(notFoundBucket, "a.txt", stream);
@@ -118,15 +153,15 @@ public class TOSV2ClientTest {
     }
 
     @Test
-    void ClientListBucketsTest(){
-        try{
+    void ClientListBucketsTest() {
+        try {
             ListBucketsOutput output = client.listBuckets(new ListBucketsInput());
             Assert.assertNotNull(output);
             Consts.LOG.info("list {} buckets.", output.getBuckets().length);
             for (int i = 0; i < output.getBuckets().length; i++) {
                 Consts.LOG.info("No.{} bucket: {}", i, output.getBuckets()[i].getName());
             }
-        } catch (TosException e){
+        } catch (TosException e) {
             Consts.LOG.error(e.toString(), e);
             Assert.fail();
         }
@@ -135,11 +170,11 @@ public class TOSV2ClientTest {
     @Test
     void ClientNotFoundBucketCURDTest() {
         TOSV2 clientCrudTest = null;
-        try{
+        try {
             TOSClientConfiguration conf = TOSClientConfiguration.builder().region(Consts.region).endpoint(Consts.endpoint)
                     .credentials(new StaticCredentials("0000", "ssss")).build();
             clientCrudTest = new TOSV2ClientBuilder().build(conf);
-        } catch (TosException e){
+        } catch (TosException e) {
             Consts.LOG.error(e.toString(), e);
             Assert.fail();
         }
@@ -148,14 +183,14 @@ public class TOSV2ClientTest {
 
         try {
             clientCrudTest.createBucket(new CreateBucketInput(bucketName));
-        } catch (TosException e){
+        } catch (TosException e) {
             Assert.assertEquals(e.getCode(), Code.INVALID_ACCESS_KEY_ID);
             Assert.assertEquals(e.getStatusCode(), HttpStatus.FORBIDDEN);
         }
 
         try {
             clientCrudTest.headBucket(bucketName);
-        }catch (TosException e) {
+        } catch (TosException e) {
             Assert.assertEquals(e.getCode(), Code.NOT_FOUND);
             Assert.assertEquals(e.getStatusCode(), HttpStatus.NOT_FOUND);
         }
@@ -170,18 +205,18 @@ public class TOSV2ClientTest {
 
     @Test
     void ClientBucketCRUDTest() throws InterruptedException {
-        String bucketName = "bucket-curd-test"+System.currentTimeMillis();
-        try{
-            try{
+        String bucketName = "bucket-curd-test" + System.currentTimeMillis();
+        try {
+            try {
                 client.deleteBucket(bucketName);
             } catch (TosException e) {
                 // ignore
             }
-            try{
+            try {
                 CreateBucketOutput createdBucket = client.createBucket(new CreateBucketInput(bucketName));
                 Assert.assertNotNull(createdBucket);
                 Consts.LOG.info("bucket created: {}", createdBucket);
-            } catch (TosException e){
+            } catch (TosException e) {
                 Consts.LOG.error(e.toString(), e);
                 Assert.fail();
             }
@@ -189,18 +224,18 @@ public class TOSV2ClientTest {
 
             try {
                 client.createBucket(new CreateBucketInput(bucketName));
-            } catch (TosException e){
+            } catch (TosException e) {
                 Assert.assertEquals(e.getCode(), Code.BUCKET_ALREADY_OWNED_BY_YOU);
                 Assert.assertEquals(e.getStatusCode(), HttpStatus.CONFLICT);
             }
 
             int bucketsNum = 0;
-            try{
+            try {
                 ListBucketsOutput output = client.listBuckets(new ListBucketsInput());
                 Assert.assertNotNull(output);
                 Consts.LOG.info("list {} buckets.", output.getBuckets().length);
                 bucketsNum = output.getBuckets().length;
-            } catch (TosException e){
+            } catch (TosException e) {
                 Consts.LOG.error(e.toString(), e);
                 Assert.fail();
             }
@@ -217,15 +252,15 @@ public class TOSV2ClientTest {
                 Assert.assertEquals(e.getCode(), Code.NO_SUCH_BUCKET);
                 Assert.assertEquals(e.getStatusCode(), HttpStatus.NOT_FOUND);
             }
-            try{
+            try {
                 ListBucketsOutput output = client.listBuckets(new ListBucketsInput());
                 Assert.assertNotNull(output);
                 Consts.LOG.info("list {} buckets.", output.getBuckets().length);
-            } catch (TosException e){
+            } catch (TosException e) {
                 Consts.LOG.error(e.toString(), e);
                 Assert.fail();
             }
-        }finally {
+        } finally {
             try {
                 client.deleteBucket(bucketName);
             } catch (TosException e) {
@@ -236,24 +271,24 @@ public class TOSV2ClientTest {
     }
 
     @Test
-    void BucketCopyObjectTest(){
+    void BucketCopyObjectTest() {
         String srcData = StringUtils.randomString(1024);
-        String key = "object-copy-"+System.currentTimeMillis();
-        String cpKey = "object-copy-data-"+System.currentTimeMillis();
+        String key = "object-copy-" + System.currentTimeMillis();
+        String cpKey = "object-copy-data-" + System.currentTimeMillis();
 
-        try{
+        try {
             PutObjectOutput srcPut = client.putObject(Consts.bucket, key, new ByteArrayInputStream(srcData.getBytes()));
             assertDataSame(client, Consts.bucket, key, srcData, srcPut.getEtag());
             CopyObjectOutput got = client.copyObject(Consts.bucket, key, cpKey);
             assertDataSame(client, Consts.bucket, cpKey, srcData, got.getEtag());
-        } catch (TosException e){
+        } catch (TosException e) {
             Consts.LOG.error(e.toString(), e);
             Assert.fail();
         } finally {
-            try{
+            try {
                 client.deleteObject(Consts.bucket, key);
                 client.deleteObject(Consts.bucket, cpKey);
-            } catch (TosException e){
+            } catch (TosException e) {
                 Consts.LOG.error(e.toString(), e);
                 Assert.fail();
             }
@@ -261,12 +296,12 @@ public class TOSV2ClientTest {
     }
 
     @Test
-    void BucketCopyObjectToTest(){
+    void BucketCopyObjectToTest() {
         String srcData = StringUtils.randomString(1024);
         String dstData = StringUtils.randomString(2048);
-        String key = "object-copy-to-"+System.currentTimeMillis();
-        String cpKey = "object-copy-to-data-"+System.currentTimeMillis();
-        try{
+        String key = "object-copy-to-" + System.currentTimeMillis();
+        String cpKey = "object-copy-to-data-" + System.currentTimeMillis();
+        try {
             PutObjectOutput srcPut = client.putObject(Consts.bucket, key, new ByteArrayInputStream(srcData.getBytes()));
             assertDataSame(client, Consts.bucket, key, srcData, srcPut.getEtag());
 
@@ -275,14 +310,14 @@ public class TOSV2ClientTest {
 
             CopyObjectOutput gotSrc = client.copyObjectTo(Consts.bucket, Consts.bucketCopy, cpKey, key);
             assertDataSame(client, Consts.bucketCopy, cpKey, srcData, gotSrc.getEtag());
-        } catch (TosException e){
+        } catch (TosException e) {
             Consts.LOG.error(e.toString(), e);
             Assert.fail();
         } finally {
-            try{
+            try {
                 client.deleteObject(Consts.bucket, key);
                 client.deleteObject(Consts.bucketCopy, cpKey);
-            } catch (TosException e){
+            } catch (TosException e) {
                 Consts.LOG.error(e.toString(), e);
                 Assert.fail();
             }
@@ -290,14 +325,14 @@ public class TOSV2ClientTest {
     }
 
     @Test
-    void BucketCopyObjectFrom(){
+    void BucketCopyObjectFrom() {
         // special case
 
         String srcData = StringUtils.randomString(1024);
         String dstData = StringUtils.randomString(2048);
-        String key = "object-copy-from-"+System.currentTimeMillis();
-        String cpKey = "object-copy-from-data-"+System.currentTimeMillis();
-        try{
+        String key = "object-copy-from-" + System.currentTimeMillis();
+        String cpKey = "object-copy-from-data-" + System.currentTimeMillis();
+        try {
             PutObjectOutput srcPut = client.putObject(Consts.bucketCopy, cpKey, new ByteArrayInputStream(srcData.getBytes()));
             assertDataSame(client, Consts.bucketCopy, cpKey, srcData, srcPut.getEtag());
 
@@ -306,16 +341,16 @@ public class TOSV2ClientTest {
 
             CopyObjectOutput got = client.copyObjectFrom(Consts.bucket, Consts.bucketCopy, cpKey, key);
             assertDataSame(client, Consts.bucket, key, srcData, got.getEtag());
-        } catch (TosException e){
+        } catch (TosException e) {
             Consts.LOG.error(e.toString(), e);
             Assert.fail();
         } finally {
             Assert.assertNotNull(client);
             Assert.assertNotNull(client);
-            try{
+            try {
                 client.deleteObject(Consts.bucketCopy, cpKey);
                 client.deleteObject(Consts.bucket, key);
-            } catch (TosException e){
+            } catch (TosException e) {
                 Consts.LOG.error(e.toString(), e);
                 Assert.fail();
             }
@@ -323,7 +358,7 @@ public class TOSV2ClientTest {
     }
 
     @Test
-    void copyRangeTest(){
+    void copyRangeTest() {
         String cr = TOSClient.copyRange(0, 0);
         Assert.assertEquals("", cr);
         long partSize = 1024L;
@@ -337,11 +372,11 @@ public class TOSV2ClientTest {
     }
 
     @Test
-    void BucketUploadPartCopyTest(){
-        String srcData = StringUtils.randomString(20*1024*1024+888);
-        String key = "object-upload-part-copy-"+System.currentTimeMillis();
+    void BucketUploadPartCopyTest() {
+        String srcData = StringUtils.randomString(20 * 1024 * 1024 + 888);
+        String key = "object-upload-part-copy-" + System.currentTimeMillis();
         String dstKey = "objectUploadPartCopy.data";
-        try{
+        try {
             PutObjectOutput srcPut = client.putObject(Consts.bucket, key, new ByteArrayInputStream(srcData.getBytes()));
             assertDataSame(client, Consts.bucket, key, srcData, srcPut.getEtag());
 
@@ -362,7 +397,7 @@ public class TOSV2ClientTest {
 
                 UploadPartCopyInput input = new UploadPartCopyInput().setUploadID(upload.getUploadID())
                         .setDestinationKey(dstKey).setSourceBucket(Consts.bucket).setStartOffset(startOffset)
-                        .setPartSize(partLen).setPartNumber(i+1).setSourceKey(key);
+                        .setPartSize(partLen).setPartNumber(i + 1).setSourceKey(key);
                 copyParts[i] = client.uploadPartCopy(Consts.bucketCopy, input);
             }
 
@@ -371,26 +406,26 @@ public class TOSV2ClientTest {
 
             client.completeMultipartUpload(Consts.bucketCopy, new CompleteMultipartUploadInput(dstKey, upload.getUploadID(), part));
 
-            try(GetObjectOutput got = client.getObject(Consts.bucketCopy, dstKey)){
+            try (GetObjectOutput got = client.getObject(Consts.bucketCopy, dstKey)) {
                 Assert.assertEquals(srcData.length(), got.getObjectMeta().getContentLength());
                 Assert.assertEquals(srcData, StringUtils.toString(got.getContent(), "content"));
             }
-        } catch (TosException | IOException e){
+        } catch (TosException | IOException e) {
             Consts.LOG.error(e.toString(), e);
             Assert.fail();
         } finally {
-            try{
+            try {
                 client.deleteObject(Consts.bucket, key);
                 client.deleteObject(Consts.bucketCopy, dstKey);
-            } catch (TosException e){
+            } catch (TosException e) {
                 Consts.LOG.error(e.toString(), e);
                 Assert.fail();
             }
         }
     }
 
-    private void assertDataSame(TOSV2 client, String bucket, String object, String data, String etag){
-        try{
+    private void assertDataSame(TOSV2 client, String bucket, String object, String data, String etag) {
+        try {
             HeadObjectOutput head = client.headObject(bucket, object);
             Assert.assertEquals(etag, head.getObjectMeta().getEtags());
             Assert.assertEquals(data.length(), head.getObjectMeta().getContentLength());
@@ -398,18 +433,18 @@ public class TOSV2ClientTest {
             GetObjectOutput got = client.getObject(bucket, object);
             String content = StringUtils.toString(got.getContent(), "content");
             Assert.assertEquals(data, content);
-        } catch (TosException e){
+        } catch (TosException e) {
             Consts.LOG.error(e.toString(), e);
             Assert.fail();
         }
     }
 
     @Test
-    void MultipartTest(){
-        String key = "multipart-test-"+System.currentTimeMillis();
+    void MultipartTest() {
+        String key = "multipart-test-" + System.currentTimeMillis();
         byte[] data = StringUtils.randomString(5 << 20).getBytes(StandardCharsets.UTF_8);
         CreateMultipartUploadOutput upload = null;
-        try{
+        try {
             upload = client.createMultipartUpload(Consts.bucket, key);
             UploadPartInput input1 = new UploadPartInput(key, upload.getUploadID(), data.length, 1,
                     new TosObjectInputStream(new ByteArrayInputStream(data)));
@@ -424,76 +459,48 @@ public class TOSV2ClientTest {
                     new MultipartUploadedPart[]{part1, part2});
             client.completeMultipartUpload(Consts.bucket, input);
             client.deleteObject(Consts.bucket, key);
-        } catch (TosException e){
+        } catch (TosException e) {
             Consts.LOG.error(e.toString(), e);
             Assert.fail();
         }
         Assert.assertNotNull(upload);
-        try{
+        try {
             client.abortMultipartUpload(Consts.bucket, new AbortMultipartUploadInput(key, upload.getRequestInfo().getRequestId()));
-        } catch (TosException e){
+        } catch (TosException e) {
             Assert.assertEquals(e.getCode(), Code.NO_SUCH_UPLOAD);
         }
     }
 
     @Test
-    void MultipartAbortTest(){
-        String key = "multipart-test-"+System.currentTimeMillis();
+    void MultipartAbortTest() {
+        String key = "multipart-test-" + System.currentTimeMillis();
         AbortMultipartUploadInput abort = null;
         try {
             CreateMultipartUploadOutput upload = client.createMultipartUpload(Consts.bucket, key);
             abort = new AbortMultipartUploadInput(key, upload.getUploadID());
             client.abortMultipartUpload(Consts.bucket, abort);
-        } catch (TosException e){
+        } catch (TosException e) {
             Consts.LOG.error(e.toString(), e);
             Assert.fail();
         }
         Assert.assertNotNull(abort);
-        try{
+        try {
             client.abortMultipartUpload(Consts.bucket, abort);
-        } catch (TosException e){
+        } catch (TosException e) {
             Assert.assertEquals(e.getCode(), Code.NO_SUCH_UPLOAD);
         }
     }
 
     @Test
-    void ObjectCURDTest(){
+    void ObjectCURDTest() {
         testObjectCrud(client, Consts.bucket);
     }
 
-    static void testObjectCrud(TOSV2 clientCRUD, String bucket){
-        String data = "1234567890abcdefghijklmnopqrstuvwxyz~!@#$%^&*()_+<>?,./   :'1234567890abcdefghijklmnopqrstuvwxyz~!@#$%^&*()_+<>?,./   :'";
-        InputStream stream = new ByteArrayInputStream(data.getBytes());
-        String key = "object-curd-"+System.currentTimeMillis();
-        try{
-            PutObjectOutput put = clientCRUD.putObject(bucket, key, stream);
-            GetObjectOutput got = clientCRUD.getObject(bucket, key);
-            // NOTICE: 注意在对象很大的时候不要这样一次性读取
-            Assert.assertEquals(crc32Check(data.getBytes()), crc32Check(StringUtils.toByteArray(got.getContent())));
-            Assert.assertEquals(put.getEtag(), got.getObjectMeta().getEtags());
-
-            HeadObjectOutput head = clientCRUD.headObject(bucket, key);
-            Assert.assertNotNull(head.getObjectMeta().getEtags());
-            Assert.assertEquals(head.getObjectMeta().getEtags(), got.getObjectMeta().getEtags());
-            Assert.assertEquals(head.getObjectMeta(), got.getObjectMeta());
-        } catch (TosException | IOException e) {
-            Consts.LOG.error(e.toString(), e);
-            Assert.fail();
-        } finally {
-            try{
-                clientCRUD.deleteObject(bucket, key);
-            } catch (TosException e){
-                Consts.LOG.error(e.toString(), e);
-                Assert.fail();
-            }
-        }
-    }
-
     @Test
-    void SetObjectMetaTest(){
+    void SetObjectMetaTest() {
         String data = StringUtils.randomString(1024);
-        String key = "object-meta-"+System.currentTimeMillis();
-        try{
+        String key = "object-meta-" + System.currentTimeMillis();
+        try {
             PutObjectOutput put = client.putObject(Consts.bucket, key, new ByteArrayInputStream(data.getBytes(StandardCharsets.UTF_8))
                     , RequestOptions.withContentType("image"));
             GetObjectOutput got = client.getObject(Consts.bucket, key);
@@ -530,13 +537,13 @@ public class TOSV2ClientTest {
             Assert.assertEquals(data, StringUtils.toString(got.getContent(), "content"));
             Assert.assertEquals(put.getEtag(), got.getObjectMeta().getEtags());
             Assert.assertEquals("image/png", got.getObjectMeta().getContentType());
-        } catch (TosException | IOException e){
+        } catch (TosException | IOException e) {
             Consts.LOG.error(e.toString(), e);
             Assert.fail();
         } finally {
-            try{
+            try {
                 client.deleteObject(Consts.bucket, key);
-            } catch (TosException e){
+            } catch (TosException e) {
                 Consts.LOG.error(e.toString(), e);
                 Assert.fail();
             }
@@ -544,13 +551,13 @@ public class TOSV2ClientTest {
     }
 
     @Test
-    void ObjectListTest(){
-        String objectPrefix = "%E4%B8%AD%E6%96%87%E6%B5%8B%E8%AF%95-"+System.currentTimeMillis();
+    void ObjectListTest() {
+        String objectPrefix = "%E4%B8%AD%E6%96%87%E6%B5%8B%E8%AF%95-" + System.currentTimeMillis();
         String data = "1234567890abcdefghijklmnopqrstuvwxyz~!@#$%^&*()_+<>?,./   :'1234567890abcdefghijklmnopqrstuvwxyz~!@#$%^&*()_+<>?,./   :'";
         int number = 12;
         boolean hasMore = true;
         String startAfter = "";
-        try{
+        try {
             for (int i = 0; i < number; i++) {
                 PutObjectOutput put = client.putObject(Consts.bucket, objectPrefix + i, new ByteArrayInputStream(data.getBytes()));
                 GetObjectOutput got = client.getObject(Consts.bucket, objectPrefix + i);
@@ -575,12 +582,12 @@ public class TOSV2ClientTest {
         } catch (TosException | IOException e) {
             Consts.LOG.error(e.toString(), e);
             Assert.fail();
-        }finally {
-            try{
+        } finally {
+            try {
                 for (int i = 0; i < number; i++) {
-                    client.deleteObject(Consts.bucket, objectPrefix+i);
+                    client.deleteObject(Consts.bucket, objectPrefix + i);
                 }
-            } catch (TosException e){
+            } catch (TosException e) {
                 Consts.LOG.error(e.toString(), e);
                 Assert.fail();
             }
@@ -588,32 +595,32 @@ public class TOSV2ClientTest {
     }
 
     @Test
-    void ObjectListVersionsTest(){
+    void ObjectListVersionsTest() {
         String bucketName = Consts.bucket;
         int number = 12;
-        String key = "object-list-version-"+System.currentTimeMillis();
+        String key = "object-list-version-" + System.currentTimeMillis();
         String[] versionID = new String[number];
-        try{
+        try {
             String buf = StringUtils.randomString(1024);
             for (int i = 0; i < number; i++) {
                 PutObjectOutput put = client.putObject(bucketName, key, new ByteArrayInputStream(buf.getBytes(StandardCharsets.UTF_8)));
                 versionID[i] = put.getVersionID();
             }
-            ListObjectVersionsInput input = new ListObjectVersionsInput().setPrefix(key.substring(0, key.length()-1));
+            ListObjectVersionsInput input = new ListObjectVersionsInput().setPrefix(key.substring(0, key.length() - 1));
             ListObjectVersionsOutput resp = client.listObjectVersions(bucketName, input);
             // 一次列举完
             Assert.assertFalse(resp.isTruncated());
             Assert.assertNotNull(resp.getVersions());
             Assert.assertEquals(resp.getVersions().length, 12);
-        } catch (TosException e){
+        } catch (TosException e) {
             Consts.LOG.error(e.toString(), e);
             Assert.fail();
-        }finally {
-            try{
+        } finally {
+            try {
                 for (int i = 0; i < number; i++) {
                     client.deleteObject(bucketName, key, RequestOptions.withVersionID(versionID[i]));
                 }
-            } catch (TosException e){
+            } catch (TosException e) {
                 Consts.LOG.error(e.toString(), e);
                 Assert.fail();
             }
@@ -621,10 +628,10 @@ public class TOSV2ClientTest {
     }
 
     @Test
-    void AppendObjectTest(){
-        String key = "append-object-"+System.currentTimeMillis();
+    void AppendObjectTest() {
+        String key = "append-object-" + System.currentTimeMillis();
         String data = StringUtils.randomString(128 << 10);
-        try{
+        try {
             AppendObjectOutput result = client.appendObject(Consts.bucketMultiVersionDisabled, key, new ByteArrayInputStream(data.getBytes()), 0);
 //            AppendObjectOutput result = client.appendObject(
 //                    AppendObjectInput.builder().contentLength(data.length()).bucket(Consts.bucket).key(key)
@@ -639,15 +646,15 @@ public class TOSV2ClientTest {
                     .offset(result.getNextAppendOffset()).preHashCrc64ecma(result.getHashCrc64ecma()).build());
             got = client.getObject(Consts.bucketMultiVersionDisabled, key);
             // NOTICE: 注意在对象很大的时候不要这样一次性读取
-            Assert.assertEquals(data.length()+data2.length(), got.getObjectMeta().getContentLength());
-            Assert.assertEquals(crc32Check((data+data2).getBytes()), crc32Check(StringUtils.toByteArray(got.getContent())));
-        } catch (TosException | IOException e){
+            Assert.assertEquals(data.length() + data2.length(), got.getObjectMeta().getContentLength());
+            Assert.assertEquals(crc32Check((data + data2).getBytes()), crc32Check(StringUtils.toByteArray(got.getContent())));
+        } catch (TosException | IOException e) {
             Consts.LOG.error(e.toString(), e);
             Assert.fail();
-        }finally {
-            try{
+        } finally {
+            try {
                 client.deleteObject(Consts.bucketMultiVersionDisabled, key);
-            } catch (TosException e){
+            } catch (TosException e) {
                 Consts.LOG.error(e.toString(), e);
                 Assert.fail();
             }
@@ -655,24 +662,24 @@ public class TOSV2ClientTest {
     }
 
     @Test
-    void DeleteMultiObjectsTest(){
+    void DeleteMultiObjectsTest() {
         String data = StringUtils.randomString(1024);
-        String objectPrefix = "delete-multi-objects-"+System.currentTimeMillis();
+        String objectPrefix = "delete-multi-objects-" + System.currentTimeMillis();
         int number = 12;
         ObjectTobeDeleted[] objectTobeDeleteds = new ObjectTobeDeleted[number];
-        try{
+        try {
             for (int i = 0; i < number; i++) {
-                PutObjectOutput put = client.putObject(Consts.bucket, objectPrefix+i, new ByteArrayInputStream(data.getBytes()));
-                GetObjectOutput got = client.getObject(Consts.bucket, objectPrefix+i);
+                PutObjectOutput put = client.putObject(Consts.bucket, objectPrefix + i, new ByteArrayInputStream(data.getBytes()));
+                GetObjectOutput got = client.getObject(Consts.bucket, objectPrefix + i);
                 Assert.assertEquals(data, StringUtils.toString(got.getContent(), "content"));
                 Assert.assertEquals(put.getEtag(), got.getObjectMeta().getEtags());
-                objectTobeDeleteds[i] = new ObjectTobeDeleted().setKey(objectPrefix+i);
+                objectTobeDeleteds[i] = new ObjectTobeDeleted().setKey(objectPrefix + i);
             }
             DeleteMultiObjectsOutput multiGot = client.deleteMultiObjects(Consts.bucket, new DeleteMultiObjectsInput(objectTobeDeleteds, false));
             Assert.assertNotNull(multiGot);
             Assert.assertNull(multiGot.getErrors());
             Assert.assertEquals(number, multiGot.getDeleteds().length);
-        } catch (TosException e){
+        } catch (TosException e) {
             Consts.LOG.error(e.toString(), e);
             Assert.fail();
         } finally {
@@ -680,7 +687,7 @@ public class TOSV2ClientTest {
                 for (int i = 0; i < number; i++) {
                     client.deleteObject(Consts.bucket, objectPrefix + i);
                 }
-            }catch (TosException e){
+            } catch (TosException e) {
                 Consts.LOG.error(e.toString(), e);
                 Assert.fail();
             }
@@ -690,10 +697,10 @@ public class TOSV2ClientTest {
     @Test
     void GetLargeObjectTest() {
         String data = StringUtils.randomString(16 << 20);
-        String key = "object-large-"+System.currentTimeMillis();
+        String key = "object-large-" + System.currentTimeMillis();
         try {
             client.putObject(Consts.bucket, key, new ByteArrayInputStream(data.getBytes()));
-        } catch (TosException e){
+        } catch (TosException e) {
             Consts.LOG.error(e.toString(), e);
             Assert.fail();
         }
@@ -719,9 +726,9 @@ public class TOSV2ClientTest {
             Consts.LOG.error(e.toString(), e);
             Assert.fail();
         } finally {
-            try{
+            try {
                 client.deleteObject(Consts.bucket, key);
-            } catch (TosException e){
+            } catch (TosException e) {
                 Consts.LOG.error(e.toString(), e);
                 Assert.fail();
             }
@@ -729,11 +736,11 @@ public class TOSV2ClientTest {
     }
 
     @Test
-    void GetObjectRangeTest(){
+    void GetObjectRangeTest() {
         String data = "1234567890abcdefghijklmnopqrstuvwxyz~!@#$%^&*()_+<>?,./   :'1234567890abcdefghijklmnopqrstuvwxyz~!@#$%^&*()_+<>?,./   :'";
         InputStream stream = new ByteArrayInputStream(data.getBytes());
-        String key = "object-curd-"+System.currentTimeMillis();
-        try{
+        String key = "object-curd-" + System.currentTimeMillis();
+        try {
             PutObjectOutput put = client.putObject(Consts.bucket, key, stream);
             GetObjectOutput got = client.getObject(Consts.bucket, key, RequestOptions.withRange(0, 7));
             // NOTICE: 注意在对象很大的时候不要这样一次性读取
@@ -743,26 +750,19 @@ public class TOSV2ClientTest {
             Consts.LOG.error(e.toString(), e);
             Assert.fail();
         } finally {
-            try{
+            try {
                 client.deleteObject(Consts.bucket, key);
-            } catch (TosException e){
+            } catch (TosException e) {
                 Consts.LOG.error(e.toString(), e);
                 Assert.fail();
             }
         }
     }
 
-    static int crc32Check(byte[] data){
-        CRC32 crc = new CRC32();
-        crc.reset();
-        crc.update(data);
-        return (int) crc.getValue();
-    }
-
     @Test
-    void ObjectAclTest(){
-        String key = "object-acl-"+System.currentTimeMillis();
-        try{
+    void ObjectAclTest() {
+        String key = "object-acl-" + System.currentTimeMillis();
+        try {
 
             String data = StringUtils.randomString(1024);
             PutObjectOutput put = client.putObject(Consts.bucket, key, new ByteArrayInputStream(data.getBytes()));
@@ -785,14 +785,14 @@ public class TOSV2ClientTest {
             gotAcl = client.getObjectAcl(Consts.bucket, key);
             Assert.assertEquals(1, gotAcl.getGrants().length);
             Assert.assertEquals(ACLConst.PERMISSION_TYPE_WRITE_ACP, gotAcl.getGrants()[0].getPermission());
-        } catch (TosException e){
+        } catch (TosException e) {
             Consts.LOG.error(e.toString(), e);
             Assert.fail();
         } finally {
             Assert.assertNotNull(client);
-            try{
+            try {
                 client.deleteObject(Consts.bucket, key);
-            } catch (TosException e){
+            } catch (TosException e) {
                 Consts.LOG.error(e.toString(), e);
                 Assert.fail();
             }
@@ -800,8 +800,8 @@ public class TOSV2ClientTest {
     }
 
     @Test
-    void PutObjectPrivateACLTest(){
-        String key = "object-acl-"+System.currentTimeMillis();
+    void PutObjectPrivateACLTest() {
+        String key = "object-acl-" + System.currentTimeMillis();
         try {
             String data = StringUtils.randomString(1024);
             client.putObject(Consts.bucket, key, new ByteArrayInputStream(data.getBytes()));
@@ -811,14 +811,14 @@ public class TOSV2ClientTest {
 
             GetObjectAclOutput gotAcl = client.getObjectAcl(Consts.bucket, key);
             Assert.assertEquals(1, gotAcl.getGrants().length);
-        } catch (TosException e){
+        } catch (TosException e) {
             Consts.LOG.error(e.toString(), e);
             Assert.fail();
         } finally {
             Assert.assertNotNull(client);
-            try{
+            try {
                 client.deleteObject(Consts.bucket, key);
-            } catch (TosException e){
+            } catch (TosException e) {
                 Consts.LOG.error(e.toString(), e);
                 Assert.fail();
             }
@@ -1831,5 +1831,44 @@ public class TOSV2ClientTest {
 
             Assert.assertEquals(new String(Hex.encodeHex(srcMd5.digest())), new String(Hex.encodeHex(dstMd5.digest())));
         }
+    }
+
+    @Test
+    void testPreSignedPostSignature() {
+        PreSignedPostSignatureInput input = new PreSignedPostSignatureInput();
+        input.setBucket("bucketname");
+        input.setKey("objectname");
+        input.setExpires(3600);
+        input.setContentLengthRange(new ContentLengthRange().setRangeStart(1).setRangeEnd(1024));
+        List<PostSignatureCondition> conditions = new ArrayList<>();
+        conditions.add(new PostSignatureCondition().setOperator("eq").setKey("success_action_status").setValue("201"));
+        conditions.add(new PostSignatureCondition().setOperator("starts-with").setKey("$content-type").setValue("text/"));
+        conditions.add(new PostSignatureCondition().setKey("acl").setValue("public-read"));
+        input.setConditions(conditions);
+        PreSignedPostSignatureOutput output = client.preSignedPostSignature(input);
+        Assert.assertTrue(output.getOriginPolicy().contains("{\"bucket\":\"bucketname\"}"));
+        Assert.assertTrue(output.getOriginPolicy().contains("{\"key\":\"objectname\"}"));
+        Assert.assertTrue(output.getOriginPolicy().contains("[\"eq\",\"$success_action_status\",\"201\"]"));
+        Assert.assertTrue(output.getOriginPolicy().contains("[\"starts-with\",\"$content-type\",\"text/\"]"));
+        Assert.assertTrue(output.getOriginPolicy().contains("{\"acl\":\"public-read\"}"));
+        Assert.assertTrue(output.getOriginPolicy().contains("[\"content-length-range\",1,1024]"));
+        System.out.println(output.getOriginPolicy());
+
+        List<PostSignatureMultiValuesCondition> multiValuesConditions = new ArrayList<>();
+        multiValuesConditions.add(new PostSignatureMultiValuesCondition().setOperator(null).setKey("invalid-key").setValue(Arrays.asList("invalid-value")));
+        multiValuesConditions.add(new PostSignatureMultiValuesCondition().setOperator("not-in").setKey("cache-control").setValue(Arrays.asList("no-cache")));
+        multiValuesConditions.add(new PostSignatureMultiValuesCondition().setOperator("in").setKey("$content-language").setValue(Arrays.asList("value1", "value2")));
+        input.setMultiValuesConditions(multiValuesConditions);
+        output = client.preSignedPostSignature(input);
+        Assert.assertTrue(output.getOriginPolicy().contains("{\"bucket\":\"bucketname\"}"));
+        Assert.assertTrue(output.getOriginPolicy().contains("{\"key\":\"objectname\"}"));
+        Assert.assertTrue(output.getOriginPolicy().contains("[\"eq\",\"$success_action_status\",\"201\"]"));
+        Assert.assertTrue(output.getOriginPolicy().contains("[\"starts-with\",\"$content-type\",\"text/\"]"));
+        Assert.assertTrue(output.getOriginPolicy().contains("{\"acl\":\"public-read\"}"));
+        Assert.assertTrue(output.getOriginPolicy().contains("[\"content-length-range\",1,1024]"));
+
+        Assert.assertTrue(output.getOriginPolicy().contains("[\"not-in\",\"$cache-control\",[\"no-cache\"]]"));
+        Assert.assertTrue(output.getOriginPolicy().contains("[\"in\",\"$content-language\",[\"value1\",\"value2\"]]"));
+        System.out.println(output.getOriginPolicy());
     }
 }

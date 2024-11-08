@@ -108,7 +108,7 @@ public class TosPreSignedRequestHandler {
             region = this.signer.getRegion();
         }
 
-        List<PostSignatureCondition> conditions = new ArrayList<>();
+        List<Object> conditions = new ArrayList<>();
         // algorithm
         conditions.add(new PostSignatureCondition(SigningUtils.v4Algorithm, SigningUtils.signPrefix));
         // date
@@ -134,20 +134,17 @@ public class TosPreSignedRequestHandler {
         }
         // custom conditions
         if (input.getConditions() != null) {
-            for (int i = 0; i < input.getConditions().size(); i++) {
-                PostSignatureCondition condition = input.getConditions().get(i);
-                if (condition.getOperator() != null) {
-                    conditions.add(new PostSignatureCondition("$"+condition.getKey(), condition.getValue(), condition.getOperator()));
-                } else {
-                    conditions.add(new PostSignatureCondition(condition.getKey(), condition.getValue()));
-                }
-            }
+            conditions.addAll(input.getConditions());
         }
         // custom content range
         if (input.getContentLengthRange() != null) {
             String key = String.valueOf(input.getContentLengthRange().getRangeStart());
             String value = String.valueOf(input.getContentLengthRange().getRangeEnd());
             conditions.add(new PostSignatureCondition(key, value, SigningUtils.signConditionRange));
+        }
+
+        if(input.getMultiValuesConditions() != null){
+            conditions.addAll(input.getMultiValuesConditions());
         }
 
         // expiration
