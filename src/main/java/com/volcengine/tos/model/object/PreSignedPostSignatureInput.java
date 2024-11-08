@@ -8,6 +8,7 @@ public class PreSignedPostSignatureInput {
     private long expires;
     private List<PostSignatureCondition> conditions;
     private ContentLengthRange contentLengthRange;
+    private List<PostSignatureMultiValuesCondition> multiValuesConditions;
 
     public String getBucket() {
         return bucket;
@@ -54,6 +55,15 @@ public class PreSignedPostSignatureInput {
         return this;
     }
 
+    public List<PostSignatureMultiValuesCondition> getMultiValuesConditions() {
+        return multiValuesConditions;
+    }
+
+    public PreSignedPostSignatureInput setMultiValuesConditions(List<PostSignatureMultiValuesCondition> multiValuesConditions) {
+        this.multiValuesConditions = multiValuesConditions;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "PreSignedPostSignatureInput{" +
@@ -62,6 +72,7 @@ public class PreSignedPostSignatureInput {
                 ", expires=" + expires +
                 ", conditions=" + conditions +
                 ", contentLengthRange=" + contentLengthRange +
+                ", multiValuesConditions=" + multiValuesConditions +
                 '}';
     }
 
@@ -75,6 +86,7 @@ public class PreSignedPostSignatureInput {
         private long expires;
         private List<PostSignatureCondition> conditions;
         private ContentLengthRange contentLengthRange;
+        private List<PostSignatureMultiValuesCondition> multiValuesConditions;
 
         private PreSignedPostSignatureInputBuilder() {
         }
@@ -104,6 +116,11 @@ public class PreSignedPostSignatureInput {
             return this;
         }
 
+        public PreSignedPostSignatureInputBuilder multiValuesConditions(List<PostSignatureMultiValuesCondition> multiValuesConditions) {
+            this.multiValuesConditions = multiValuesConditions;
+            return this;
+        }
+
         public PreSignedPostSignatureInput build() {
             PreSignedPostSignatureInput preSignedPostSignatureInput = new PreSignedPostSignatureInput();
             preSignedPostSignatureInput.setBucket(bucket);
@@ -111,6 +128,7 @@ public class PreSignedPostSignatureInput {
             preSignedPostSignatureInput.setExpires(expires);
             preSignedPostSignatureInput.setConditions(conditions);
             preSignedPostSignatureInput.setContentLengthRange(contentLengthRange);
+            preSignedPostSignatureInput.setMultiValuesConditions(multiValuesConditions);
             return preSignedPostSignatureInput;
         }
     }

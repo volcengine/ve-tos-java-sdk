@@ -7,15 +7,15 @@ import java.util.List;
 
 public class PostPolicyJson {
     @JsonProperty("conditions")
-    private List<PostSignatureCondition> conditions;
+    private List<Object> conditions;
     @JsonProperty("expiration")
     private String expiration;
 
-    public List<PostSignatureCondition> getConditions() {
+    public List<Object> getConditions() {
         return conditions;
     }
 
-    public PostPolicyJson setConditions(List<PostSignatureCondition> conditions) {
+    public PostPolicyJson setConditions(List<Object> conditions) {
         this.conditions = conditions;
         return this;
     }

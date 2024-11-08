@@ -1,5 +1,10 @@
 ## Release Note
 
+### 2024.11.1 Version 2.8.7
+
+- ListObjects CommonPrefix返回lastModified
+- PostObject支持多值操作符
+
 ### 2024.10.17 Version 2.8.6
 
 - 修复AppendObject 适配分层桶首次上传空对象场景
