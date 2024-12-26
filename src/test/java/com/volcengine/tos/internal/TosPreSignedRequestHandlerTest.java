@@ -72,81 +72,72 @@ public class TosPreSignedRequestHandlerTest {
 
     @Test
     void preSignedURLSpecialCharTest() {
-        String key = "/abc+ /?#~!.txt";
+        List<String> keyList = new ArrayList<>();
+        keyList.add("/test01/!-_.*'()"); // 无需编码特殊字符
+        keyList.add("/test02/&$@=;+    ,?"); // 需要编码特殊字符，包含连续多个空格
+        keyList.add("/test03/\t\n\r\b\f\007"); // 包含ASCII码控制字符
+        keyList.add("/test04/\uD83D\uDE0A?/\uD83D\uDE2D文本"); // 包含中文、emoji表情
+        keyList.add("/test05/[\\{^}%`~<>#|]\""); // 不建议使用的字符
+        keyList.add("./test06/./test"); // ./开头以及中间包含./
+        keyList.add("../test07/../test"); // ../开头以及中间包含../
+        keyList.add("/test08/."); // /.结尾
+        keyList.add("/test09/.."); // /..结尾
+        keyList.add("/test10///.."); // 包含多个连续的//
 
-        // preSign put object
-        PreSignedURLInput input = new PreSignedURLInput().setHttpMethod(HttpMethod.PUT).setBucket(Consts.bucket)
-                .setKey(key);
-        PreSignedURLOutput url = handler.preSignedURL(input);
-        Random random = new Random();
-        int length = random.nextInt(65536) + 1;
-        try {
-            InputStream content = new ByteArrayInputStream(StringUtils.randomString(length).getBytes());
-            Response resp = doReq(HttpMethod.PUT, url.getSignedUrl(), content, length, "");
-            Assert.assertEquals(resp.code(), HttpStatus.OK);
-            resp.close();
-        } catch (Exception e) {
-            testFailed(e);
-        }
+        for (String key : keyList) {
+            // preSign put object
+            PreSignedURLInput input = new PreSignedURLInput().setHttpMethod(HttpMethod.PUT).setBucket(Consts.bucket)
+                    .setKey(key).setExpires(3600);
+            PreSignedURLOutput url = handler.preSignedURL(input);
+            Random random = new Random();
+            int length = random.nextInt(65536) + 1;
+            try {
+                InputStream content = new ByteArrayInputStream(StringUtils.randomString(length).getBytes());
+                Response resp = doReq(HttpMethod.PUT, url.getSignedUrl(), content, length, "");
+                Assert.assertEquals(resp.code(), HttpStatus.OK);
+                resp.close();
 
-        // preSign get object
-        Response resp;
-        try {
-            input = new PreSignedURLInput().setHttpMethod(HttpMethod.GET).setBucket(Consts.bucket).setKey(key);
-            url = handler.preSignedURL(input);
-            resp = doReq(HttpMethod.GET, url.getSignedUrl(), null, -1, "");
-            Assert.assertEquals(resp.code(), HttpStatus.OK);
-            Assert.assertEquals(resp.headers().get(TosHeader.HEADER_CONTENT_LENGTH), String.valueOf(length));
-            Objects.requireNonNull(resp.body()).close();
+                // preSign get object
+                input = new PreSignedURLInput().setHttpMethod(HttpMethod.GET).setBucket(Consts.bucket).setKey(key);
+                url = handler.preSignedURL(input);
+                resp = doReq(HttpMethod.GET, url.getSignedUrl(), null, -1, "");
+                Assert.assertEquals(resp.code(), HttpStatus.OK);
+                Assert.assertEquals(resp.headers().get(TosHeader.HEADER_CONTENT_LENGTH), String.valueOf(length));
+                Objects.requireNonNull(resp.body()).close();
 
-            GetObjectV2Output getOutput = tosClient.getObject(new GetObjectV2Input().setBucket(Consts.bucket)
-                    .setKey(key));
-            Assert.assertEquals(getOutput.getContentLength(), length);
-            getOutput.getContent().close();
-        } catch (Exception e) {
-            testFailed(e);
-        }
+                // preSign delete object
+                input = new PreSignedURLInput().setHttpMethod(HttpMethod.DELETE).setBucket(Consts.bucket).setKey(key);
+                url = handler.preSignedURL(input);
+                resp = doReq(HttpMethod.DELETE, url.getSignedUrl(), null, -1, "");
+                Assert.assertEquals(resp.code(), HttpStatus.NO_CONTENT);
 
-        // delete object
-        try {
-            input = new PreSignedURLInput().setHttpMethod(HttpMethod.DELETE).setBucket(Consts.bucket).setKey(key);
-            url = handler.preSignedURL(input);
-            resp = doReq(HttpMethod.DELETE, url.getSignedUrl(), null, -1, "");
-            Assert.assertEquals(resp.code(), HttpStatus.NO_CONTENT);
-        } catch (Exception e) {
-            testFailed(e);
-        }
+                // put object
+                length = random.nextInt(65536) + 1;
+                InputStream content1 = new ByteArrayInputStream(StringUtils.randomString(length).getBytes());
+                tosClient.putObject(new PutObjectInput().setBucket(Consts.bucket).setKey(key).setContent(content1));
 
-        // put object
-        key = "/bcd+ /?#~!.txt";
-        length = random.nextInt(65536) + 1;
-        try {
-            InputStream content = new ByteArrayInputStream(StringUtils.randomString(length).getBytes());
-            tosClient.putObject(new PutObjectInput().setBucket(Consts.bucket).setKey(key).setContent(content));
-        } catch (Exception e) {
-            testFailed(e);
-        }
+                // get object
+                GetObjectV2Output getOutput = tosClient.getObject(new GetObjectV2Input().setBucket(Consts.bucket)
+                        .setKey(key));
+                Assert.assertEquals(getOutput.getContentLength(), length);
+                getOutput.getContent().close();
 
-        // get object
-        try {
-            input = new PreSignedURLInput().setHttpMethod(HttpMethod.GET).setBucket(Consts.bucket).setKey(key);
-            url = handler.preSignedURL(input);
-            resp = doReq(HttpMethod.GET, url.getSignedUrl(), null, -1, "");
-            Assert.assertEquals(resp.code(), HttpStatus.OK);
-            Assert.assertEquals(resp.headers().get(TosHeader.HEADER_CONTENT_LENGTH), String.valueOf(length));
-            Objects.requireNonNull(resp.body()).close();
-        } catch (Exception e) {
-            testFailed(e);
-        }
+                // preSign get object
+                input = new PreSignedURLInput().setHttpMethod(HttpMethod.GET).setBucket(Consts.bucket).setKey(key);
+                url = handler.preSignedURL(input);
+                resp = doReq(HttpMethod.GET, url.getSignedUrl(), null, -1, "");
+                Assert.assertEquals(resp.code(), HttpStatus.OK);
+                Assert.assertEquals(resp.headers().get(TosHeader.HEADER_CONTENT_LENGTH), String.valueOf(length));
+                Objects.requireNonNull(resp.body()).close();
 
-        // delete object
-        try {
-            input = new PreSignedURLInput().setHttpMethod(HttpMethod.DELETE).setBucket(Consts.bucket).setKey(key);
-            url = handler.preSignedURL(input);
-            resp = doReq(HttpMethod.DELETE, url.getSignedUrl(), null, -1, "");
-            Assert.assertEquals(resp.code(), HttpStatus.NO_CONTENT);
-        } catch (Exception e) {
-            testFailed(e);
+                // delete object
+                input = new PreSignedURLInput().setHttpMethod(HttpMethod.DELETE).setBucket(Consts.bucket).setKey(key);
+                url = handler.preSignedURL(input);
+                resp = doReq(HttpMethod.DELETE, url.getSignedUrl(), null, -1, "");
+                Assert.assertEquals(resp.code(), HttpStatus.NO_CONTENT);
+            } catch (Exception e) {
+                testFailed(e);
+            }
         }
     }
 
