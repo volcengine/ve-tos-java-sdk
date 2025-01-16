@@ -1,5 +1,9 @@
 ## Release Note
 
+### 2024.12.25 Version 2.8.8
+
+- Fix PreSignedURL 接口特殊字符兼容性
+
 ### 2024.11.1 Version 2.8.7
 
 - ListObjects CommonPrefix返回lastModified

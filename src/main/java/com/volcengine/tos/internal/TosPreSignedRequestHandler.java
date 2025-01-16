@@ -78,7 +78,7 @@ public class TosPreSignedRequestHandler {
             input.getQuery().forEach(builder::withQuery);
         }
         TosRequest request = this.factory.build(builder, input.getHttpMethod(), ttl);
-        return new PreSignedURLOutput(request.toEscapeURL().toString(), request.getHeaders());
+        return new PreSignedURLOutput(request.toURL().toString(), request.getHeaders());
     }
 
     public PreSignedPostSignatureOutput preSignedPostSignature(PreSignedPostSignatureInput input) throws TosException {
