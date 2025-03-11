@@ -1,26 +1,24 @@
 package com.volcengine.tos.internal;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.volcengine.tos.comm.TosHeader;
-import com.volcengine.tos.internal.util.StringUtils;
-import com.volcengine.tos.model.RequestInfo;
-import okio.Source;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.Serializable;
 import java.util.Collections;
 import java.util.Map;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.volcengine.tos.comm.TosHeader;
+import com.volcengine.tos.internal.util.StringUtils;
+import com.volcengine.tos.model.RequestInfo;
+
 public class TosResponse implements AutoCloseable, Serializable {
+
     private int statusCode;
     private long contentLength;
 
     private Map<String, String> headers = Collections.emptyMap();
     @JsonIgnore
     private transient InputStream inputStream;
-
-    private transient Source source;
 
     public RequestInfo RequestInfo() {
         return new RequestInfo(this.getRequesID(), this.getID2(), this.getStatusCode(), this.headers);
@@ -56,14 +54,14 @@ public class TosResponse implements AutoCloseable, Serializable {
         return inputStream;
     }
 
-    public long getInputStreamContentLength() throws IOException{
+    public long getInputStreamContentLength() throws IOException {
         return inputStream.available() == 0 ? -1 : inputStream.available();
     }
+
     public TosResponse setInputStream(InputStream inputStream) {
         this.inputStream = inputStream;
         return this;
     }
-
 
     public Map<String, String> getHeaders() {
         return headers;
@@ -81,15 +79,6 @@ public class TosResponse implements AutoCloseable, Serializable {
         return this;
     }
 
-    protected Source getSource() {
-        return source;
-    }
-
-    protected TosResponse setSource(Source source) {
-        this.source = source;
-        return this;
-    }
-
     @Override
     public void close() throws IOException {
         if (inputStream != null) {
@@ -99,10 +88,10 @@ public class TosResponse implements AutoCloseable, Serializable {
 
     @Override
     public String toString() {
-        return "TosResponse{" +
-                "statusCode=" + statusCode +
-                ", contentLength=" + contentLength +
-                ", headers=" + headers +
-                '}';
+        return "TosResponse{"
+                + "statusCode=" + statusCode
+                + ", contentLength=" + contentLength
+                + ", headers=" + headers
+                + '}';
     }
 }

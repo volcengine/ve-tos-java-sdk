@@ -1,15 +1,21 @@
 package com.volcengine.tos.internal.util.dnscache;
 
-import com.volcengine.tos.internal.util.StringUtils;
-
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+
+import com.volcengine.tos.internal.util.StringUtils;
 
 @Deprecated
 public class DefaultDnsCacheService implements DnsCacheService {
+
     private static final ExecutorService executor = new ThreadPoolExecutor(1, 3, 1000,
             TimeUnit.MILLISECONDS, new LinkedBlockingQueue<>(), Executors.defaultThreadFactory(), new ThreadPoolExecutor.AbortPolicy());
     private static final String VOLCES_HOST_SUFFIX = "volces.com";
@@ -85,10 +91,15 @@ public class DefaultDnsCacheService implements DnsCacheService {
         if (hostSplit.length != HOST_SPLIT_LENGTH) {
             return host;
         }
-        List<String> hostWithoutFirstElement = new ArrayList<>(hostSplit.length-1);
+        List<String> hostWithoutFirstElement = new ArrayList<>(hostSplit.length - 1);
         for (int i = 1; i < hostSplit.length; i++) {
             hostWithoutFirstElement.add(hostSplit[i]);
         }
         return StringUtils.join(hostWithoutFirstElement, HOST_CONCAT);
+    }
+
+    @Override
+    public void removeAddress(String host) {
+        this.ipListMap.remove(host);
     }
 }

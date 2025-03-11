@@ -1,8 +1,39 @@
 package com.volcengine.tos.internal;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Random;
+
+import org.apache.hc.client5.http.classic.methods.HttpDelete;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpHead;
+import org.apache.hc.client5.http.classic.methods.HttpPost;
+import org.apache.hc.client5.http.classic.methods.HttpPut;
+import org.apache.hc.client5.http.entity.mime.ByteArrayBody;
+import org.apache.hc.client5.http.entity.mime.ContentBody;
+import org.apache.hc.client5.http.entity.mime.MultipartEntityBuilder;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.core5.http.ClassicHttpRequest;
+import org.apache.hc.core5.http.ClassicHttpResponse;
+import org.apache.hc.core5.http.io.entity.ByteArrayEntity;
+import org.testng.Assert;
+import org.testng.annotations.BeforeTest;
+import org.testng.annotations.Test;
+
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.volcengine.tos.*;
 import com.volcengine.tos.Consts;
+import com.volcengine.tos.TOSClientConfiguration;
+import com.volcengine.tos.TOSV2;
+import com.volcengine.tos.TOSV2ClientBuilder;
+import com.volcengine.tos.TosException;
 import com.volcengine.tos.auth.StaticCredentials;
 import com.volcengine.tos.comm.HttpMethod;
 import com.volcengine.tos.comm.HttpStatus;
@@ -11,36 +42,34 @@ import com.volcengine.tos.comm.common.ACLType;
 import com.volcengine.tos.internal.model.CreateMultipartUploadOutputJson;
 import com.volcengine.tos.internal.util.PayloadConverter;
 import com.volcengine.tos.internal.util.StringUtils;
-import com.volcengine.tos.model.object.*;
-import okhttp3.*;
-import org.testng.Assert;
-import org.testng.annotations.BeforeTest;
-import org.testng.annotations.Test;
-
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.*;
-import java.util.concurrent.TimeUnit;
+import com.volcengine.tos.internal.util.TosUtils;
+import com.volcengine.tos.model.object.CompleteMultipartUploadV2Input;
+import com.volcengine.tos.model.object.ContentLengthRange;
+import com.volcengine.tos.model.object.GetObjectV2Input;
+import com.volcengine.tos.model.object.GetObjectV2Output;
+import com.volcengine.tos.model.object.ListObjectsV2Output;
+import com.volcengine.tos.model.object.PolicySignatureCondition;
+import com.volcengine.tos.model.object.PostSignatureCondition;
+import com.volcengine.tos.model.object.PreSignedPolicyURLInput;
+import com.volcengine.tos.model.object.PreSignedPolicyURLOutput;
+import com.volcengine.tos.model.object.PreSignedPostSignatureInput;
+import com.volcengine.tos.model.object.PreSignedPostSignatureOutput;
+import com.volcengine.tos.model.object.PreSignedURLInput;
+import com.volcengine.tos.model.object.PreSignedURLOutput;
+import com.volcengine.tos.model.object.PutObjectInput;
+import com.volcengine.tos.model.object.UploadedPartV2;
 
 public class TosPreSignedRequestHandlerTest {
+
     private TosPreSignedRequestHandler handler;
-    private OkHttpClient client;
+    private CloseableHttpClient client;
     private TOSV2 tosClient;
     private final String sampleData = StringUtils.randomString(1024);
 
     @BeforeTest
     void init() {
         handler = ClientInstance.getPreSignedRequestHandlerInstance();
-        ConnectionPool connectionPool = new ConnectionPool(1024, 60000, TimeUnit.MILLISECONDS);
-
-        Dispatcher dispatcher = new Dispatcher();
-        OkHttpClient.Builder builder = new OkHttpClient.Builder();
-
-        this.client = builder.dispatcher(dispatcher)
-                .connectionPool(connectionPool).retryOnConnectionFailure(true).connectTimeout(10000, TimeUnit.MILLISECONDS)
-                .readTimeout(30000, TimeUnit.MILLISECONDS).writeTimeout(30000, TimeUnit.MILLISECONDS)
-                .followRedirects(false).followSslRedirects(false).build();
+        this.client = TosUtils.defaultApacheHttpClient();
         this.tosClient = new TOSV2ClientBuilder().build(TOSClientConfiguration.builder().region(Consts.region).endpoint(Consts.endpoint)
                 .credentials(new StaticCredentials(Consts.accessKey, Consts.secretKey)).build());
     }
@@ -53,8 +82,8 @@ public class TosPreSignedRequestHandlerTest {
             PreSignedURLInput input = new PreSignedURLInput().setHttpMethod(HttpMethod.PUT).setBucket(bucket).setExpires(1000);
             PreSignedURLOutput url = handler.preSignedURL(input);
             Consts.LOG.debug("url, {}", url.getSignedUrl());
-            Response resp = doReq(HttpMethod.PUT, url.getSignedUrl(), null, -1, "");
-            Assert.assertEquals(resp.code(), HttpStatus.OK);
+            ClassicHttpResponse resp = doReq(HttpMethod.PUT, url.getSignedUrl(), null, -1, "");
+            Assert.assertEquals(resp.getCode(), HttpStatus.OK);
             Thread.sleep(5 * 1000);
         } catch (Exception e) {
             testFailed(e);
@@ -62,8 +91,8 @@ public class TosPreSignedRequestHandlerTest {
             PreSignedURLInput input = new PreSignedURLInput().setBucket(bucket).setHttpMethod(HttpMethod.DELETE);
             PreSignedURLOutput url = handler.preSignedURL(input);
             try {
-                Response resp = doReq(HttpMethod.DELETE, url.getSignedUrl(), null, -1, "");
-                Assert.assertEquals(resp.code(), HttpStatus.NO_CONTENT);
+                ClassicHttpResponse resp = doReq(HttpMethod.DELETE, url.getSignedUrl(), null, -1, "");
+                Assert.assertEquals(resp.getCode(), HttpStatus.NO_CONTENT);
             } catch (Exception e) {
                 // ignore
             }
@@ -93,23 +122,24 @@ public class TosPreSignedRequestHandlerTest {
             int length = random.nextInt(65536) + 1;
             try {
                 InputStream content = new ByteArrayInputStream(StringUtils.randomString(length).getBytes());
-                Response resp = doReq(HttpMethod.PUT, url.getSignedUrl(), content, length, "");
-                Assert.assertEquals(resp.code(), HttpStatus.OK);
+                ClassicHttpResponse resp = doReq(HttpMethod.PUT, url.getSignedUrl(), content, length, "");
+                System.out.println(url.getSignedUrl());
+                Assert.assertEquals(resp.getCode(), HttpStatus.OK, resp.toString());
                 resp.close();
 
                 // preSign get object
                 input = new PreSignedURLInput().setHttpMethod(HttpMethod.GET).setBucket(Consts.bucket).setKey(key);
                 url = handler.preSignedURL(input);
                 resp = doReq(HttpMethod.GET, url.getSignedUrl(), null, -1, "");
-                Assert.assertEquals(resp.code(), HttpStatus.OK);
-                Assert.assertEquals(resp.headers().get(TosHeader.HEADER_CONTENT_LENGTH), String.valueOf(length));
-                Objects.requireNonNull(resp.body()).close();
+                Assert.assertEquals(resp.getCode(), HttpStatus.OK);
+                Assert.assertEquals(resp.getFirstHeader(TosHeader.HEADER_CONTENT_LENGTH).getValue(), String.valueOf(length));
+                Objects.requireNonNull(resp.getEntity()).close();
 
                 // preSign delete object
                 input = new PreSignedURLInput().setHttpMethod(HttpMethod.DELETE).setBucket(Consts.bucket).setKey(key);
                 url = handler.preSignedURL(input);
                 resp = doReq(HttpMethod.DELETE, url.getSignedUrl(), null, -1, "");
-                Assert.assertEquals(resp.code(), HttpStatus.NO_CONTENT);
+                Assert.assertEquals(resp.getCode(), HttpStatus.NO_CONTENT);
 
                 // put object
                 length = random.nextInt(65536) + 1;
@@ -126,15 +156,15 @@ public class TosPreSignedRequestHandlerTest {
                 input = new PreSignedURLInput().setHttpMethod(HttpMethod.GET).setBucket(Consts.bucket).setKey(key);
                 url = handler.preSignedURL(input);
                 resp = doReq(HttpMethod.GET, url.getSignedUrl(), null, -1, "");
-                Assert.assertEquals(resp.code(), HttpStatus.OK);
-                Assert.assertEquals(resp.headers().get(TosHeader.HEADER_CONTENT_LENGTH), String.valueOf(length));
-                Objects.requireNonNull(resp.body()).close();
+                Assert.assertEquals(resp.getCode(), HttpStatus.OK);
+                Assert.assertEquals(resp.getFirstHeader(TosHeader.HEADER_CONTENT_LENGTH).getValue(), String.valueOf(length));
+                Objects.requireNonNull(resp.getEntity()).close();
 
                 // delete object
                 input = new PreSignedURLInput().setHttpMethod(HttpMethod.DELETE).setBucket(Consts.bucket).setKey(key);
                 url = handler.preSignedURL(input);
                 resp = doReq(HttpMethod.DELETE, url.getSignedUrl(), null, -1, "");
-                Assert.assertEquals(resp.code(), HttpStatus.NO_CONTENT);
+                Assert.assertEquals(resp.getCode(), HttpStatus.NO_CONTENT);
             } catch (Exception e) {
                 testFailed(e);
             }
@@ -158,14 +188,14 @@ public class TosPreSignedRequestHandlerTest {
         PreSignedURLOutput url = handler.preSignedURL(input);
         try {
             InputStream content = new ByteArrayInputStream(StringUtils.randomString(65536).getBytes());
-            Response resp = doReq(HttpMethod.PUT, url.getSignedUrl(), content, 65536, "");
-            Assert.assertEquals(resp.code(), HttpStatus.OK);
+            ClassicHttpResponse resp = doReq(HttpMethod.PUT, url.getSignedUrl(), content, 65536, "");
+            Assert.assertEquals(resp.getCode(), HttpStatus.OK);
             resp.close();
 
             Thread.sleep(3000);
             content = new ByteArrayInputStream(StringUtils.randomString(65536).getBytes());
             resp = doReq(HttpMethod.PUT, url.getSignedUrl(), content, 65536, "");
-            Assert.assertEquals(resp.code(), HttpStatus.FORBIDDEN);
+            Assert.assertEquals(resp.getCode(), HttpStatus.FORBIDDEN);
             resp.close();
         } catch (Exception e) {
             testFailed(e);
@@ -179,8 +209,8 @@ public class TosPreSignedRequestHandlerTest {
         url = handler.preSignedURL(input);
         try {
             InputStream content = new ByteArrayInputStream("hello world".getBytes());
-            Response resp = doReqWithHeaders(HttpMethod.PUT, url.getSignedUrl(), content, "hello world".length(), "", header);
-            Assert.assertEquals(resp.code(), HttpStatus.OK);
+            ClassicHttpResponse resp = doReqWithHeaders(HttpMethod.PUT, url.getSignedUrl(), content, "hello world".length(), "", header);
+            Assert.assertEquals(resp.getCode(), HttpStatus.OK);
         } catch (IOException e) {
             testFailed(e);
         }
@@ -193,8 +223,8 @@ public class TosPreSignedRequestHandlerTest {
         try {
             // prepare data
             InputStream content = new ByteArrayInputStream(data.getBytes());
-            Response resp = doReq(HttpMethod.PUT, url.getSignedUrl(), content, 65536, "");
-            Assert.assertEquals(resp.code(), HttpStatus.OK);
+            ClassicHttpResponse resp = doReq(HttpMethod.PUT, url.getSignedUrl(), content, 65536, "");
+            Assert.assertEquals(resp.getCode(), HttpStatus.OK);
             resp.close();
 
             // head it
@@ -202,28 +232,28 @@ public class TosPreSignedRequestHandlerTest {
                     .setKey(key).setExpires(1);
             url = handler.preSignedURL(input);
             resp = doReq(HttpMethod.HEAD, url.getSignedUrl(), null, -1, "");
-            Assert.assertEquals(resp.code(), HttpStatus.OK);
+            Assert.assertEquals(resp.getCode(), HttpStatus.OK);
             Thread.sleep(3000);
             resp = doReq(HttpMethod.HEAD, url.getSignedUrl(), null, -1, "");
-            Assert.assertEquals(resp.code(), HttpStatus.FORBIDDEN);
+            Assert.assertEquals(resp.getCode(), HttpStatus.FORBIDDEN);
         } catch (Exception e) {
             testFailed(e);
         }
 
         // get object
-        Response resp;
+        ClassicHttpResponse resp;
         try {
             input = new PreSignedURLInput().setHttpMethod(HttpMethod.GET).setBucket(Consts.bucket)
                     .setKey(key).setExpires(2);
             url = handler.preSignedURL(input);
             resp = doReq(HttpMethod.GET, url.getSignedUrl(), null, -1, "");
-            Assert.assertEquals(resp.code(), HttpStatus.OK);
-            String data1 = StringUtils.toString(resp.body().byteStream(), "content");
-            resp.body().close();
+            Assert.assertEquals(resp.getCode(), HttpStatus.OK);
+            String data1 = StringUtils.toString(resp.getEntity().getContent(), "content");
+            resp.getEntity().close();
             Assert.assertTrue(StringUtils.equals(data1, data));
             Thread.sleep(2500);
             resp = doReq(HttpMethod.HEAD, url.getSignedUrl(), null, -1, "");
-            Assert.assertEquals(resp.code(), HttpStatus.FORBIDDEN);
+            Assert.assertEquals(resp.getCode(), HttpStatus.FORBIDDEN);
         } catch (Exception e) {
             testFailed(e);
         }
@@ -234,10 +264,10 @@ public class TosPreSignedRequestHandlerTest {
                     .setKey(key).setExpires(2);
             url = handler.preSignedURL(input);
             resp = doReq(HttpMethod.DELETE, url.getSignedUrl(), null, -1, "");
-            Assert.assertEquals(resp.code(), HttpStatus.NO_CONTENT);
+            Assert.assertEquals(resp.getCode(), HttpStatus.NO_CONTENT);
             Thread.sleep(2500);
             resp = doReq(HttpMethod.HEAD, url.getSignedUrl(), null, -1, "");
-            Assert.assertEquals(resp.code(), HttpStatus.FORBIDDEN);
+            Assert.assertEquals(resp.getCode(), HttpStatus.FORBIDDEN);
         } catch (Exception e) {
             testFailed(e);
         }
@@ -251,12 +281,12 @@ public class TosPreSignedRequestHandlerTest {
             PreSignedURLInput input = new PreSignedURLInput().setHttpMethod(HttpMethod.POST).setBucket(Consts.bucket)
                     .setKey(key).setExpires(120).setQuery(Collections.singletonMap("uploads", ""));
             PreSignedURLOutput url = handler.preSignedURL(input);
-            Response resp = doReq(HttpMethod.POST, url.getSignedUrl(),
+            ClassicHttpResponse resp = doReq(HttpMethod.POST, url.getSignedUrl(),
                     null, -1, "");
-            Assert.assertEquals(resp.code(), HttpStatus.OK);
-            CreateMultipartUploadOutputJson create = PayloadConverter.parsePayload(resp.body().byteStream(),
+            Assert.assertEquals(resp.getCode(), HttpStatus.OK);
+            CreateMultipartUploadOutputJson create = PayloadConverter.parsePayload(resp.getEntity().getContent(),
                     new TypeReference<CreateMultipartUploadOutputJson>() {
-                    });
+            });
             String uploadID = create.getUploadID();
 
             // uploadPart
@@ -272,8 +302,8 @@ public class TosPreSignedRequestHandlerTest {
                 url = handler.preSignedURL(input);
                 resp = doReq(HttpMethod.PUT, url.getSignedUrl(),
                         new ByteArrayInputStream(data), data.length, "");
-                Assert.assertEquals(resp.code(), HttpStatus.OK);
-                parts.add(new UploadedPartV2().setPartNumber(i).setEtag(resp.header(TosHeader.HEADER_ETAG)));
+                Assert.assertEquals(resp.getCode(), HttpStatus.OK);
+                parts.add(new UploadedPartV2().setPartNumber(i).setEtag(resp.getFirstHeader(TosHeader.HEADER_ETAG).getValue()));
             }
 
             // completeMultipartUpload
@@ -284,20 +314,20 @@ public class TosPreSignedRequestHandlerTest {
             resp = doReq(HttpMethod.POST, url.getSignedUrl(), new ByteArrayInputStream(serializedPayload.getData()),
                     serializedPayload.getData().length, "application/json");
             resp.close();
-            Assert.assertEquals(resp.code(), HttpStatus.OK);
-            Consts.LOG.debug("completeMultipartUpload succeed, reqid is {}, object key is {}", resp.header(TosHeader.HEADER_REQUEST_ID), key);
+            Assert.assertEquals(resp.getCode(), HttpStatus.OK);
+            Consts.LOG.debug("completeMultipartUpload succeed, reqid is {}, object key is {}", resp.getFirstHeader(TosHeader.HEADER_REQUEST_ID).getValue(), key);
 
             // head it
             input = new PreSignedURLInput().setHttpMethod(HttpMethod.HEAD).setBucket(Consts.bucket).setKey(key);
             url = handler.preSignedURL(input);
             resp = doReq(HttpMethod.HEAD, url.getSignedUrl(), null, -1, "");
-            Assert.assertEquals(resp.code(), HttpStatus.OK);
+            Assert.assertEquals(resp.getCode(), HttpStatus.OK);
 
             // delete it
             input = new PreSignedURLInput().setHttpMethod(HttpMethod.DELETE).setBucket(Consts.bucket).setKey(key);
             url = handler.preSignedURL(input);
             resp = doReq(HttpMethod.DELETE, url.getSignedUrl(), null, -1, "");
-            Assert.assertEquals(resp.code(), HttpStatus.NO_CONTENT);
+            Assert.assertEquals(resp.getCode(), HttpStatus.NO_CONTENT);
         } catch (Exception e) {
             testFailed(e);
         }
@@ -318,6 +348,7 @@ public class TosPreSignedRequestHandlerTest {
         PreSignedURLInput input = new PreSignedURLInput().setHttpMethod(HttpMethod.PUT).setBucket(Consts.bucket)
                 .setKey(key).setExpires(2).setAlternativeEndpoint(Consts.endpoint2);
         PreSignedURLOutput url = handler.preSignedURL(input);
+        System.out.println(url.getSignedUrl());
         Assert.assertTrue(url.getSignedUrl().contains(Consts.bucket + "." + Consts.endpoint2));
 
         // generate url without bucket
@@ -336,11 +367,11 @@ public class TosPreSignedRequestHandlerTest {
             PreSignedPostSignatureInput input = new PreSignedPostSignatureInput().setBucket(Consts.bucket)
                     .setKey(key).setExpires(3600);
             PreSignedPostSignatureOutput output = handler.preSignedPostSignature(input);
-            Response response = doPostReq(key, null, output, sampleData);
-            if (response.body() != null) {
-                Consts.LOG.debug(StringUtils.toString(response.body().byteStream(), "content"));
+            ClassicHttpResponse response = doPostReq(key, null, output, sampleData);
+            if (response.getEntity() != null) {
+                Consts.LOG.debug(StringUtils.toString(response.getEntity().getContent(), "content"));
             }
-            Assert.assertEquals(response.code(), HttpStatus.NO_CONTENT);
+            Assert.assertEquals(response.getCode(), HttpStatus.NO_CONTENT);
             response.close();
             checkData(key);
 
@@ -350,7 +381,7 @@ public class TosPreSignedRequestHandlerTest {
             output = handler.preSignedPostSignature(input);
             Thread.sleep(3000);
             response = doPostReq(key, null, output, sampleData);
-            Assert.assertEquals(response.code(), HttpStatus.FORBIDDEN);
+            Assert.assertEquals(response.getCode(), HttpStatus.FORBIDDEN);
             response.close();
 
             // with content length range
@@ -359,10 +390,10 @@ public class TosPreSignedRequestHandlerTest {
                     .setContentLengthRange(new ContentLengthRange().setRangeStart(50).setRangeEnd(1025));
             output = handler.preSignedPostSignature(input);
             response = doPostReq(key, null, output, sampleData);
-            if (response.body() != null) {
-                Consts.LOG.debug(StringUtils.toString(response.body().byteStream(), "content"));
+            if (response.getEntity() != null) {
+                Consts.LOG.debug(StringUtils.toString(response.getEntity().getContent(), "content"));
             }
-            Assert.assertEquals(response.code(), HttpStatus.NO_CONTENT);
+            Assert.assertEquals(response.getCode(), HttpStatus.NO_CONTENT);
             response.close();
             checkData(key);
 
@@ -372,10 +403,10 @@ public class TosPreSignedRequestHandlerTest {
                     .setContentLengthRange(new ContentLengthRange().setRangeStart(50).setRangeEnd(1023));
             output = handler.preSignedPostSignature(input);
             response = doPostReq(key, null, output, sampleData);
-            if (response.body() != null) {
-                Consts.LOG.debug(StringUtils.toString(response.body().byteStream(), "content"));
+            if (response.getEntity() != null) {
+                Consts.LOG.debug(StringUtils.toString(response.getEntity().getContent(), "content"));
             }
-            Assert.assertEquals(response.code(), HttpStatus.BAD_REQUEST);
+            Assert.assertEquals(response.getCode(), HttpStatus.BAD_REQUEST);
             response.close();
             GetObjectV2Input get = new GetObjectV2Input().setBucket(Consts.bucket).setKey(key);
             try (GetObjectV2Output got = ClientInstance.getObjectRequestHandlerInstance().getObject(get)) {
@@ -401,23 +432,23 @@ public class TosPreSignedRequestHandlerTest {
             PreSignedPostSignatureInput input = new PreSignedPostSignatureInput().setBucket(Consts.bucket)
                     .setKey(key).setExpires(3600).setConditions(conditions);
             PreSignedPostSignatureOutput output = handler.preSignedPostSignature(input);
-            Response response = doPostReq(key, ACLType.ACL_PUBLIC_READ, output, sampleData);
-            if (response.body() != null) {
-                Consts.LOG.debug(StringUtils.toString(response.body().byteStream(), "content"));
+            ClassicHttpResponse response = doPostReq(key, ACLType.ACL_PUBLIC_READ, output, sampleData);
+            if (response.getEntity() != null) {
+                Consts.LOG.debug(StringUtils.toString(response.getEntity().getContent(), "content"));
             }
-            Assert.assertEquals(response.code(), HttpStatus.NO_CONTENT);
+            Assert.assertEquals(response.getCode(), HttpStatus.NO_CONTENT);
             response.close();
             checkData(key);
 
             // invalid acl
             response = doPostReq(key, ACLType.ACL_PRIVATE, output, sampleData);
-            Assert.assertEquals(response.code(), HttpStatus.FORBIDDEN);
+            Assert.assertEquals(response.getCode(), HttpStatus.FORBIDDEN);
             response.close();
 
             // invalid key
             key = getUniqueObjectKey();
             response = doPostReq(key, ACLType.ACL_PUBLIC_READ, output, sampleData);
-            Assert.assertEquals(response.code(), HttpStatus.FORBIDDEN);
+            Assert.assertEquals(response.getCode(), HttpStatus.FORBIDDEN);
             response.close();
         } catch (Exception e) {
             testFailed(e);
@@ -454,28 +485,29 @@ public class TosPreSignedRequestHandlerTest {
         PreSignedPolicyURLOutput output = handler.preSignedPolicyURL(input);
 
         String getUrl = output.getPreSignedPolicyURLGenerator().getSignedURLForGetOrHead(key, null);
+        System.out.println(getUrl);
         try {
-            Response response = doReq(HttpMethod.GET, getUrl, null, -1, "");
+            ClassicHttpResponse response = doReq(HttpMethod.GET, getUrl, null, -1, "");
             String body = null;
-            if (response.body() != null) {
-                body = StringUtils.toString(response.body().byteStream(), "content");
+            if (response.getEntity() != null) {
+                body = StringUtils.toString(response.getEntity().getContent(), "content");
                 response.close();
             }
-            Assert.assertEquals(response.code(), HttpStatus.OK);
+            Assert.assertEquals(response.getCode(), HttpStatus.OK);
             Assert.assertEquals(body, data);
 
             String headUrl = output.getPreSignedPolicyURLGenerator().getSignedURLForGetOrHead(key1, null);
             response = doReq(HttpMethod.HEAD, headUrl, null, -1, "");
-            Assert.assertEquals(response.code(), HttpStatus.OK);
-            Assert.assertEquals(response.header(TosHeader.HEADER_CONTENT_LENGTH), String.valueOf(data1.length()));
+            Assert.assertEquals(response.getCode(), HttpStatus.OK);
+            Assert.assertEquals(response.getFirstHeader(TosHeader.HEADER_CONTENT_LENGTH).getValue(), String.valueOf(data1.length()));
 
             // prefix must be subsequence for policy, prefix set "policy", but policy starts-with "policy-"
             Map<String, String> query = new HashMap<>();
             query.put("prefix", "policy");
             String listUrl = output.getPreSignedPolicyURLGenerator().getSignedURLForList(query);
             response = doReq(HttpMethod.GET, listUrl, null, -1, "");
-            Assert.assertEquals(response.code(), HttpStatus.FORBIDDEN);
-            if (response.body() != null) {
+            Assert.assertEquals(response.getCode(), HttpStatus.FORBIDDEN);
+            if (response.getEntity() != null) {
                 response.close();
             }
 
@@ -483,11 +515,11 @@ public class TosPreSignedRequestHandlerTest {
             query.put("prefix", keyPrefix);
             listUrl = output.getPreSignedPolicyURLGenerator().getSignedURLForList(query);
             response = doReq(HttpMethod.GET, listUrl, null, -1, "");
-            Assert.assertEquals(response.code(), HttpStatus.OK);
-            Assert.assertNotNull(response.body());
-            ListObjectsV2Output listed = PayloadConverter.parsePayload(response.body().byteStream(),
+            Assert.assertEquals(response.getCode(), HttpStatus.OK);
+            Assert.assertNotNull(response.getEntity());
+            ListObjectsV2Output listed = PayloadConverter.parsePayload(response.getEntity().getContent(),
                     new TypeReference<ListObjectsV2Output>() {
-                    });
+            });
             response.close();
             Assert.assertNotNull(listed);
             Assert.assertNotNull(listed.getContents());
@@ -496,22 +528,22 @@ public class TosPreSignedRequestHandlerTest {
 
             headUrl = output.getPreSignedPolicyURLGenerator().getSignedURLForGetOrHead(key2, null);
             response = doReq(HttpMethod.HEAD, headUrl, null, -1, "");
-            Assert.assertEquals(response.code(), HttpStatus.OK);
-            Assert.assertEquals(response.header(TosHeader.HEADER_CONTENT_LENGTH), String.valueOf(data2.length()));
+            Assert.assertEquals(response.getCode(), HttpStatus.OK);
+            Assert.assertEquals(response.getFirstHeader(TosHeader.HEADER_CONTENT_LENGTH).getValue(), String.valueOf(data2.length()));
 
             headUrl = output.getPreSignedPolicyURLGenerator().getSignedURLForGetOrHead(key3, null);
             response = doReq(HttpMethod.HEAD, headUrl, null, -1, "");
-            Assert.assertEquals(response.code(), HttpStatus.OK);
-            Assert.assertEquals(response.header(TosHeader.HEADER_CONTENT_LENGTH), String.valueOf(data3.length()));
-            Assert.assertEquals(response.header(TosHeader.HEADER_CONTENT_TYPE), "binary/octet-stream");
+            Assert.assertEquals(response.getCode(), HttpStatus.OK);
+            Assert.assertEquals(response.getFirstHeader(TosHeader.HEADER_CONTENT_LENGTH).getValue(), String.valueOf(data3.length()));
+            Assert.assertEquals(response.getFirstHeader(TosHeader.HEADER_CONTENT_TYPE).getValue(), "binary/octet-stream");
 
             query = new HashMap<>();
             query.put("response-content-type", "text/plain");
             headUrl = output.getPreSignedPolicyURLGenerator().getSignedURLForGetOrHead(key3, query);
             response = doReq(HttpMethod.HEAD, headUrl, null, -1, "");
-            Assert.assertEquals(response.code(), HttpStatus.OK);
-            Assert.assertEquals(response.header(TosHeader.HEADER_CONTENT_LENGTH), String.valueOf(data3.length()));
-            Assert.assertEquals(response.header(TosHeader.HEADER_CONTENT_TYPE), "text/plain");
+            Assert.assertEquals(response.getCode(), HttpStatus.OK);
+            Assert.assertEquals(response.getFirstHeader(TosHeader.HEADER_CONTENT_LENGTH).getValue(), String.valueOf(data3.length()));
+            Assert.assertEquals(response.getFirstHeader(TosHeader.HEADER_CONTENT_TYPE).getValue(), "text/plain");
         } catch (IOException e) {
             testFailed(e);
         }
@@ -541,56 +573,59 @@ public class TosPreSignedRequestHandlerTest {
         }
     }
 
-    private Response doReq(String method, String url, InputStream content, long contentLength, String contentType) throws IOException {
+    private ClassicHttpResponse doReq(String method, String url, InputStream content, long contentLength, String contentType) throws IOException {
         return this.doReqWithHeaders(method, url, content, contentLength, contentType, null);
     }
 
-    private Response doReqWithHeaders(String method, String url, InputStream content, long contentLength, String contentType, Map<String, String> headers) throws IOException {
-        Request.Builder builder = new Request.Builder().url(url);
+    private ClassicHttpResponse doReqWithHeaders(String method, String url, InputStream content, long contentLength, String contentType, Map<String, String> headers) throws IOException {
+        ClassicHttpRequest request = null;
         if (StringUtils.isEmpty(contentType)) {
             contentType = "binary/octet-stream";
         }
         switch (method.toUpperCase()) {
             case HttpMethod.GET:
-                builder.get();
+                request = new HttpGet(url);
                 break;
             case HttpMethod.POST:
+                request = new HttpPost(url);
                 byte[] data;
                 if (content == null) {
                     data = new byte[0];
                 } else {
                     data = StringUtils.toByteArray(content);
                 }
-                builder.post(RequestBody.create(MediaType.parse(contentType), data));
+                request.setEntity(new ByteArrayEntity(data, org.apache.hc.core5.http.ContentType.parse(contentType)));
                 break;
             case HttpMethod.PUT: {
+                request = new HttpPut(url);
                 if (content != null) {
-                    builder.put(new WrappedTransportRequestBody(MediaType.parse(contentType), content, contentLength));
+                    request.setEntity(new WrappedApacheTransportRequestBody(org.apache.hc.core5.http.ContentType.parse(contentType), content, contentLength));
                 } else {
-                    builder.put(RequestBody.create(MediaType.parse(contentType), ""));
+                    request.setEntity(new ByteArrayEntity(new byte[0], org.apache.hc.core5.http.ContentType.parse(contentType)));
                 }
                 break;
             }
             case HttpMethod.HEAD:
-                builder.head();
+                request = new HttpHead(url);
                 break;
             case HttpMethod.DELETE:
-                builder.delete();
+                request = new HttpDelete(url);
                 break;
             default:
                 throw new UnsupportedOperationException("Method is not supported: " + method);
         }
         if (headers != null) {
             for (Map.Entry<String, String> entry : headers.entrySet()) {
-                builder.addHeader(entry.getKey(), entry.getValue());
+                request.addHeader(entry.getKey(), entry.getValue());
             }
         }
-        return client.newCall(builder.build()).execute();
+        return client.executeOpen(null, request, null);
     }
 
-    private Response doPostReq(String key, ACLType acl, PreSignedPostSignatureOutput input, String data) throws IOException {
+    private ClassicHttpResponse doPostReq(String key, ACLType acl, PreSignedPostSignatureOutput input, String data) throws IOException {
         String url = "http://" + Consts.bucket + "." + Consts.endpoint;
-        RequestBody contentBody = RequestBody.create(MediaType.parse("binary/octet-stream"), data);
+        //RequestBody contentBody = RequestBody.create(MediaType.parse("binary/octet-stream"), data);
+        ClassicHttpRequest request = new HttpPost(url);
         System.out.println("key: " + key);
         System.out.println("bucket: " + Consts.bucket);
         System.out.println("endpoint: " + Consts.endpoint);
@@ -599,22 +634,22 @@ public class TosPreSignedRequestHandlerTest {
         System.out.println("X-Tos-Credential: " + input.getCredential());
         System.out.println("X-Tos-Signature: " + input.getSignature());
         System.out.println("policy: " + input.getPolicy());
+        MultipartEntityBuilder builder = MultipartEntityBuilder.create();
+        builder = builder.addTextBody("key", key)
+                .addTextBody("X-Tos-Algorithm", input.getAlgorithm())
+                .addTextBody("X-Tos-Date", input.getDate())
+                .addTextBody("X-Tos-Credential", input.getCredential())
+                .addTextBody("policy", input.getPolicy())
+                .addTextBody("X-Tos-Signature", input.getSignature());;
 
-        MultipartBody.Builder reqBuilder = new MultipartBody.Builder().setType(MultipartBody.FORM)
-                .addFormDataPart("key", key)
-                .addFormDataPart("X-Tos-Algorithm", input.getAlgorithm())
-                .addFormDataPart("X-Tos-Date", input.getDate())
-                .addFormDataPart("X-Tos-Credential", input.getCredential())
-                .addFormDataPart("policy", input.getPolicy())
-                .addFormDataPart("X-Tos-Signature", input.getSignature());
         if (acl != null) {
-            reqBuilder.addFormDataPart("x-tos-acl", acl.toString());
+            builder = builder.addTextBody("x-tos-acl", acl.toString());
         }
-        reqBuilder.addFormDataPart("file", "my.test", contentBody);
-        MultipartBody body = reqBuilder.build();
+        ContentBody contentBody = new ByteArrayBody(data.getBytes(), org.apache.hc.core5.http.ContentType.parse("binary/octet-stream"), "my.test");
+        builder.addPart("file", contentBody);
+        request.setEntity(builder.build());
 
-        Request request = new Request.Builder().url(url).addHeader("content-type", "multipart/form-data").post(body).build();
-        return client.newCall(request).execute();
+        return client.executeOpen(null, request, null);
     }
 
     private String getUniqueObjectKey() {

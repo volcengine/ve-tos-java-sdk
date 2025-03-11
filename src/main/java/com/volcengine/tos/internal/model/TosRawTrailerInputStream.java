@@ -83,8 +83,8 @@ public class TosRawTrailerInputStream extends FilterInputStream implements Retry
         String actual = this.trailerHeaderContent.substring(this.trailerHeaderKey.length()).trim();
         String expect = new String(Base64.encodeBase64(TosUtils.longToByteArray(this.checkSum.getValue())));
         if (!actual.equals(expect)) {
-            throw new TosClientException("check crc64 for getting object by trailer header failed, expect base64 crc64 " + expect +
-                    ", actual base64 crc64 " + actual, null);
+            throw new TosClientException("check crc64 for getting object by trailer header failed, expect base64 crc64 " + expect
+                    + ", actual base64 crc64 " + actual, null);
         }
     }
 

@@ -48,6 +48,7 @@ public class TosBucketRequestHandler {
                 .withHeader(TosHeader.HEADER_STORAGE_CLASS, input.getStorageClass() == null ? null : input.getStorageClass().toString())
                 .withHeader(TosHeader.HEADER_AZ_REDUNDANCY, input.getAzRedundancy() == null ? null : input.getAzRedundancy().toString())
                 .withHeader(TosHeader.HEADER_PROJECT_NAME, input.getProjectName())
+                .withHeader(TosHeader.HEADER_TAGGING, input.getTagging())
                 .withHeader(TosHeader.HEADER_BUCKET_TYPE, input.getBucketType() == null ? null : input.getBucketType().toString());
         builder = this.handleGenericInput(builder, input);
         TosRequest req = this.factory.build(builder, HttpMethod.PUT, null).setRetryableOnClientException(false);
@@ -99,8 +100,8 @@ public class TosBucketRequestHandler {
         ensureValidBucketName(input.getBucket());
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("policy", "");
         builder = this.handleGenericInput(builder, input);
-        TosRequest req = this.factory.build(builder, HttpMethod.PUT, new ByteArrayInputStream(input.getPolicy()
-                .getBytes(StandardCharsets.UTF_8))).setContentLength(input.getPolicy().length());
+        byte[] policyStr = input.getPolicy().getBytes(StandardCharsets.UTF_8);
+        TosRequest req = this.factory.build(builder, HttpMethod.PUT, new ByteArrayInputStream(policyStr)).setContentLength(policyStr.length);
         return bucketHandler.doRequest(req, HttpStatus.NO_CONTENT, res -> new PutBucketPolicyOutput()
                 .setRequestInfo(res.RequestInfo()));
     }

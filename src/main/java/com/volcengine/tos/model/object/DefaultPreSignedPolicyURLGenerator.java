@@ -1,13 +1,16 @@
 package com.volcengine.tos.model.object;
 
+import java.net.URISyntaxException;
+import java.util.Map;
+
+import org.apache.hc.core5.net.URIBuilder;
+
 import com.volcengine.tos.TosClientException;
 import com.volcengine.tos.internal.util.ParamsChecker;
 import com.volcengine.tos.internal.util.StringUtils;
-import okhttp3.HttpUrl;
-
-import java.util.Map;
 
 public class DefaultPreSignedPolicyURLGenerator implements PreSignedPolicyURLGenerator {
+
     private String signatureQuery;
     private String host;
     private String scheme;
@@ -73,7 +76,7 @@ public class DefaultPreSignedPolicyURLGenerator implements PreSignedPolicyURLGen
     }
 
     private String generateUrl(String key, Map<String, String> additionalQuery) {
-        HttpUrl.Builder url = new HttpUrl.Builder();
+        URIBuilder uri = new URIBuilder();
         String host = null;
         if (!isCustomDomain) {
             ParamsChecker.isValidBucketName(bucket);
@@ -82,23 +85,34 @@ public class DefaultPreSignedPolicyURLGenerator implements PreSignedPolicyURLGen
             host = this.host;
         }
         String path = StringUtils.isNotEmpty(key) ? key : "";
-        url = url.scheme(scheme).host(host).addPathSegment(path).encodedQuery(signatureQuery);
+        StringBuilder buf = new StringBuilder(signatureQuery);
         if (additionalQuery != null) {
             for (Map.Entry<String, String> entry : additionalQuery.entrySet()) {
-                url.addQueryParameter(entry.getKey(), entry.getValue());
+                if (buf.length() > 0) {
+                    buf.append('&');
+                }
+                buf.append(entry.getKey());
+                buf.append('=');
+                buf.append(entry.getValue() == null ? "" : entry.getValue());
             }
         }
-        return url.build().toString();
+        uri = uri.setScheme(scheme).setHost(host).setPathSegments(path).setCustomQuery(buf.toString());
+        try {
+            return uri.build().toString();
+        } catch (URISyntaxException e) {
+            // ingore
+        }
+        return null;
     }
 
     @Override
     public String toString() {
-        return "DefaultPreSignedPolicyURLGenerator{" +
-                "signatureQuery='" + signatureQuery + '\'' +
-                ", host='" + host + '\'' +
-                ", scheme='" + scheme + '\'' +
-                ", bucket='" + bucket + '\'' +
-                ", isCustomDomain=" + isCustomDomain +
-                '}';
+        return "DefaultPreSignedPolicyURLGenerator{"
+                + "signatureQuery='" + signatureQuery + '\''
+                + ", host='" + host + '\''
+                + ", scheme='" + scheme + '\''
+                + ", bucket='" + bucket + '\''
+                + ", isCustomDomain=" + isCustomDomain
+                + '}';
     }
 }

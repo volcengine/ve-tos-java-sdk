@@ -1,7 +1,5 @@
 package com.volcengine.tos.internal.util;
 
-import com.volcengine.tos.TosClientException;
-
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -11,8 +9,11 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Random;
 
+import com.volcengine.tos.TosClientException;
+
 public class StringUtils {
-    private static final String ALPHANUMERIC_STR="0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+
+    private static final String ALPHANUMERIC_STR = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
     public static String removeStart(String str, String remove) {
         if (isNotEmpty(str) && isNotEmpty(remove)) {
@@ -52,8 +53,8 @@ public class StringUtils {
         if (src == null) {
             return false;
         } else {
-            return dst != null &&
-                    src.toLowerCase().startsWith(dst.toLowerCase());
+            return dst != null
+                    && src.toLowerCase().startsWith(dst.toLowerCase());
         }
     }
 
@@ -66,10 +67,10 @@ public class StringUtils {
     }
 
     // only for test
-    public static String randomString(int length){
+    public static String randomString(int length) {
         Random random = new Random();
         StringBuilder sb = new StringBuilder();
-        for(int i = 0;i < length; i++){
+        for (int i = 0; i < length; i++) {
             int number = random.nextInt(62);
             sb.append(ALPHANUMERIC_STR.charAt(number));
         }
@@ -95,6 +96,11 @@ public class StringUtils {
         ByteArrayOutputStream result = new ByteArrayOutputStream();
         byte[] buffer = new byte[1024];
         int length;
+
+        if (stream == null) {
+            return result;
+        }
+
         while ((length = stream.read(buffer)) != -1) {
             result.write(buffer, 0, length);
         }

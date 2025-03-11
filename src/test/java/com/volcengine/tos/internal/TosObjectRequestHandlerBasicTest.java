@@ -1515,6 +1515,18 @@ public class TosObjectRequestHandlerBasicTest {
                     Assert.assertEquals(g.getGrantee().getCanned(), CannedType.CANNED_ALL_USERS);
                 }
             }
+
+            PutObjectACLInput input1 = PutObjectACLInput.builder()
+                    .bucket(Consts.bucket)
+                    .key(key)
+                    .owner(Owner.builder().id("volc-test").build())
+                    .bucketOwnerEntrusted(false)
+                    .isDefault(true)
+                    .build();
+            getHandler().putObjectAcl(input1);
+
+            GetObjectACLV2Output out1 = getHandler().getObjectAcl(get);
+            Assert.assertTrue(out1.isDefault());
         } catch (Exception e) {
             testFailed(e);
         } finally {

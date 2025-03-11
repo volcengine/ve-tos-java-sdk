@@ -1,13 +1,199 @@
 package com.volcengine.tos;
 
-import com.volcengine.tos.auth.Credentials;
-import com.volcengine.tos.model.bucket.*;
-import com.volcengine.tos.model.object.*;
-import com.volcengine.tos.transport.TransportConfig;
-
 import java.io.Closeable;
 
+import com.volcengine.tos.auth.Credentials;
+import com.volcengine.tos.model.bucket.CreateBucketV2Input;
+import com.volcengine.tos.model.bucket.CreateBucketV2Output;
+import com.volcengine.tos.model.bucket.DeleteBucketCORSInput;
+import com.volcengine.tos.model.bucket.DeleteBucketCORSOutput;
+import com.volcengine.tos.model.bucket.DeleteBucketCustomDomainInput;
+import com.volcengine.tos.model.bucket.DeleteBucketCustomDomainOutput;
+import com.volcengine.tos.model.bucket.DeleteBucketEncryptionInput;
+import com.volcengine.tos.model.bucket.DeleteBucketEncryptionOutput;
+import com.volcengine.tos.model.bucket.DeleteBucketInput;
+import com.volcengine.tos.model.bucket.DeleteBucketInventoryInput;
+import com.volcengine.tos.model.bucket.DeleteBucketInventoryOutput;
+import com.volcengine.tos.model.bucket.DeleteBucketLifecycleInput;
+import com.volcengine.tos.model.bucket.DeleteBucketLifecycleOutput;
+import com.volcengine.tos.model.bucket.DeleteBucketMirrorBackInput;
+import com.volcengine.tos.model.bucket.DeleteBucketMirrorBackOutput;
+import com.volcengine.tos.model.bucket.DeleteBucketOutput;
+import com.volcengine.tos.model.bucket.DeleteBucketPolicyInput;
+import com.volcengine.tos.model.bucket.DeleteBucketPolicyOutput;
+import com.volcengine.tos.model.bucket.DeleteBucketRealTimeLogInput;
+import com.volcengine.tos.model.bucket.DeleteBucketRealTimeLogOutput;
+import com.volcengine.tos.model.bucket.DeleteBucketRenameInput;
+import com.volcengine.tos.model.bucket.DeleteBucketRenameOutput;
+import com.volcengine.tos.model.bucket.DeleteBucketReplicationInput;
+import com.volcengine.tos.model.bucket.DeleteBucketReplicationOutput;
+import com.volcengine.tos.model.bucket.DeleteBucketTaggingInput;
+import com.volcengine.tos.model.bucket.DeleteBucketTaggingOutput;
+import com.volcengine.tos.model.bucket.DeleteBucketWebsiteInput;
+import com.volcengine.tos.model.bucket.DeleteBucketWebsiteOutput;
+import com.volcengine.tos.model.bucket.GetBucketACLInput;
+import com.volcengine.tos.model.bucket.GetBucketACLOutput;
+import com.volcengine.tos.model.bucket.GetBucketCORSInput;
+import com.volcengine.tos.model.bucket.GetBucketCORSOutput;
+import com.volcengine.tos.model.bucket.GetBucketEncryptionInput;
+import com.volcengine.tos.model.bucket.GetBucketEncryptionOutput;
+import com.volcengine.tos.model.bucket.GetBucketInventoryInput;
+import com.volcengine.tos.model.bucket.GetBucketInventoryOutput;
+import com.volcengine.tos.model.bucket.GetBucketLifecycleInput;
+import com.volcengine.tos.model.bucket.GetBucketLifecycleOutput;
+import com.volcengine.tos.model.bucket.GetBucketLocationInput;
+import com.volcengine.tos.model.bucket.GetBucketLocationOutput;
+import com.volcengine.tos.model.bucket.GetBucketMirrorBackInput;
+import com.volcengine.tos.model.bucket.GetBucketMirrorBackOutput;
+import com.volcengine.tos.model.bucket.GetBucketNotificationInput;
+import com.volcengine.tos.model.bucket.GetBucketNotificationOutput;
+import com.volcengine.tos.model.bucket.GetBucketNotificationType2Input;
+import com.volcengine.tos.model.bucket.GetBucketNotificationType2Output;
+import com.volcengine.tos.model.bucket.GetBucketPolicyInput;
+import com.volcengine.tos.model.bucket.GetBucketPolicyOutput;
+import com.volcengine.tos.model.bucket.GetBucketRealTimeLogInput;
+import com.volcengine.tos.model.bucket.GetBucketRealTimeLogOutput;
+import com.volcengine.tos.model.bucket.GetBucketRenameInput;
+import com.volcengine.tos.model.bucket.GetBucketRenameOutput;
+import com.volcengine.tos.model.bucket.GetBucketReplicationInput;
+import com.volcengine.tos.model.bucket.GetBucketReplicationOutput;
+import com.volcengine.tos.model.bucket.GetBucketTaggingInput;
+import com.volcengine.tos.model.bucket.GetBucketTaggingOutput;
+import com.volcengine.tos.model.bucket.GetBucketVersioningInput;
+import com.volcengine.tos.model.bucket.GetBucketVersioningOutput;
+import com.volcengine.tos.model.bucket.GetBucketWebsiteInput;
+import com.volcengine.tos.model.bucket.GetBucketWebsiteOutput;
+import com.volcengine.tos.model.bucket.HeadBucketOutput;
+import com.volcengine.tos.model.bucket.HeadBucketV2Input;
+import com.volcengine.tos.model.bucket.HeadBucketV2Output;
+import com.volcengine.tos.model.bucket.ListBucketCustomDomainInput;
+import com.volcengine.tos.model.bucket.ListBucketCustomDomainOutput;
+import com.volcengine.tos.model.bucket.ListBucketInventoryInput;
+import com.volcengine.tos.model.bucket.ListBucketInventoryOutput;
+import com.volcengine.tos.model.bucket.ListBucketsV2Input;
+import com.volcengine.tos.model.bucket.ListBucketsV2Output;
+import com.volcengine.tos.model.bucket.PutBucketACLInput;
+import com.volcengine.tos.model.bucket.PutBucketACLOutput;
+import com.volcengine.tos.model.bucket.PutBucketCORSInput;
+import com.volcengine.tos.model.bucket.PutBucketCORSOutput;
+import com.volcengine.tos.model.bucket.PutBucketCustomDomainInput;
+import com.volcengine.tos.model.bucket.PutBucketCustomDomainOutput;
+import com.volcengine.tos.model.bucket.PutBucketEncryptionInput;
+import com.volcengine.tos.model.bucket.PutBucketEncryptionOutput;
+import com.volcengine.tos.model.bucket.PutBucketInventoryInput;
+import com.volcengine.tos.model.bucket.PutBucketInventoryOutput;
+import com.volcengine.tos.model.bucket.PutBucketLifecycleInput;
+import com.volcengine.tos.model.bucket.PutBucketLifecycleOutput;
+import com.volcengine.tos.model.bucket.PutBucketMirrorBackInput;
+import com.volcengine.tos.model.bucket.PutBucketMirrorBackOutput;
+import com.volcengine.tos.model.bucket.PutBucketNotificationInput;
+import com.volcengine.tos.model.bucket.PutBucketNotificationOutput;
+import com.volcengine.tos.model.bucket.PutBucketNotificationType2Input;
+import com.volcengine.tos.model.bucket.PutBucketNotificationType2Output;
+import com.volcengine.tos.model.bucket.PutBucketPolicyInput;
+import com.volcengine.tos.model.bucket.PutBucketPolicyOutput;
+import com.volcengine.tos.model.bucket.PutBucketRealTimeLogInput;
+import com.volcengine.tos.model.bucket.PutBucketRealTimeLogOutput;
+import com.volcengine.tos.model.bucket.PutBucketRenameInput;
+import com.volcengine.tos.model.bucket.PutBucketRenameOutput;
+import com.volcengine.tos.model.bucket.PutBucketReplicationInput;
+import com.volcengine.tos.model.bucket.PutBucketReplicationOutput;
+import com.volcengine.tos.model.bucket.PutBucketStorageClassInput;
+import com.volcengine.tos.model.bucket.PutBucketStorageClassOutput;
+import com.volcengine.tos.model.bucket.PutBucketTaggingInput;
+import com.volcengine.tos.model.bucket.PutBucketTaggingOutput;
+import com.volcengine.tos.model.bucket.PutBucketVersioningInput;
+import com.volcengine.tos.model.bucket.PutBucketVersioningOutput;
+import com.volcengine.tos.model.bucket.PutBucketWebsiteInput;
+import com.volcengine.tos.model.bucket.PutBucketWebsiteOutput;
+import com.volcengine.tos.model.object.AbortMultipartUploadInput;
+import com.volcengine.tos.model.object.AbortMultipartUploadOutput;
+import com.volcengine.tos.model.object.AppendObjectInput;
+import com.volcengine.tos.model.object.AppendObjectOutput;
+import com.volcengine.tos.model.object.CompleteMultipartUploadV2Input;
+import com.volcengine.tos.model.object.CompleteMultipartUploadV2Output;
+import com.volcengine.tos.model.object.CopyObjectV2Input;
+import com.volcengine.tos.model.object.CopyObjectV2Output;
+import com.volcengine.tos.model.object.CreateMultipartUploadInput;
+import com.volcengine.tos.model.object.CreateMultipartUploadOutput;
+import com.volcengine.tos.model.object.DeleteMultiObjectsV2Input;
+import com.volcengine.tos.model.object.DeleteMultiObjectsV2Output;
+import com.volcengine.tos.model.object.DeleteObjectInput;
+import com.volcengine.tos.model.object.DeleteObjectOutput;
+import com.volcengine.tos.model.object.DeleteObjectTaggingInput;
+import com.volcengine.tos.model.object.DeleteObjectTaggingOutput;
+import com.volcengine.tos.model.object.DownloadFileInput;
+import com.volcengine.tos.model.object.DownloadFileOutput;
+import com.volcengine.tos.model.object.FetchObjectInput;
+import com.volcengine.tos.model.object.FetchObjectOutput;
+import com.volcengine.tos.model.object.GetFetchTaskInput;
+import com.volcengine.tos.model.object.GetFetchTaskOutput;
+import com.volcengine.tos.model.object.GetFileStatusInput;
+import com.volcengine.tos.model.object.GetFileStatusOutput;
+import com.volcengine.tos.model.object.GetObjectACLV2Input;
+import com.volcengine.tos.model.object.GetObjectACLV2Output;
+import com.volcengine.tos.model.object.GetObjectTaggingInput;
+import com.volcengine.tos.model.object.GetObjectTaggingOutput;
+import com.volcengine.tos.model.object.GetObjectToFileInput;
+import com.volcengine.tos.model.object.GetObjectToFileOutput;
+import com.volcengine.tos.model.object.GetObjectV2Input;
+import com.volcengine.tos.model.object.GetObjectV2Output;
+import com.volcengine.tos.model.object.GetSymlinkInput;
+import com.volcengine.tos.model.object.GetSymlinkOutput;
+import com.volcengine.tos.model.object.HeadObjectV2Input;
+import com.volcengine.tos.model.object.HeadObjectV2Output;
+import com.volcengine.tos.model.object.ListMultipartUploadsV2Input;
+import com.volcengine.tos.model.object.ListMultipartUploadsV2Output;
+import com.volcengine.tos.model.object.ListObjectVersionsV2Input;
+import com.volcengine.tos.model.object.ListObjectVersionsV2Output;
+import com.volcengine.tos.model.object.ListObjectsType2Input;
+import com.volcengine.tos.model.object.ListObjectsType2Output;
+import com.volcengine.tos.model.object.ListObjectsV2Input;
+import com.volcengine.tos.model.object.ListObjectsV2Output;
+import com.volcengine.tos.model.object.ListPartsInput;
+import com.volcengine.tos.model.object.ListPartsOutput;
+import com.volcengine.tos.model.object.PreSignedPolicyURLInput;
+import com.volcengine.tos.model.object.PreSignedPolicyURLOutput;
+import com.volcengine.tos.model.object.PreSignedPostSignatureInput;
+import com.volcengine.tos.model.object.PreSignedPostSignatureOutput;
+import com.volcengine.tos.model.object.PreSignedURLInput;
+import com.volcengine.tos.model.object.PreSignedURLOutput;
+import com.volcengine.tos.model.object.PreSingedPolicyURLInput;
+import com.volcengine.tos.model.object.PreSingedPolicyURLOutput;
+import com.volcengine.tos.model.object.PutFetchTaskInput;
+import com.volcengine.tos.model.object.PutFetchTaskOutput;
+import com.volcengine.tos.model.object.PutObjectACLInput;
+import com.volcengine.tos.model.object.PutObjectACLOutput;
+import com.volcengine.tos.model.object.PutObjectFromFileInput;
+import com.volcengine.tos.model.object.PutObjectFromFileOutput;
+import com.volcengine.tos.model.object.PutObjectInput;
+import com.volcengine.tos.model.object.PutObjectOutput;
+import com.volcengine.tos.model.object.PutObjectTaggingInput;
+import com.volcengine.tos.model.object.PutObjectTaggingOutput;
+import com.volcengine.tos.model.object.PutSymlinkInput;
+import com.volcengine.tos.model.object.PutSymlinkOutput;
+import com.volcengine.tos.model.object.RenameObjectInput;
+import com.volcengine.tos.model.object.RenameObjectOutput;
+import com.volcengine.tos.model.object.RestoreObjectInput;
+import com.volcengine.tos.model.object.RestoreObjectOutput;
+import com.volcengine.tos.model.object.ResumableCopyObjectInput;
+import com.volcengine.tos.model.object.ResumableCopyObjectOutput;
+import com.volcengine.tos.model.object.SetObjectMetaInput;
+import com.volcengine.tos.model.object.SetObjectMetaOutput;
+import com.volcengine.tos.model.object.SetObjectTimeInput;
+import com.volcengine.tos.model.object.SetObjectTimeOutput;
+import com.volcengine.tos.model.object.UploadFileV2Input;
+import com.volcengine.tos.model.object.UploadFileV2Output;
+import com.volcengine.tos.model.object.UploadPartCopyV2Input;
+import com.volcengine.tos.model.object.UploadPartCopyV2Output;
+import com.volcengine.tos.model.object.UploadPartFromFileInput;
+import com.volcengine.tos.model.object.UploadPartFromFileOutput;
+import com.volcengine.tos.model.object.UploadPartV2Input;
+import com.volcengine.tos.model.object.UploadPartV2Output;
+import com.volcengine.tos.transport.TransportConfig;
+
 public interface TOSV2 extends TOS, Closeable {
+
     /**
      * create a new bucket
      *
@@ -33,7 +219,6 @@ public interface TOSV2 extends TOS, Closeable {
      * @return {@link HeadBucketV2Output}
      * @throws TosException
      */
-
     /**
      * get bucket's meta data
      *
@@ -118,7 +303,6 @@ public interface TOSV2 extends TOS, Closeable {
      * @throws TosException
      */
     DeleteBucketPolicyOutput deleteBucketPolicy(DeleteBucketPolicyInput input) throws TosException;
-
 
     /**
      * set the CORS of a bucket
@@ -309,7 +493,6 @@ public interface TOSV2 extends TOS, Closeable {
      */
     GetBucketNotificationOutput getBucketNotification(GetBucketNotificationInput input) throws TosException;
 
-
     /**
      * set the event notification v2 rules of a bucket
      *
@@ -466,8 +649,8 @@ public interface TOSV2 extends TOS, Closeable {
     GetObjectToFileOutput getObjectToFile(GetObjectToFileInput input) throws TosException;
 
     /**
-     * If the key exists, return the metadata of the key,
-     * otherwise return the first object information under the directory with the key.
+     * If the key exists, return the metadata of the key, otherwise return the
+     * first object information under the directory with the key.
      *
      * @param input get file status options
      * @return {@link GetFileStatusOutput}
@@ -545,8 +728,17 @@ public interface TOSV2 extends TOS, Closeable {
     SetObjectMetaOutput setObjectMeta(SetObjectMetaInput input) throws TosException;
 
     /**
-     * list objects of a bucket
-     * deprecated since v2.4.0, use listObjectsType2 instead
+     * set object last modify time
+     *
+     * @param input setObjectTime option
+     * @return {@link SetObjectTimeOutput}
+     * @throws TosException
+     */
+    SetObjectTimeOutput setObjectTime(SetObjectTimeInput input) throws TosException;
+
+    /**
+     * list objects of a bucket deprecated since v2.4.0, use listObjectsType2
+     * instead
      *
      * @param input list object options
      * @return {@link ListObjectsV2Output}
@@ -742,7 +934,6 @@ public interface TOSV2 extends TOS, Closeable {
     GetSymlinkOutput getSymlink(GetSymlinkInput input) throws TosException;
 
 //    ModifyObjectOutput modifyObject(ModifyObjectInput input) throws TosException;
-
     /**
      * create a pre-signed URL
      *

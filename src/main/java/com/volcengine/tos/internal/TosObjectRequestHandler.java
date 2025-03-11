@@ -1,27 +1,12 @@
 package com.volcengine.tos.internal;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.volcengine.tos.TosClientException;
-import com.volcengine.tos.TosException;
-import com.volcengine.tos.TosServerException;
-import com.volcengine.tos.comm.HttpMethod;
-import com.volcengine.tos.comm.HttpStatus;
-import com.volcengine.tos.comm.MimeType;
-import com.volcengine.tos.comm.TosHeader;
-import com.volcengine.tos.comm.common.BucketType;
-import com.volcengine.tos.comm.event.DataTransferListener;
-import com.volcengine.tos.comm.ratelimit.RateLimiter;
-import com.volcengine.tos.internal.model.*;
-import com.volcengine.tos.internal.util.*;
-import com.volcengine.tos.internal.util.aborthook.DefaultAbortTosObjectInputStreamHook;
-import com.volcengine.tos.internal.util.ratelimit.RateLimitedInputStream;
-import com.volcengine.tos.model.GenericInput;
-import com.volcengine.tos.model.bucket.HeadBucketV2Input;
-import com.volcengine.tos.model.bucket.HeadBucketV2Output;
-import com.volcengine.tos.model.object.*;
-
-import java.io.*;
+import java.io.ByteArrayInputStream;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
 import java.lang.reflect.Field;
+import java.net.URISyntaxException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.channels.FileChannel;
@@ -33,7 +18,112 @@ import java.util.Map;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.volcengine.tos.TosClientException;
+import com.volcengine.tos.TosException;
+import com.volcengine.tos.TosServerException;
+import com.volcengine.tos.comm.HttpMethod;
+import com.volcengine.tos.comm.HttpStatus;
+import com.volcengine.tos.comm.MimeType;
+import com.volcengine.tos.comm.TosHeader;
+import com.volcengine.tos.comm.common.BucketType;
+import com.volcengine.tos.comm.event.DataTransferListener;
+import com.volcengine.tos.comm.ratelimit.RateLimiter;
+import com.volcengine.tos.internal.model.CRC64Checksum;
+import com.volcengine.tos.internal.model.CheckCrc64AutoInputStream;
+import com.volcengine.tos.internal.model.CreateMultipartUploadOutputJson;
+import com.volcengine.tos.internal.model.SimpleDataTransferListenInputStream;
+import com.volcengine.tos.internal.model.TosRawTrailerInputStream;
+import com.volcengine.tos.internal.model.UploadPartCopyOutputJson;
+import com.volcengine.tos.internal.util.CRC64Utils;
+import com.volcengine.tos.internal.util.DateConverter;
+import com.volcengine.tos.internal.util.ParamsChecker;
+import com.volcengine.tos.internal.util.PayloadConverter;
+import com.volcengine.tos.internal.util.SigningUtils;
+import com.volcengine.tos.internal.util.StringUtils;
+import com.volcengine.tos.internal.util.TosUtils;
+import com.volcengine.tos.internal.util.aborthook.DefaultAbortTosObjectInputStreamHook;
+import com.volcengine.tos.internal.util.ratelimit.RateLimitedInputStream;
+import com.volcengine.tos.model.GenericInput;
+import com.volcengine.tos.model.bucket.HeadBucketV2Input;
+import com.volcengine.tos.model.bucket.HeadBucketV2Output;
+import com.volcengine.tos.model.object.AbortMultipartUploadInput;
+import com.volcengine.tos.model.object.AbortMultipartUploadOutput;
+import com.volcengine.tos.model.object.AppendObjectInput;
+import com.volcengine.tos.model.object.AppendObjectOutput;
+import com.volcengine.tos.model.object.CompleteMultipartUploadV2Input;
+import com.volcengine.tos.model.object.CompleteMultipartUploadV2Output;
+import com.volcengine.tos.model.object.CopyObjectV2Input;
+import com.volcengine.tos.model.object.CopyObjectV2Output;
+import com.volcengine.tos.model.object.CreateMultipartUploadInput;
+import com.volcengine.tos.model.object.CreateMultipartUploadOutput;
+import com.volcengine.tos.model.object.DeleteMultiObjectsV2Input;
+import com.volcengine.tos.model.object.DeleteMultiObjectsV2Output;
+import com.volcengine.tos.model.object.DeleteObjectInput;
+import com.volcengine.tos.model.object.DeleteObjectOutput;
+import com.volcengine.tos.model.object.DeleteObjectTaggingInput;
+import com.volcengine.tos.model.object.DeleteObjectTaggingOutput;
+import com.volcengine.tos.model.object.FetchObjectInput;
+import com.volcengine.tos.model.object.FetchObjectOutput;
+import com.volcengine.tos.model.object.GetFetchTaskInput;
+import com.volcengine.tos.model.object.GetFetchTaskOutput;
+import com.volcengine.tos.model.object.GetFileStatusInput;
+import com.volcengine.tos.model.object.GetFileStatusOutput;
+import com.volcengine.tos.model.object.GetObjectACLV2Input;
+import com.volcengine.tos.model.object.GetObjectACLV2Output;
+import com.volcengine.tos.model.object.GetObjectBasicOutput;
+import com.volcengine.tos.model.object.GetObjectTaggingInput;
+import com.volcengine.tos.model.object.GetObjectTaggingOutput;
+import com.volcengine.tos.model.object.GetObjectV2Input;
+import com.volcengine.tos.model.object.GetObjectV2Output;
+import com.volcengine.tos.model.object.GetSymlinkInput;
+import com.volcengine.tos.model.object.GetSymlinkOutput;
+import com.volcengine.tos.model.object.HeadObjectV2Input;
+import com.volcengine.tos.model.object.HeadObjectV2Output;
+import com.volcengine.tos.model.object.ListMultipartUploadsV2Input;
+import com.volcengine.tos.model.object.ListMultipartUploadsV2Output;
+import com.volcengine.tos.model.object.ListObjectVersionsV2Input;
+import com.volcengine.tos.model.object.ListObjectVersionsV2Output;
+import com.volcengine.tos.model.object.ListObjectsType2Input;
+import com.volcengine.tos.model.object.ListObjectsType2Output;
+import com.volcengine.tos.model.object.ListObjectsV2Input;
+import com.volcengine.tos.model.object.ListObjectsV2Output;
+import com.volcengine.tos.model.object.ListPartsInput;
+import com.volcengine.tos.model.object.ListPartsOutput;
+import com.volcengine.tos.model.object.ListedCommonPrefix;
+import com.volcengine.tos.model.object.ListedObjectV2;
+import com.volcengine.tos.model.object.ModifyObjectInput;
+import com.volcengine.tos.model.object.ModifyObjectOutput;
+import com.volcengine.tos.model.object.ObjectMetaRequestOptions;
+import com.volcengine.tos.model.object.ObjectTobeDeleted;
+import com.volcengine.tos.model.object.PutFetchTaskInput;
+import com.volcengine.tos.model.object.PutFetchTaskOutput;
+import com.volcengine.tos.model.object.PutObjectACLInput;
+import com.volcengine.tos.model.object.PutObjectACLOutput;
+import com.volcengine.tos.model.object.PutObjectBasicInput;
+import com.volcengine.tos.model.object.PutObjectInput;
+import com.volcengine.tos.model.object.PutObjectOutput;
+import com.volcengine.tos.model.object.PutObjectTaggingInput;
+import com.volcengine.tos.model.object.PutObjectTaggingOutput;
+import com.volcengine.tos.model.object.PutSymlinkInput;
+import com.volcengine.tos.model.object.PutSymlinkOutput;
+import com.volcengine.tos.model.object.RenameObjectInput;
+import com.volcengine.tos.model.object.RenameObjectOutput;
+import com.volcengine.tos.model.object.RestoreObjectInput;
+import com.volcengine.tos.model.object.RestoreObjectOutput;
+import com.volcengine.tos.model.object.SetObjectMetaInput;
+import com.volcengine.tos.model.object.SetObjectMetaOutput;
+import com.volcengine.tos.model.object.SetObjectTimeInput;
+import com.volcengine.tos.model.object.SetObjectTimeOutput;
+import com.volcengine.tos.model.object.TosObjectInputStream;
+import com.volcengine.tos.model.object.UploadPartBasicInput;
+import com.volcengine.tos.model.object.UploadPartCopyV2Input;
+import com.volcengine.tos.model.object.UploadPartCopyV2Output;
+import com.volcengine.tos.model.object.UploadPartV2Input;
+import com.volcengine.tos.model.object.UploadPartV2Output;
+
 public class TosObjectRequestHandler {
+
     private TosBucketRequestHandler bucketRequestHandler;
     private RequestHandler objectHandler;
     private TosRequestFactory factory;
@@ -44,12 +134,14 @@ public class TosObjectRequestHandler {
     private final BucketCacheLock[] bucketCacheLocks;
 
     private static class BucketCache {
+
         BucketType bucketType;
         long lastUpdateTimeNanos;
         double timeout;
     }
 
     private static class BucketCacheLock {
+
         Map<String, BucketCache> bucketTypes;
         ReadWriteLock lock;
     }
@@ -204,7 +296,7 @@ public class TosObjectRequestHandler {
 
     private GetFileStatusOutput buildGetFileStatusOutput(TosResponse response) {
         return PayloadConverter.parsePayload(response.getInputStream(), new TypeReference<GetFileStatusOutput>() {
-                })
+        })
                 .setRequestInfo(response.RequestInfo());
     }
 
@@ -213,7 +305,7 @@ public class TosObjectRequestHandler {
         ensureValidBucketName(input.getBucket());
         ensureValidKey(input.getKey());
         RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(),
-                        input.getAllSettedHeaders()).withQuery("versionId", input.getVersionID())
+                input.getAllSettedHeaders()).withQuery("versionId", input.getVersionID())
                 .withQuery(TosHeader.QUERY_RESPONSE_CACHE_CONTROL, input.getResponseCacheControl())
                 .withQuery(TosHeader.QUERY_RESPONSE_CONTENT_DISPOSITION, input.getResponseContentDisposition())
                 .withQuery(TosHeader.QUERY_RESPONSE_CONTENT_ENCODING, input.getResponseContentEncoding())
@@ -250,7 +342,11 @@ public class TosObjectRequestHandler {
             TosResponse response = objectHandler.doRequest(req, getExpectedCodes(input.getAllSettedHeaders()));
             return buildGetObjectV2Output(response, input.getRateLimiter(), input.getDataTransferListener(), useTrailerHeader);
         } catch (TosException ex) {
-            throw ex.setRequestUrl(req.toURL().toString());
+            try {
+                throw ex.setRequestUrl(req.toURL().toString());
+            } catch (URISyntaxException e) {
+                throw new TosClientException("uri syntax exception", e);
+            }
         }
     }
 
@@ -269,7 +365,7 @@ public class TosObjectRequestHandler {
     }
 
     private GetObjectV2Output buildGetObjectV2Output(TosResponse response, RateLimiter rateLimiter,
-                                                     DataTransferListener dataTransferListener, boolean useTrailerHeader) {
+            DataTransferListener dataTransferListener, boolean useTrailerHeader) {
         GetObjectBasicOutput basicOutput = new GetObjectBasicOutput()
                 .setRequestInfo(response.RequestInfo()).parseFromTosResponse(response);
         InputStream content = response.getInputStream();
@@ -291,7 +387,7 @@ public class TosObjectRequestHandler {
         }
 
         return new GetObjectV2Output(basicOutput, new TosObjectInputStream(content))
-                .setHook(new DefaultAbortTosObjectInputStreamHook(content, response.getSource()));
+                .setHook(new DefaultAbortTosObjectInputStreamHook(content));
     }
 
     private boolean checkTrailerHeaderFromServer(TosResponse response) {
@@ -373,7 +469,7 @@ public class TosObjectRequestHandler {
                 .setContentLength(marshalResult.getData().length);
         return objectHandler.doRequest(req, HttpStatus.OK, response -> PayloadConverter.parsePayload(response.getInputStream(),
                 new TypeReference<DeleteMultiObjectsV2Output>() {
-                }).requestInfo(response.RequestInfo())
+        }).requestInfo(response.RequestInfo())
         );
     }
 
@@ -574,7 +670,6 @@ public class TosObjectRequestHandler {
 //        if (input.getContentLength() <= 0) {
 //            throw new TosClientException("content length should be set in appendObject method.", null);
 //        }
-
         RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), input.getAllSettedHeaders())
                 .withQuery("append", "")
                 .withQuery("offset", String.valueOf(input.getOffset()))
@@ -627,6 +722,25 @@ public class TosObjectRequestHandler {
         );
     }
 
+    public SetObjectTimeOutput setObjectTime(SetObjectTimeInput input) throws TosException {
+        ParamsChecker.ensureNotNull(input, "SetObjectTimeInput");
+        ParamsChecker.ensureNotNull(input.getModifyTimestamp(), "modifyTimestamp");
+        ensureValidBucketName(input.getBucket());
+        ensureValidKey(input.getKey());
+
+        long secondTimeStamp = input.getModifyTimestamp().getTime() / 1000;
+        long nanosecondExtTimeStamp = (input.getModifyTimestamp().getTime() - secondTimeStamp * 1000) * 1000 * 1000;
+        RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), null)
+                .withQuery("time", "").withHeader(TosHeader.HEADER_MODIFY_TIMESTAMP, String.valueOf(secondTimeStamp))
+                .withHeader(TosHeader.HEADER_MODIFY_TIMESTAMP_NS, String.valueOf(nanosecondExtTimeStamp));
+        addContentType(builder, input.getKey());
+        builder = this.handleGenericInput(builder, input);
+        TosRequest req = this.factory.build(builder, HttpMethod.POST, null);
+        return objectHandler.doRequest(req, HttpStatus.OK,
+                response -> new SetObjectTimeOutput().setRequestInfo(response.RequestInfo())
+        );
+    }
+
     public ListObjectsV2Output listObjects(ListObjectsV2Input input) throws TosException {
         ParamsChecker.ensureNotNull(input, "ListObjectsV2Input");
         ensureValidBucketName(input.getBucket());
@@ -641,7 +755,7 @@ public class TosObjectRequestHandler {
         TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
         return objectHandler.doRequest(req, HttpStatus.OK, response -> PayloadConverter.parsePayload(response.getInputStream(),
                 new TypeReference<ListObjectsV2Output>() {
-                }).setRequestInfo(response.RequestInfo()));
+        }).setRequestInfo(response.RequestInfo()));
     }
 
     public ListObjectsType2Output listObjectsType2(ListObjectsType2Input input) throws TosException {
@@ -663,7 +777,7 @@ public class TosObjectRequestHandler {
         TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
         ListObjectsType2Output output = objectHandler.doRequest(req, HttpStatus.OK, response -> PayloadConverter.parsePayload(response.getInputStream(),
                 new TypeReference<ListObjectsType2Output>() {
-                }).setRequestInfo(response.RequestInfo()));
+        }).setRequestInfo(response.RequestInfo()));
         if (output.getContents() != null && output.getContents().size() > 0 && this.disableEncodingMeta) {
             for (ListedObjectV2 obj : output.getContents()) {
                 try {
@@ -741,7 +855,7 @@ public class TosObjectRequestHandler {
         return objectHandler.doRequest(req, HttpStatus.OK,
                 response -> PayloadConverter.parsePayload(response.getInputStream(),
                         new TypeReference<ListObjectVersionsV2Output>() {
-                        }).setRequestInfo(response.RequestInfo())
+                }).setRequestInfo(response.RequestInfo())
         );
     }
 
@@ -764,7 +878,7 @@ public class TosObjectRequestHandler {
         try {
             CopyObjectV2Output output = PayloadConverter.parsePayload(rspMsg,
                     new TypeReference<CopyObjectV2Output>() {
-                    });
+            });
             return output.setRequestInfo(response.RequestInfo())
                     .setVersionID(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_VERSIONID))
                     .setSourceVersionID(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_COPY_SOURCE_VERSION_ID))
@@ -776,7 +890,7 @@ public class TosObjectRequestHandler {
         } catch (TosClientException e) {
             ServerExceptionJson errMsg = PayloadConverter.parsePayload(rspMsg,
                     new TypeReference<ServerExceptionJson>() {
-                    });
+            });
             throw new TosServerException(response.getStatusCode(), errMsg.getCode(), errMsg.getMessage(),
                     errMsg.getRequestID(), errMsg.getHostID()).setEc(errMsg.getEc()).setKey(errMsg.getKey());
         }
@@ -804,7 +918,7 @@ public class TosObjectRequestHandler {
         try {
             UploadPartCopyOutputJson out = PayloadConverter.parsePayload(rspMsg,
                     new TypeReference<UploadPartCopyOutputJson>() {
-                    });
+            });
             return new UploadPartCopyV2Output().requestInfo(response.RequestInfo())
                     .copySourceVersionID(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_COPY_SOURCE_VERSION_ID))
                     .setServerSideEncryptionKeyID(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_SSE))
@@ -815,7 +929,7 @@ public class TosObjectRequestHandler {
         } catch (TosClientException e) {
             ServerExceptionJson errMsg = PayloadConverter.parsePayload(rspMsg,
                     new TypeReference<ServerExceptionJson>() {
-                    });
+            });
             throw new TosServerException(response.getStatusCode(), errMsg.getCode(), errMsg.getMessage(),
                     errMsg.getRequestID(), errMsg.getHostID()).setEc(errMsg.getEc()).setKey(errMsg.getKey());
         }
@@ -856,7 +970,7 @@ public class TosObjectRequestHandler {
 
     private GetObjectACLV2Output buildGetObjectACLV2Output(TosResponse response) {
         return PayloadConverter.parsePayload(response.getInputStream(), new TypeReference<GetObjectACLV2Output>() {
-                })
+        })
                 .setRequestInfo(response.RequestInfo())
                 .setVersionID(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_VERSIONID));
     }
@@ -886,8 +1000,8 @@ public class TosObjectRequestHandler {
         builder = this.handleGenericInput(builder, input);
         TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
         return objectHandler.doRequest(req, HttpStatus.OK, res -> PayloadConverter.parsePayload(res.getInputStream(),
-                        new TypeReference<GetObjectTaggingOutput>() {
-                        }).setRequestInfo(res.RequestInfo())
+                new TypeReference<GetObjectTaggingOutput>() {
+        }).setRequestInfo(res.RequestInfo())
                 .setVersionID(res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_VERSIONID)));
     }
 
@@ -915,8 +1029,8 @@ public class TosObjectRequestHandler {
         TosRequest req = this.factory.build(builder, HttpMethod.POST, new ByteArrayInputStream(marshalResult.getData()))
                 .setContentLength(marshalResult.getData().length);
         return objectHandler.doRequest(req, HttpStatus.OK, response -> PayloadConverter.parsePayload(response.getInputStream(),
-                        new TypeReference<FetchObjectOutput>() {
-                        }).setRequestInfo(response.RequestInfo())
+                new TypeReference<FetchObjectOutput>() {
+        }).setRequestInfo(response.RequestInfo())
                 .setVersionID(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_VERSIONID))
                 .setSsecAlgorithm(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_SSE_CUSTOMER_ALGORITHM))
                 .setSsecKeyMD5(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_SSE_CUSTOMER_KEY_MD5))
@@ -936,7 +1050,7 @@ public class TosObjectRequestHandler {
                 .setContentLength(marshalResult.getData().length);
         return objectHandler.doRequest(req, HttpStatus.OK, response -> PayloadConverter.parsePayload(response.getInputStream(),
                 new TypeReference<PutFetchTaskOutput>() {
-                }).setRequestInfo(response.RequestInfo()));
+        }).setRequestInfo(response.RequestInfo()));
     }
 
     public GetFetchTaskOutput getFetchTask(GetFetchTaskInput input) throws TosException {
@@ -950,7 +1064,7 @@ public class TosObjectRequestHandler {
         TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
         GetFetchTaskOutput output = objectHandler.doRequest(req, HttpStatus.OK, response -> PayloadConverter.parsePayload(response.getInputStream(),
                 new TypeReference<GetFetchTaskOutput>() {
-                }).setRequestInfo(response.RequestInfo()));
+        }).setRequestInfo(response.RequestInfo()));
         if (output.getTask() != null && output.getTask().getMeta() != null && output.getTask().getMeta().size() > 0 && disableEncodingMeta) {
             try {
                 Field f = output.getTask().getClass().getDeclaredField("disableEncodingMeta");
@@ -983,7 +1097,7 @@ public class TosObjectRequestHandler {
     private CreateMultipartUploadOutput buildCreateMultipartUploadOutput(TosResponse response) {
         CreateMultipartUploadOutputJson upload = PayloadConverter.parsePayload(response.getInputStream(),
                 new TypeReference<CreateMultipartUploadOutputJson>() {
-                });
+        });
         return new CreateMultipartUploadOutput().setRequestInfo(response.RequestInfo())
                 .setBucket(upload.getBucket()).setKey(upload.getKey()).setUploadID(upload.getUploadID())
                 .setEncodingType(upload.getEncodingType())
@@ -1134,7 +1248,7 @@ public class TosObjectRequestHandler {
         return objectHandler.doRequest(req, HttpStatus.OK,
                 response -> PayloadConverter.parsePayload(response.getInputStream(),
                         new TypeReference<ListPartsOutput>() {
-                        }).setRequestInfo(response.RequestInfo())
+                }).setRequestInfo(response.RequestInfo())
         );
     }
 
@@ -1157,7 +1271,7 @@ public class TosObjectRequestHandler {
         return objectHandler.doRequest(req, HttpStatus.OK,
                 response -> PayloadConverter.parsePayload(response.getInputStream(),
                         new TypeReference<ListMultipartUploadsV2Output>() {
-                        }).setRequestInfo(response.RequestInfo())
+                }).setRequestInfo(response.RequestInfo())
         );
     }
 
@@ -1294,7 +1408,6 @@ public class TosObjectRequestHandler {
                 .setEnableCrcCheck(enableCrcCheck)
                 .setCrc64InitValue(CRC64Utils.unsignedLongStringToLong(preHashCrc64ecma))
                 .setDataTransferListener(input.getDataTransferListener());
-
 
         return objectHandler.doRequest(req, HttpStatus.OK, res -> {
             String nextModifyOffset = res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_NEXT_MODIFY_OFFSET);

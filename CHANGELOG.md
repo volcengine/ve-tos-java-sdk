@@ -1,5 +1,15 @@
 ## Release Note
 
+### 2025.02.25 Version 2.8.9 - hadoop
+
+- Feat 使用apache httpclient 替换 okhttp
+
+### 2025.02.13 Version 2.8.9
+
+- Feat 支持 SetObjectTime 接口
+- Feat 断点续传接口支持上传回调
+- 修复BucketPolicy不支持中文
+
 ### 2024.12.25 Version 2.8.8
 
 - Fix PreSignedURL 接口特殊字符兼容性

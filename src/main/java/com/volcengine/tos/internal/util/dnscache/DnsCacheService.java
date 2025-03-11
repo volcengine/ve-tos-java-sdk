@@ -6,4 +6,5 @@ import java.util.List;
 public interface DnsCacheService {
     List<InetAddress> getIpList(String host);
     void removeAddress(String host, String ip);
+    void removeAddress(String host);
 }

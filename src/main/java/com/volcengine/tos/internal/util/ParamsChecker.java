@@ -1,21 +1,28 @@
 package com.volcengine.tos.internal.util;
 
+import java.net.Inet6Address;
+import java.net.InetAddress;
+import java.net.URISyntaxException;
+import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+import org.apache.hc.core5.net.URIBuilder;
+
 import com.volcengine.tos.TosClientException;
 import com.volcengine.tos.comm.HttpMethod;
 import com.volcengine.tos.internal.Consts;
-import okhttp3.HttpUrl;
-
-import java.net.*;
-import java.util.*;
 
 public class ParamsChecker {
+
     private static final String BUCKET_INVALID_PREFIX_SUFFIX = "-";
     private static final String BUCKET_NAME_PATTERN = "^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$";
     private static final List<String> INVALID_OBJECT_KEY_LIST = Arrays.asList(".", "..", "%2e", "%2e.", ".%2e", "%2e%2e");
-    private static final String IP_V6_PATTERN = "^([\\da-fA-F]{1,4}:){7}[\\da-fA-F]{1,4}|:((:[\\da−fA−F]1,4)1,6|:)|:((:[\\da−fA−F]1,4)1,6|:)|" +
-            "^[\\da-fA-F]{1,4}:((:[\\da-fA-F]{1,4}){1,5}|:)|([\\da−fA−F]1,4:)2((:[\\da−fA−F]1,4)1,4|:)|([\\da−fA−F]1,4:)2((:[\\da−fA−F]1,4)1,4|:)|" +
-            "^([\\da-fA-F]{1,4}:){3}((:[\\da-fA-F]{1,4}){1,3}|:)|([\\da−fA−F]1,4:)4((:[\\da−fA−F]1,4)1,2|:)|([\\da−fA−F]1,4:)4((:[\\da−fA−F]1,4)1,2|:)|" +
-            "^([\\da-fA-F]{1,4}:){5}:([\\da-fA-F]{1,4})?|([\\da−fA−F]1,4:)6:|([\\da−fA−F]1,4:)6:";
+    private static final String IP_V6_PATTERN = "^([\\da-fA-F]{1,4}:){7}[\\da-fA-F]{1,4}|:((:[\\da−fA−F]1,4)1,6|:)|:((:[\\da−fA−F]1,4)1,6|:)|"
+            + "^[\\da-fA-F]{1,4}:((:[\\da-fA-F]{1,4}){1,5}|:)|([\\da−fA−F]1,4:)2((:[\\da−fA−F]1,4)1,4|:)|([\\da−fA−F]1,4:)2((:[\\da−fA−F]1,4)1,4|:)|"
+            + "^([\\da-fA-F]{1,4}:){3}((:[\\da-fA-F]{1,4}){1,3}|:)|([\\da−fA−F]1,4:)4((:[\\da−fA−F]1,4)1,2|:)|([\\da−fA−F]1,4:)4((:[\\da−fA−F]1,4)1,2|:)|"
+            + "^([\\da-fA-F]{1,4}:){5}:([\\da-fA-F]{1,4})?|([\\da−fA−F]1,4:)6:|([\\da−fA−F]1,4:)6:";
 
     public static List<String> parseFromEndpoint(String endpoint) {
         if (StringUtils.isEmpty(endpoint)) {
@@ -50,24 +57,25 @@ public class ParamsChecker {
         if (StringUtils.isEmpty(host)) {
             return false;
         }
-        try{
-            HttpUrl url = HttpUrl.parse(Consts.SCHEME_HTTPS + "://" + host);
-            if (url == null || StringUtils.isEmpty(url.host())) {
+        try {
+            URIBuilder url = new URIBuilder(Consts.SCHEME_HTTPS + "://" + host);
+            // HttpUrl url = HttpUrl.parse(Consts.SCHEME_HTTPS + "://" + host);
+            if (url == null || StringUtils.isEmpty(url.getHost())) {
                 return false;
             }
-            InetAddress addr = InetAddress.getByName(url.host());
-            boolean validAddress = StringUtils.equals(addr.getHostAddress(), url.host()) ||
-                    StringUtils.equals(url.host(), "localhost");
+            InetAddress addr = InetAddress.getByName(url.getHost());
+            boolean validAddress = StringUtils.equals(addr.getHostAddress(), url.getHost())
+                    || StringUtils.equals(url.getHost(), "localhost");
             if (validAddress) {
                 return true;
             }
             if (addr instanceof Inet6Address) {
                 // 如果是被压缩的 ipv6 地址，validAddress 会为 false，但实际上可能是同一个地址
                 // 这里简单用正则匹配，如果两者都是 ipv6 地址，认为他们相同。
-                return addr.getHostAddress().matches(IP_V6_PATTERN) && url.host().matches(IP_V6_PATTERN);
+                return addr.getHostAddress().matches(IP_V6_PATTERN) && url.getHost().matches(IP_V6_PATTERN);
             }
             return false;
-        } catch (UnknownHostException e) {
+        } catch (UnknownHostException | URISyntaxException e) {
             return false;
         }
     }
@@ -94,7 +102,7 @@ public class ParamsChecker {
             // host:port
             portStr = host.substring(idx + 1);
         }
-        try{
+        try {
             port = Integer.parseInt(portStr);
         } catch (NumberFormatException e) {
             // set port by default
@@ -108,8 +116,8 @@ public class ParamsChecker {
             throw new TosClientException("invalid bucket name, the length must be [3, 63]", null);
         }
         if (name.startsWith(BUCKET_INVALID_PREFIX_SUFFIX) || name.endsWith(BUCKET_INVALID_PREFIX_SUFFIX)) {
-            throw new TosClientException("invalid bucket name, the bucket name can be neither " +
-                    "starting with '-' nor ending with '-'", null);
+            throw new TosClientException("invalid bucket name, the bucket name can be neither "
+                    + "starting with '-' nor ending with '-'", null);
         }
         if (!name.matches(BUCKET_NAME_PATTERN)) {
             throw new TosClientException("invalid bucket name, the character set is illegal", null);
@@ -139,7 +147,6 @@ public class ParamsChecker {
 //            throw new TosClientException("object key should be utf-8 encode", e);
 //        }
 //    }
-
     public static void isValidBucketNameAndKey(String bucket, String key) {
         isValidBucketName(bucket);
         isValidKey(key);

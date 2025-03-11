@@ -1,19 +1,5 @@
 package com.volcengine.tos.internal.util;
 
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.volcengine.tos.TosClientException;
-import com.volcengine.tos.internal.Consts;
-import okhttp3.ConnectionPool;
-import okhttp3.Dispatcher;
-import okhttp3.OkHttpClient;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSocketFactory;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
@@ -22,14 +8,45 @@ import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Pattern;
 
-import static com.volcengine.tos.internal.Consts.*;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
+
+import org.apache.hc.client5.http.config.ConnectionConfig;
+import org.apache.hc.client5.http.config.RequestConfig;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.HttpClientBuilder;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManager;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManagerBuilder;
+import org.apache.hc.client5.http.ssl.NoopHostnameVerifier;
+import org.apache.hc.client5.http.ssl.SSLConnectionSocketFactory;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.volcengine.tos.TosClientException;
+import com.volcengine.tos.internal.Consts;
+import static com.volcengine.tos.internal.Consts.JAVA_VERSION;
+import static com.volcengine.tos.internal.Consts.OS_ARCH;
+import static com.volcengine.tos.internal.Consts.OS_NAME;
+import static com.volcengine.tos.internal.Consts.SDK_LOG_NAMESPACE;
+import static com.volcengine.tos.internal.Consts.SDK_NAME;
+import static com.volcengine.tos.internal.Consts.SDK_VERSION;
 
 public class TosUtils {
+
     private static final String USER_AGENT = String.format("%s/%s (%s/%s;%s)",
             SDK_NAME, SDK_VERSION, OS_NAME, OS_ARCH, JAVA_VERSION);
     private static final ObjectMapper JSON = new ObjectMapper()
@@ -70,7 +87,7 @@ public class TosUtils {
     }
 
     private static Map<String, List<String>> getInstance() throws TosClientException {
-        if (SUPPORTED_REGION != null){
+        if (SUPPORTED_REGION != null) {
             return SUPPORTED_REGION;
         }
         synchronized (TosUtils.class) {
@@ -118,8 +135,8 @@ public class TosUtils {
     }
 
     /**
-     * tryEncodeValue 如果 value 包含中文，会对 value 进行编码
-     * 对于 URLEncoder 库，编码时 " " 会被编成 "+"，sdk 会强制转成 "%20"
+     * tryEncodeValue 如果 value 包含中文，会对 value 进行编码 对于 URLEncoder 库，编码时 " " 会被编成
+     * "+"，sdk 会强制转成 "%20"
      */
     public static String tryEncodeValue(String key, String value) {
         if (value == null || value.length() == 0) {
@@ -134,16 +151,15 @@ public class TosUtils {
                         .replace("~", "%7E")
                         .replace("/", "%2F");
             } catch (UnsupportedEncodingException e) {
-                throw new TosClientException("tos: unsupported http header value in key: "+key, e);
+                throw new TosClientException("tos: unsupported http header value in key: " + key, e);
             }
         }
         return encodedValue;
     }
 
     /**
-     * tryDecodeValue 对 value 尝试解码，如果解码后的值不包含中文，则返回原值，否则返回解码后的值
-     * 对于 URLDecoder 库，解码时 "+" 会被解成 " "，sdk 会强制解成 "+"
-     * 对于解码抛异常的场景，直接返回原值
+     * tryDecodeValue 对 value 尝试解码，如果解码后的值不包含中文，则返回原值，否则返回解码后的值 对于 URLDecoder
+     * 库，解码时 "+" 会被解成 " "，sdk 会强制解成 "+" 对于解码抛异常的场景，直接返回原值
      */
     public static String tryDecodeValue(String key, String value) {
         if (key == null || value == null) {
@@ -201,7 +217,7 @@ public class TosUtils {
     /**
      * 输入 null 会返回 ""
      *
-     * @param in          输入字符串
+     * @param in 输入字符串
      * @param encodeSlash 是否编码 /
      * @return 编码之后的string
      */
@@ -218,23 +234,23 @@ public class TosUtils {
                 hexCount++;
             }
         }
-        byte[] encoded = new byte[inBytes.length+2*hexCount];
+        byte[] encoded = new byte[inBytes.length + 2 * hexCount];
         for (int i = 0, j = 0; i < inBytes.length; i++) {
             int uintByte = inBytes[i] & 0xFF;
-            if (uintByte == '/'){
+            if (uintByte == '/') {
                 if (encodeSlash) {
                     encoded[j] = '%';
-                    encoded[j+1] = '2';
-                    encoded[j+2] = 'F';
+                    encoded[j + 1] = '2';
+                    encoded[j + 2] = 'F';
                     j += 3;
-                } else{
+                } else {
                     encoded[j] = inBytes[i];
                     j++;
                 }
             } else if (!nonEscape[uintByte]) {
                 encoded[j] = '%';
-                encoded[j+1] = escapeChar[uintByte >> 4];
-                encoded[j+2] = escapeChar[uintByte & 15];
+                encoded[j + 1] = escapeChar[uintByte >> 4];
+                encoded[j + 2] = escapeChar[uintByte & 15];
                 j += 3;
             } else {
                 encoded[j] = inBytes[i];
@@ -257,11 +273,11 @@ public class TosUtils {
         if (backoff > max) {
             backoff = max;
         }
-        backoff *= 1 + jitter*(random.nextDouble(1) * 2 - 1);
+        backoff *= 1 + jitter * (random.nextDouble(1) * 2 - 1);
         if (backoff < 0) {
             return 0;
         }
-        return (long)(backoff * 1000);
+        return (long) (backoff * 1000);
     }
 
     public static String convertInteger(int value) {
@@ -312,53 +328,62 @@ public class TosUtils {
         return byteArray;
     }
 
-    public static OkHttpClient.Builder ignoreCertificate(OkHttpClient.Builder builder) throws TosClientException {
+    public static PoolingHttpClientConnectionManagerBuilder ignoreCertificate(PoolingHttpClientConnectionManagerBuilder builder) throws TosClientException {
         TosUtils.getLogger().info("tos: ignore ssl certificate verification");
         try {
             final TrustManager[] trustAllCerts = new TrustManager[]{
-                    new X509TrustManager() {
-                        @Override
-                        public void checkClientTrusted(X509Certificate[] chain, String authType) {
-                        }
-
-                        @Override
-                        public void checkServerTrusted(X509Certificate[] chain, String authType) {
-                        }
-
-                        @Override
-                        public X509Certificate[] getAcceptedIssuers() {
-                            return new X509Certificate[]{};
-                        }
+                new X509TrustManager() {
+                    @Override
+                    public void checkClientTrusted(X509Certificate[] chain, String authType) {
                     }
+
+                    @Override
+                    public void checkServerTrusted(X509Certificate[] chain, String authType) {
+                    }
+
+                    @Override
+                    public X509Certificate[] getAcceptedIssuers() {
+                        return new X509Certificate[]{};
+                    }
+                }
             };
             final SSLContext sslContext = SSLContext.getInstance("SSL");
             sslContext.init(null, trustAllCerts, new SecureRandom());
-            final SSLSocketFactory sslSocketFactory = sslContext.getSocketFactory();
-
-            builder.sslSocketFactory(sslSocketFactory, (X509TrustManager) trustAllCerts[0]);
-            builder.hostnameVerifier((hostname, session) -> true);
+            final SSLConnectionSocketFactory sslSocketFactory = new SSLConnectionSocketFactory(sslContext, NoopHostnameVerifier.INSTANCE);
+            builder.setSSLSocketFactory(sslSocketFactory);
         } catch (NoSuchAlgorithmException | KeyManagementException e) {
             throw new TosClientException("tos: set ignoreCertificate failed", e);
         }
+
         return builder;
     }
 
-    public static OkHttpClient defaultOkHttpClient() {
-        OkHttpClient.Builder builder = new OkHttpClient.Builder();
-        Dispatcher dispatcher = new Dispatcher();
-        dispatcher.setMaxRequests(Consts.DEFAULT_MAX_CONNECTIONS);
-        dispatcher.setMaxRequestsPerHost(Consts.DEFAULT_MAX_CONNECTIONS);
-        ConnectionPool connectionPool = new ConnectionPool(Consts.DEFAULT_MAX_CONNECTIONS,
-                Consts.DEFAULT_IDLE_CONNECTION_TIME_MILLS, TimeUnit.MILLISECONDS);
-        builder = TosUtils.ignoreCertificate(builder);
-        return builder.dispatcher(dispatcher)
-                .connectionPool(connectionPool)
-                .retryOnConnectionFailure(false)
-                .readTimeout(Consts.DEFAULT_READ_TIMEOUT_MILLS, TimeUnit.MILLISECONDS)
-                .writeTimeout(Consts.DEFAULT_WRITE_TIMEOUT_MILLS, TimeUnit.MILLISECONDS)
-                .connectTimeout(Consts.DEFAULT_CONNECT_TIMEOUT_MILLS, TimeUnit.MILLISECONDS)
-                .followRedirects(false)
-                .followSslRedirects(false)
+    public static CloseableHttpClient defaultApacheHttpClient() {
+        HttpClientBuilder builder = HttpClients.custom();
+
+        ConnectionConfig connectionConfig = ConnectionConfig.custom()
+                .setConnectTimeout(Consts.DEFAULT_CONNECT_TIMEOUT_MILLS, TimeUnit.MILLISECONDS)
+                .setSocketTimeout(Consts.DEFAULT_READ_TIMEOUT_MILLS, TimeUnit.MILLISECONDS)
+                .setTimeToLive(Consts.DEFAULT_IDLE_CONNECTION_TIME_MILLS, TimeUnit.MILLISECONDS)
+                .build();
+
+        PoolingHttpClientConnectionManagerBuilder connectionManagerBuilder = PoolingHttpClientConnectionManagerBuilder.create();
+        connectionManagerBuilder = TosUtils.ignoreCertificate(connectionManagerBuilder);
+
+        PoolingHttpClientConnectionManager connectionManager = connectionManagerBuilder
+                .build();
+        connectionManager.setMaxTotal(Consts.DEFAULT_MAX_CONNECTIONS);
+        connectionManager.setDefaultMaxPerRoute(Consts.DEFAULT_MAX_CONNECTIONS);
+        connectionManager.setDefaultConnectionConfig(connectionConfig);
+        
+        RequestConfig requestConfig = RequestConfig.custom()
+                .build();
+
+        return builder
+                .setConnectionManager(connectionManager)
+                .setDefaultRequestConfig(requestConfig)
+                .disableAutomaticRetries()
+                .disableRedirectHandling()
                 .build();
     }
 }

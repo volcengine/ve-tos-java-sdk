@@ -578,6 +578,10 @@ public class TOSV2Client implements TOSV2 {
         return objectRequestHandler.setObjectMeta(input);
     }
 
+    public SetObjectTimeOutput setObjectTime(SetObjectTimeInput input) throws TosException {
+        return objectRequestHandler.setObjectTime(input);
+    }
+
     @Override
     public ListObjectsV2Output listObjects(ListObjectsV2Input input) throws TosException {
         return objectRequestHandler.listObjects(input);

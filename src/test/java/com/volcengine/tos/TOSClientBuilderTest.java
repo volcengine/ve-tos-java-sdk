@@ -1,18 +1,21 @@
 package com.volcengine.tos;
 
+import java.net.URI;
+import java.net.URISyntaxException;
+
+import org.testng.Assert;
+import org.testng.annotations.Test;
+
 import com.volcengine.tos.auth.StaticCredentials;
 import com.volcengine.tos.comm.HttpMethod;
 import com.volcengine.tos.internal.RequestBuilder;
 import com.volcengine.tos.internal.TosRequest;
 import com.volcengine.tos.model.object.PreSignedURLInput;
 import com.volcengine.tos.model.object.PreSignedURLOutput;
-import okhttp3.HttpUrl;
-import org.testng.Assert;
-import org.testng.annotations.Test;
 
 public class TOSClientBuilderTest {
     @Test
-    void isCustomDomainTest() {
+    void isCustomDomainTest() throws URISyntaxException {
         TOSClientConfiguration configuration = TOSClientConfiguration.builder()
                 .isCustomDomain(true)
                 .endpoint(Consts.endpoint)
@@ -25,7 +28,7 @@ public class TOSClientBuilderTest {
         String key = "bbb";
         RequestBuilder builder = client.getFactory().init(bucket, key, null);
         TosRequest req = builder.buildRequest("GET", null);
-        HttpUrl url = req.toURL();
+        URI url = req.toURL();
         String endpoint = Consts.endpoint;
         if (!endpoint.startsWith("http") && !endpoint.startsWith("https")) {
             endpoint = "https://" + endpoint;

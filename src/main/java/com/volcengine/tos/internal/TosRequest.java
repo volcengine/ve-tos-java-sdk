@@ -1,16 +1,19 @@
 package com.volcengine.tos.internal;
 
-import com.volcengine.tos.comm.event.DataTransferListener;
-import com.volcengine.tos.comm.ratelimit.RateLimiter;
-import com.volcengine.tos.internal.util.StringUtils;
-import com.volcengine.tos.internal.util.TosUtils;
-import okhttp3.HttpUrl;
-
 import java.io.InputStream;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Collections;
 import java.util.Map;
 
+import org.apache.hc.core5.net.URIBuilder;
+
+import com.volcengine.tos.comm.event.DataTransferListener;
+import com.volcengine.tos.comm.ratelimit.RateLimiter;
+import com.volcengine.tos.internal.util.StringUtils;
+
 public class TosRequest {
+
     private String scheme;
     private String method;
     private String host;
@@ -36,8 +39,7 @@ public class TosRequest {
     private Map<String, String> query = Collections.emptyMap();
 
     /**
-     * only for POST data
-     * only used in ClientV1, deprecated in ClientV2
+     * only for POST data only used in ClientV1, deprecated in ClientV2
      */
     private byte[] data = new byte[0];
 
@@ -53,7 +55,7 @@ public class TosRequest {
     }
 
     public TosRequest(String scheme, String method, String host, String path, InputStream inputStream,
-                      Map<String, String> query, Map<String, String> headers) {
+            Map<String, String> query, Map<String, String> headers) {
         this.scheme = scheme;
         this.method = method;
         this.host = host;
@@ -66,31 +68,31 @@ public class TosRequest {
         this.retryableOnServerException = true;
     }
 
-    public HttpUrl toURL() {
-        HttpUrl.Builder builder = new HttpUrl.Builder();
+    public URI toURL() throws URISyntaxException {
+        URIBuilder builder = new URIBuilder();
         if (query != null) {
             for (Map.Entry<String, String> entry : query.entrySet()) {
-                builder.addEncodedQueryParameter(entry.getKey(), TosUtils.uriEncode(entry.getValue(), true));
+                builder.addParameter(entry.getKey(), entry.getValue());
             }
         }
         // path 带了'/'，addPathSegment 会自动添加'/'，因此这里移除之
         String escapePath = StringUtils.removeStart(path, "/");
-        builder = builder.scheme(scheme).host(host).addPathSegment(escapePath);
+        builder = builder.setScheme(scheme).setHost(host).setPathSegments(escapePath);
         if (port != 0) {
-            builder.port(port);
+            builder.setPort(port);
         }
         return builder.build();
     }
 
-    public HttpUrl toEscapeURL() {
-        HttpUrl.Builder builder = new HttpUrl.Builder();
+    public URI toEscapeURL() throws URISyntaxException {
+        URIBuilder builder = new URIBuilder();
         if (query != null) {
             for (Map.Entry<String, String> entry : query.entrySet()) {
-                builder.addEncodedQueryParameter(entry.getKey(), TosUtils.uriEncode(entry.getValue(), true));
+                builder.addParameter(entry.getKey(), entry.getValue());
             }
         }
 
-        return builder.scheme(scheme).host(host).encodedPath(path).build();
+        return builder.setScheme(scheme).setHost(host).setPathSegments(path).build();
     }
 
     public String getScheme() {

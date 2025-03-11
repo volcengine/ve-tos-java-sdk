@@ -1,17 +1,7 @@
 package com.volcengine.tos.internal;
 
-import com.volcengine.tos.TosClientException;
-import com.volcengine.tos.TosException;
-import com.volcengine.tos.auth.Credential;
-import com.volcengine.tos.auth.SignKeyInfo;
-import com.volcengine.tos.auth.Signer;
-import com.volcengine.tos.internal.model.PostPolicyJson;
-import com.volcengine.tos.internal.model.PreSignedPolicyJson;
-import com.volcengine.tos.internal.util.*;
-import com.volcengine.tos.internal.util.base64.Base64;
-import com.volcengine.tos.model.object.*;
-
 import java.io.ByteArrayInputStream;
+import java.net.URISyntaxException;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -20,7 +10,32 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import com.volcengine.tos.TosClientException;
+import com.volcengine.tos.TosException;
+import com.volcengine.tos.auth.Credential;
+import com.volcengine.tos.auth.SignKeyInfo;
+import com.volcengine.tos.auth.Signer;
+import com.volcengine.tos.internal.model.PostPolicyJson;
+import com.volcengine.tos.internal.model.PreSignedPolicyJson;
+import com.volcengine.tos.internal.util.ParamsChecker;
+import com.volcengine.tos.internal.util.PayloadConverter;
+import com.volcengine.tos.internal.util.SigningUtils;
+import com.volcengine.tos.internal.util.StringUtils;
+import com.volcengine.tos.internal.util.TosUtils;
+import com.volcengine.tos.internal.util.base64.Base64;
+import com.volcengine.tos.model.object.DefaultPreSignedPolicyURLGenerator;
+import com.volcengine.tos.model.object.PolicySignatureCondition;
+import com.volcengine.tos.model.object.PostSignatureCondition;
+import com.volcengine.tos.model.object.PreSignedPolicyURLGenerator;
+import com.volcengine.tos.model.object.PreSignedPolicyURLInput;
+import com.volcengine.tos.model.object.PreSignedPolicyURLOutput;
+import com.volcengine.tos.model.object.PreSignedPostSignatureInput;
+import com.volcengine.tos.model.object.PreSignedPostSignatureOutput;
+import com.volcengine.tos.model.object.PreSignedURLInput;
+import com.volcengine.tos.model.object.PreSignedURLOutput;
+
 public class TosPreSignedRequestHandler {
+
     private TosRequestFactory factory;
     private Signer signer;
 
@@ -70,7 +85,7 @@ public class TosPreSignedRequestHandler {
         // 直接走 custom domain 模式，此设置针对单次请求，不会修改 factory 中的 urlMode
         builder.setUrlMode(useCustomDomain ? Consts.URL_MODE_CUSTOM_DOMAIN : Consts.URL_MODE_DEFAULT);
         if (StringUtils.isNotEmpty(input.getAlternativeEndpoint())) {
-            String newHost= ParamsChecker.parseFromEndpoint(input.getAlternativeEndpoint()).get(1);
+            String newHost = ParamsChecker.parseFromEndpoint(input.getAlternativeEndpoint()).get(1);
             builder.setHost(newHost);
         }
 
@@ -78,7 +93,11 @@ public class TosPreSignedRequestHandler {
             input.getQuery().forEach(builder::withQuery);
         }
         TosRequest request = this.factory.build(builder, input.getHttpMethod(), ttl);
-        return new PreSignedURLOutput(request.toURL().toString(), request.getHeaders());
+        try {
+            return new PreSignedURLOutput(request.toURL().toString(), request.getHeaders());
+        } catch (URISyntaxException e) {
+            throw new TosClientException("uri syntax exception", e);
+        }
     }
 
     public PreSignedPostSignatureOutput preSignedPostSignature(PreSignedPostSignatureInput input) throws TosException {
@@ -143,7 +162,7 @@ public class TosPreSignedRequestHandler {
             conditions.add(new PostSignatureCondition(key, value, SigningUtils.signConditionRange));
         }
 
-        if(input.getMultiValuesConditions() != null){
+        if (input.getMultiValuesConditions() != null) {
             conditions.addAll(input.getMultiValuesConditions());
         }
 
@@ -237,10 +256,10 @@ public class TosPreSignedRequestHandler {
         String canonicalStr = SigningUtils.encodeQuery(query) + split + SigningUtils.unsignedPayload;
         byte[] sha256Value = SigningUtils.sha256(canonicalStr);
         String hexValue = String.valueOf(SigningUtils.toHex(sha256Value));
-        String buf = SigningUtils.signPrefix + split +
-                date8601 + split +
-                dateDay + '/' + region + "/tos/request" + split +
-                hexValue;
+        String buf = SigningUtils.signPrefix + split
+                + date8601 + split
+                + dateDay + '/' + region + "/tos/request" + split
+                + hexValue;
 
         // sign key
         byte[] signK = null;
@@ -250,7 +269,7 @@ public class TosPreSignedRequestHandler {
         byte[] sign = SigningUtils.hmacSha256(signK, buf.getBytes());
 
         query.add(new AbstractMap.SimpleEntry<>(SigningUtils.v4Signature, String.valueOf(SigningUtils.toHex(sign))));
-        String encodedQuery = SigningUtils.encodeQuery(query);
+        String rawQuery = SigningUtils.toQuery(query);
 
         String scheme = factory.getScheme();
         String host = factory.getHost();
@@ -259,10 +278,10 @@ public class TosPreSignedRequestHandler {
         }
 
         PreSignedPolicyURLGenerator generator = new DefaultPreSignedPolicyURLGenerator().setScheme(scheme)
-                .setSignatureQuery(encodedQuery).setCustomDomain(input.isCustomDomain())
+                .setSignatureQuery(rawQuery).setCustomDomain(input.isCustomDomain())
                 .setBucket(input.getBucket()).setHost(host);
 
         return new PreSignedPolicyURLOutput().setPreSignedPolicyURLGenerator(generator)
-                .setScheme(scheme).setHost(host).setSignatureQuery(encodedQuery);
+                .setScheme(scheme).setHost(host).setSignatureQuery(rawQuery);
     }
 }

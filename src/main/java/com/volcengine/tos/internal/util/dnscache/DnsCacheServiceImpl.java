@@ -1,15 +1,20 @@
 package com.volcengine.tos.internal.util.dnscache;
 
-import com.volcengine.tos.internal.util.StringUtils;
-
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.InetAddress;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
+import com.volcengine.tos.internal.util.StringUtils;
+
 public class DnsCacheServiceImpl implements DnsCacheService, Closeable {
+
     private final int timeoutMinutes;
 
     private final Map<String, IpListItem> ipListMap;
@@ -125,6 +130,7 @@ public class DnsCacheServiceImpl implements DnsCacheService, Closeable {
     }
 
     static class IpListItemValue {
+
         List<InetAddress> ipList;
         long lastUpdateTimeNanos;
         boolean immortal;
@@ -147,6 +153,7 @@ public class DnsCacheServiceImpl implements DnsCacheService, Closeable {
     }
 
     static class IpListItem {
+
         final String host;
         final double timeout;
 
@@ -178,5 +185,12 @@ public class DnsCacheServiceImpl implements DnsCacheService, Closeable {
                 this.value.immortal = true;
             }
         }
+    }
+
+    @Override
+    public void removeAddress(String host) {
+        this.lock.writeLock().lock();
+        this.ipListMap.remove(host);
+        this.lock.writeLock().unlock();
     }
 }

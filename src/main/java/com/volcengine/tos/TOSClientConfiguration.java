@@ -1,5 +1,8 @@
 package com.volcengine.tos;
 
+import java.util.HashMap;
+import java.util.Map;
+
 import com.volcengine.tos.auth.Credentials;
 import com.volcengine.tos.credential.CredentialsProvider;
 import com.volcengine.tos.credential.EcsCredentialsProvider;
@@ -9,10 +12,8 @@ import com.volcengine.tos.internal.Consts;
 import com.volcengine.tos.internal.CredentialsProviderWrapper;
 import com.volcengine.tos.transport.TransportConfig;
 
-import java.util.HashMap;
-import java.util.Map;
-
 public class TOSClientConfiguration {
+
     private Credentials credentials;
     private CredentialsProvider credentialsProvider;
     private String endpoint;
@@ -185,6 +186,7 @@ public class TOSClientConfiguration {
     }
 
     public static final class TosClientConfigurationBuilder {
+
         private Credentials credentials;
         private CredentialsProvider credentialsProvider;
         private String endpoint;

@@ -1,16 +1,10 @@
 package com.volcengine.tos.internal;
 
-import com.volcengine.tos.TosClientException;
-import com.volcengine.tos.auth.Signer;
-import com.volcengine.tos.comm.TosHeader;
-import com.volcengine.tos.internal.model.HttpRange;
-import com.volcengine.tos.internal.util.StringUtils;
-import com.volcengine.tos.internal.util.TosUtils;
-
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
+import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.nio.channels.FileChannel;
 import java.time.Duration;
@@ -19,7 +13,15 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
 
-import static com.volcengine.tos.internal.Consts.*;
+import com.volcengine.tos.TosClientException;
+import com.volcengine.tos.auth.Signer;
+import com.volcengine.tos.comm.TosHeader;
+import static com.volcengine.tos.internal.Consts.URL_MODE_CUSTOM_DOMAIN;
+import static com.volcengine.tos.internal.Consts.URL_MODE_DEFAULT;
+import static com.volcengine.tos.internal.Consts.URL_MODE_PATH;
+import com.volcengine.tos.internal.model.HttpRange;
+import com.volcengine.tos.internal.util.StringUtils;
+import com.volcengine.tos.internal.util.TosUtils;
 
 public class RequestBuilder {
     private Signer signer;
@@ -351,6 +353,10 @@ public class RequestBuilder {
                 request.getQuery().put(key, query.get(key));
             }
         }
-        return request.toURL().toString();
+        try {
+            return request.toURL().toString();   
+        } catch (URISyntaxException e) {
+            throw new TosClientException("url not legal", e);
+        } 
     }
 }

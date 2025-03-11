@@ -1,17 +1,8 @@
 package com.volcengine.tos.credential;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import com.volcengine.tos.TosClientException;
-import com.volcengine.tos.comm.HttpStatus;
-import com.volcengine.tos.internal.util.StringUtils;
-import com.volcengine.tos.internal.util.TosUtils;
-import okhttp3.OkHttpClient;
-import okhttp3.Request;
-import okhttp3.Response;
-
 import java.io.Closeable;
 import java.io.IOException;
+import java.io.InputStream;
 import java.time.Instant;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
@@ -19,7 +10,19 @@ import java.util.Date;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.core5.http.HttpEntity;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.volcengine.tos.TosClientException;
+import com.volcengine.tos.comm.HttpStatus;
+import com.volcengine.tos.internal.util.StringUtils;
+import com.volcengine.tos.internal.util.TosUtils;
+
 public class EcsCredentialsProvider implements CredentialsProvider, Closeable {
+
     private static final String DEFAULT_META_SERVICE_URL = "http://100.96.0.96/volcstack/latest/iam/security_credentials";
     private static final DateTimeFormatter expireTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssXXX");
 
@@ -27,7 +30,7 @@ public class EcsCredentialsProvider implements CredentialsProvider, Closeable {
     private final String roleName;
     private final String url;
     private final Lock lock;
-    private final OkHttpClient client;
+    private final CloseableHttpClient client;
     private volatile EcsCredentials ecsCredentials;
 
     public EcsCredentialsProvider(String roleName) {
@@ -45,7 +48,7 @@ public class EcsCredentialsProvider implements CredentialsProvider, Closeable {
         }
         this.roleName = roleName;
         this.lock = new ReentrantLock();
-        this.client = TosUtils.defaultOkHttpClient();
+        this.client = TosUtils.defaultApacheHttpClient();
         // 5min interval
         final int finalRefreshInterval = 300;
         this.refreshThread = new Thread() {
@@ -90,24 +93,31 @@ public class EcsCredentialsProvider implements CredentialsProvider, Closeable {
 
     private Credentials fetchCredentials() {
         EcsCredentials origin = this.ecsCredentials;
-        Request.Builder builder = new Request.Builder().url(url + "/" + roleName).method("GET", null);
-        try (Response response = this.client.newCall(builder.build()).execute()) {
-            if (response.code() == HttpStatus.OK) {
-                if (response.body() != null) {
-                    EcsCredentials current = TosUtils.getJsonMapper().readValue(response.body().byteStream(), EcsCredentials.class);
-                    if (StringUtils.isNotEmpty(current.ak) && StringUtils.isNotEmpty(current.sk)) {
-                        current.lastUpdateTimeNanos = System.nanoTime();
-                        if (StringUtils.isNotEmpty(current.expiredTime)) {
-                            ZonedDateTime l = ZonedDateTime.parse(current.expiredTime, expireTimeFormatter);
-                            current.expiredDate = Date.from(Instant.from(l));
+        try {
+            EcsCredentials current = this.client.execute(new HttpGet(url + "/" + roleName), response -> {
+                int statusCode = response.getCode();
+                if (statusCode == HttpStatus.OK) {
+                    HttpEntity entity = response.getEntity();
+                    if (entity != null) {
+                        try (InputStream inputStream = entity.getContent()) {
+                            EcsCredentials creds = TosUtils.getJsonMapper().readValue(inputStream, EcsCredentials.class);
+                            if (StringUtils.isNotEmpty(creds.ak) && StringUtils.isNotEmpty(creds.sk)) {
+                                creds.lastUpdateTimeNanos = System.nanoTime();
+                                if (StringUtils.isNotEmpty(creds.expiredTime)) {
+                                    ZonedDateTime l = ZonedDateTime.parse(creds.expiredTime, expireTimeFormatter);
+                                    creds.expiredDate = Date.from(Instant.from(l));
+                                }
+                                this.ecsCredentials = creds;
+                                return creds;
+                            }
                         }
-                        this.ecsCredentials = current;
-                        return current;
                     }
+                    throw new TosClientException("parse ecs token failed", null);
                 }
-                throw new TosClientException("parse ecs token failed", null);
-            }
-            throw new TosClientException("get ecs token failed, unexpected status code: " + response.code(), null);
+                throw new TosClientException("get ecs token failed, unexpected status code: " + statusCode, null);
+            });
+            this.ecsCredentials = current;
+            return current;
         } catch (Exception e) {
             if (origin != null) {
                 origin.immortal = true;
@@ -124,10 +134,11 @@ public class EcsCredentialsProvider implements CredentialsProvider, Closeable {
     @Override
     public void close() throws IOException {
         this.refreshThread.interrupt();
-        this.client.connectionPool().evictAll();
+        this.client.close();
     }
 
     private static class EcsCredentials implements Credentials {
+
         @JsonIgnore
         volatile boolean immortal;
         @JsonIgnore

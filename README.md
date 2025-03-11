@@ -12,8 +12,8 @@ More details can be found in [https://www.volcengine.com/docs/6349/79895]()
 ```xml
 <dependency>
     <groupId>com.volcengine</groupId>
-    <artifactId>ve-tos-java-sdk</artifactId>
-    <version>2.8.8</version>
+    <artifactId>ve-tos-java-sdk-hadoop</artifactId>
+    <version>2.8.9</version>
 </dependency>
 ```
 

@@ -1,5 +1,44 @@
 package com.volcengine.tos.internal;
 
+import java.io.BufferedInputStream;
+import java.io.Closeable;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
+import java.util.zip.CheckedInputStream;
+
+import org.apache.hc.client5.http.SystemDefaultDnsResolver;
+import org.apache.hc.client5.http.auth.AuthScope;
+import org.apache.hc.client5.http.auth.UsernamePasswordCredentials;
+import org.apache.hc.client5.http.classic.methods.HttpDelete;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpHead;
+import org.apache.hc.client5.http.classic.methods.HttpPost;
+import org.apache.hc.client5.http.classic.methods.HttpPut;
+import org.apache.hc.client5.http.config.ConnectionConfig;
+import org.apache.hc.client5.http.config.RequestConfig;
+import org.apache.hc.client5.http.impl.auth.BasicCredentialsProvider;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.HttpClientBuilder;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManagerBuilder;
+import org.apache.hc.client5.http.impl.routing.DefaultProxyRoutePlanner;
+import org.apache.hc.core5.http.ClassicHttpRequest;
+import org.apache.hc.core5.http.ClassicHttpResponse;
+import org.apache.hc.core5.http.ContentType;
+import org.apache.hc.core5.http.Header;
+import org.apache.hc.core5.http.HttpEntity;
+import org.apache.hc.core5.http.HttpHost;
+import org.apache.hc.core5.http.io.entity.AbstractHttpEntity;
+import org.apache.hc.core5.http.io.entity.ByteArrayEntity;
+
 import com.volcengine.tos.TosClientException;
 import com.volcengine.tos.comm.HttpMethod;
 import com.volcengine.tos.comm.HttpStatus;
@@ -19,30 +58,16 @@ import com.volcengine.tos.internal.util.dnscache.DnsCacheService;
 import com.volcengine.tos.internal.util.dnscache.DnsCacheServiceImpl;
 import com.volcengine.tos.internal.util.ratelimit.RateLimitedInputStream;
 import com.volcengine.tos.transport.TransportConfig;
-import okhttp3.Authenticator;
-import okhttp3.*;
-import okio.BufferedSink;
-
-import java.io.*;
-import java.net.*;
-import java.util.*;
-import java.util.concurrent.TimeUnit;
-import java.util.zip.CheckedInputStream;
 
 /**
- * @author volcengine
- * 1. Basic HTTP request and response handler
- * 2. Retrier in exception
- * 3. Custom HTTP client config
- * 4. DNS cache
- * 5. Enable/Disable verify SSL certification
- * 6. HTTP proxy
- * 7. Rate limiter
- * 8. ...
+ * @author volcengine 1. Basic HTTP request and response handler 2. Retrier in
+ * exception 3. Custom HTTP client config 4. DNS cache 5. Enable/Disable verify
+ * SSL certification 6. HTTP proxy 7. Rate limiter 8. ...
  */
 public class RequestTransport implements Transport, Closeable {
-    private static final MediaType DEFAULT_MEDIA_TYPE = null;
-    private final OkHttpClient client;
+
+    private static final ContentType DEFAULT_MEDIA_TYPE = null;
+    private final CloseableHttpClient client;
     private int maxRetries;
 
     private int except100ContinueThreshold;
@@ -52,8 +77,8 @@ public class RequestTransport implements Transport, Closeable {
     public RequestTransport(TransportConfig config) {
         ParamsChecker.ensureNotNull(config, "TransportConfig");
         int maxConnections = config.getMaxConnections() > 0 ? config.getMaxConnections() : Consts.DEFAULT_MAX_CONNECTIONS;
-        int maxIdleConnectionTimeMills = config.getIdleConnectionTimeMills() > 0 ?
-                config.getIdleConnectionTimeMills() : Consts.DEFAULT_IDLE_CONNECTION_TIME_MILLS;
+        int maxIdleConnectionTimeMills = config.getIdleConnectionTimeMills() > 0
+                ? config.getIdleConnectionTimeMills() : Consts.DEFAULT_IDLE_CONNECTION_TIME_MILLS;
         int readTimeout = config.getReadTimeoutMills() >= 0 ? config.getReadTimeoutMills() : Consts.DEFAULT_READ_TIMEOUT_MILLS;
         int writeTimeout = config.getWriteTimeoutMills() >= 0 ? config.getWriteTimeoutMills() : Consts.DEFAULT_WRITE_TIMEOUT_MILLS;
         int connectTimeout = config.getConnectTimeoutMills() > 0 ? config.getConnectTimeoutMills() : Consts.DEFAULT_CONNECT_TIMEOUT_MILLS;
@@ -64,90 +89,72 @@ public class RequestTransport implements Transport, Closeable {
         }
         this.except100ContinueThreshold = config.getExcept100ContinueThreshold();
 
-        ConnectionPool connectionPool = new ConnectionPool(maxConnections,
-                maxIdleConnectionTimeMills, TimeUnit.MILLISECONDS);
+        HttpClientBuilder builder = HttpClients.custom();
 
-        Dispatcher dispatcher = new Dispatcher();
-        dispatcher.setMaxRequests(maxConnections);
-        dispatcher.setMaxRequestsPerHost(maxConnections);
-        OkHttpClient.Builder builder = new OkHttpClient.Builder();
+        RequestDnsResolver requestDnsResolver = new RequestDnsResolver(SystemDefaultDnsResolver.INSTANCE);
+
+        RequestConfig.Builder requestConfigBuilder = RequestConfig.custom();
+        PoolingHttpClientConnectionManagerBuilder connectionManagerBuilder = PoolingHttpClientConnectionManagerBuilder.create();
         if (!config.isHttp() && !config.isEnableVerifySSL()) {
             // the sdk verifies ssl cert while using https,
             // but if you disable ssl verification,
             // will ignore it by the following method.
-            builder = TosUtils.ignoreCertificate(builder);
+            connectionManagerBuilder = TosUtils.ignoreCertificate(connectionManagerBuilder);
+
         }
+
         if (StringUtils.isNotEmpty(config.getProxyHost()) && config.getProxyPort() > 0) {
             addProxyConfig(config, builder);
         }
 
-        RequestEventListener.RequestEventListenerFactory eventListener = new
-                RequestEventListener.RequestEventListenerFactory(TosUtils.getLogger())
-                .setHighLatencyLogThreshold(config.getHighLatencyLogThreshold());
         if (config.getDnsCacheTimeMinutes() > 0) {
             dnsCacheService = new DnsCacheServiceImpl(config.getDnsCacheTimeMinutes(), 30);
-            eventListener.setDnsCacheService(dnsCacheService);
-            builder.dns(createDnsWithCache());
+            requestDnsResolver.setDnsCacheService(dnsCacheService);
         }
 
-        this.client = builder.dispatcher(dispatcher)
-                .connectionPool(connectionPool)
-                .retryOnConnectionFailure(false)
-                .readTimeout(readTimeout, TimeUnit.MILLISECONDS)
-                .writeTimeout(writeTimeout, TimeUnit.MILLISECONDS)
-                .connectTimeout(connectTimeout, TimeUnit.MILLISECONDS)
-                // 默认关闭重定向
-                .followRedirects(false)
-                .followSslRedirects(false)
-                .eventListenerFactory(eventListener)
+        connectionManagerBuilder.setDnsResolver(requestDnsResolver);
+        connectionManagerBuilder.setMaxConnTotal(maxConnections);
+        connectionManagerBuilder.setMaxConnPerRoute(maxConnections);
+
+        ConnectionConfig.Builder conBuilder = ConnectionConfig.custom();
+        conBuilder.setTimeToLive(maxIdleConnectionTimeMills, TimeUnit.MILLISECONDS);
+        conBuilder.setSocketTimeout(Math.max(readTimeout, writeTimeout), TimeUnit.MILLISECONDS);
+        conBuilder.setConnectTimeout(connectTimeout, TimeUnit.MILLISECONDS);
+
+        connectionManagerBuilder.setDefaultConnectionConfig(conBuilder.build());
+
+        RequestLatencyInterceptor requestLatencyInterceptor = new RequestLatencyInterceptor(TosUtils.getLogger())
+                .setHighLatencyLogThreshold(config.getHighLatencyLogThreshold());
+        RequestDnsInterceptor requestDnsInterceptor = new RequestDnsInterceptor(dnsCacheService);
+
+        RequestConnectionManager requestConnectionManager = new RequestConnectionManager(connectionManagerBuilder.build());
+        this.client = builder
+                .setConnectionManager(requestConnectionManager)
+                .setDefaultRequestConfig(requestConfigBuilder.build())
+                .disableAutomaticRetries()
+                .disableRedirectHandling()
+                .addRequestInterceptorFirst(requestLatencyInterceptor)
+                .addResponseInterceptorLast(requestLatencyInterceptor)
+                .addExecInterceptorAfter("dnsRemover", "dnsRemover", requestDnsInterceptor)
+                .disableContentCompression()
                 .build();
     }
 
-    private void addProxyConfig(TransportConfig config, OkHttpClient.Builder builder) {
-        SocketAddress socketAddress = new InetSocketAddress(config.getProxyHost(), config.getProxyPort());
-        builder.proxy(new Proxy(Proxy.Type.HTTP, socketAddress));
+    private void addProxyConfig(TransportConfig config, HttpClientBuilder builder) {
+        HttpHost proxy = new HttpHost(config.getProxyHost(), config.getProxyPort());
+        DefaultProxyRoutePlanner routePlanner = new DefaultProxyRoutePlanner(proxy);
+        builder.setRoutePlanner(routePlanner);
         if (StringUtils.isNotEmpty(config.getProxyUserName())) {
-            Authenticator proxyAuthenticator = (route, response) -> {
-                String credential = Credentials.basic(config.getProxyUserName(), config.getProxyPassword());
-                return response.request().newBuilder()
-                        .header("Proxy-Authorization", credential).build();
-            };
-            builder.proxyAuthenticator(proxyAuthenticator);
+            BasicCredentialsProvider credentialsProvider = new BasicCredentialsProvider();
+            credentialsProvider.setCredentials(new AuthScope(config.getProxyHost(), config.getProxyPort()),
+                    new UsernamePasswordCredentials(config.getProxyUserName(), config.getProxyPassword().toCharArray()));
+            builder.setDefaultCredentialsProvider(credentialsProvider);
         }
     }
 
     public RequestTransport setDisableEncodingMeta(boolean disableEncodingMeta) {
         this.disableEncodingMeta = disableEncodingMeta;
         return this;
-    }
-
-    private Dns createDnsWithCache() {
-        return new Dns() {
-            @Override
-            public List<InetAddress> lookup(String host) throws UnknownHostException {
-                try {
-                    List<InetAddress> ipList = dnsCacheService.getIpList(host);
-                    if (ipList == null || ipList.size() == 0) {
-                        throw new UnknownHostException("Broken system behaviour for dns lookup of " + host);
-                    }
-                    if (ipList.size() == 1) {
-                        return ipList;
-                    }
-
-                    List<InetAddress> tempIpList = new ArrayList<>(ipList.size());
-                    for (InetAddress addr : ipList) {
-                        tempIpList.add(addr);
-                    }
-                    Collections.shuffle(tempIpList);
-                    return tempIpList;
-                } catch (RuntimeException e) {
-                    UnknownHostException unknownHostException =
-                            new UnknownHostException("Broken system behaviour for dns lookup of " + host);
-                    unknownHostException.initCause(e);
-                    throw unknownHostException;
-                }
-            }
-        };
     }
 
     @Override
@@ -159,61 +166,106 @@ public class RequestTransport implements Transport, Closeable {
         }
     }
 
-    public OkHttpClient getClient() {
+    public CloseableHttpClient getClient() {
         return client;
+    }
+
+    private class WrappedHttpResponse {
+
+        private final TosResponse response;
+        private final boolean retry;
+        private final int code;
+        private final String retryAfter;
+        private final String reqID;
+        private ClassicHttpResponse httpResponse;
+
+        public WrappedHttpResponse(TosResponse response, boolean retry, int code, String retryAfter, String reqID) {
+            this.response = response;
+            this.retry = retry;
+            this.code = code;
+            this.retryAfter = retryAfter;
+            this.reqID = reqID;
+        }
+
+        public TosResponse getResponse() {
+            return this.response;
+        }
+
+        public boolean isRetry() {
+            return this.retry;
+        }
+
+        public int getCode() {
+            return this.code;
+        }
+
+        public String getRetryAfter() {
+            return this.retryAfter;
+        }
+
+        public String getReqID() {
+            return this.reqID;
+        }
+
+        public void setHttpResponse(ClassicHttpResponse httpResponse) {
+            this.httpResponse = httpResponse;
+        }
+
+        public ClassicHttpResponse getHttpResponse() {
+            return this.httpResponse;
+        }
     }
 
     @Override
     public TosResponse roundTrip(TosRequest tosRequest) throws IOException {
-        Response response = null;
+        WrappedHttpResponse wrappedHttpResponse = null;
         long start = System.currentTimeMillis();
         int reqTimes = 1;
         wrapTosRequestContent(tosRequest);
-        Request lastRequest = null;
+        ClassicHttpRequest lastRequest = null;
         for (int i = 0; i < maxRetries + 1; i++, reqTimes++) {
             try {
                 if (tosRequest.getContent() != null && (tosRequest.getContent() instanceof RetryCountNotifier)) {
                     ((RetryCountNotifier) tosRequest.getContent()).setRetryCount(i);
                 }
-                if (lastRequest != null && lastRequest.body() != null && (lastRequest.body() instanceof WrappedTransportRequestBody)) {
-                    ((WrappedTransportRequestBody) lastRequest.body()).reset();
+
+                if (lastRequest != null) {
+                    HttpEntity entity = lastRequest.getEntity();
+                    if (entity != null && entity instanceof WrappedApacheTransportRequestBody) {
+                        ((WrappedApacheTransportRequestBody) entity).reset();
+                    }
                 }
 
-                Request.Builder builder = buildRequest(tosRequest);
+                ClassicHttpRequest builder = buildRequest(tosRequest);
+                lastRequest = builder;
                 if (i != 0) {
                     builder.addHeader(TosHeader.HEADER_SDK_RETRY_COUNT, "attempt=" + i + "; max=" + maxRetries);
                 }
-                lastRequest = builder.build();
-                response = client.newCall(lastRequest).execute();
-                if (response.code() >= HttpStatus.INTERNAL_SERVER_ERROR
-                        || response.code() == HttpStatus.TOO_MANY_REQUESTS
-                        || response.code() == HttpStatus.REQUEST_TIMEOUT
-                        || (response.code() == HttpStatus.BAD_REQUEST && "0005-00000044".equals(response.header(TosHeader.HEADER_EC)))) {
-                    // retry on 5xx, 429, 400+0005-00000044
+
+                ClassicHttpResponse response = this.client.executeOpen(null, builder, null);
+                wrappedHttpResponse = this.handleResponse(response, tosRequest);
+                wrappedHttpResponse.setHttpResponse(response);
+                if (wrappedHttpResponse.isRetry()) {
                     if (tosRequest.isRetryableOnServerException()) {
                         // the request can be retried.
                         if (i != maxRetries) {
                             long sleepMs = TosUtils.backoff(i);
-                            if (response.code() == HttpStatus.SERVICE_UNAVAILABLE || response.code() == HttpStatus.TOO_MANY_REQUESTS) {
-                                String retryAfter = response.header(TosHeader.HEADER_RETRY_AFTER);
-                                if (StringUtils.isNotEmpty(retryAfter)) {
+                            if (wrappedHttpResponse.getCode() == HttpStatus.SERVICE_UNAVAILABLE || wrappedHttpResponse.getCode() == HttpStatus.TOO_MANY_REQUESTS) {
+                                if (StringUtils.isNotEmpty(wrappedHttpResponse.getRetryAfter())) {
                                     try {
-                                        sleepMs = Math.max(Integer.valueOf(retryAfter) * 1000, sleepMs);
-                                    } catch (Exception ex) {
+                                        sleepMs = Math.max(Integer.parseInt(wrappedHttpResponse.getRetryAfter()) * 1000, sleepMs);
+                                    } catch (NumberFormatException ex) {
                                     }
                                 }
                             }
                             // last time does not need to sleep
                             Thread.sleep(sleepMs);
-                            // close response body before retry
-                            response.close();
                             continue;
                         }
                     }
                 }
                 break;
             } catch (InterruptedException e) {
-                response.close();
                 TosUtils.getLogger().debug("tos: request interrupted while sleeping in retry");
                 printAccessLogFailed(e);
                 throw new TosClientException("tos: request interrupted", e);
@@ -226,36 +278,35 @@ public class RequestTransport implements Transport, Closeable {
                             throw e;
                         }
                         Thread.sleep(TosUtils.backoff(i));
-                        if (response != null) {
-                            response.close();
-                        }
                         continue;
                     } catch (InterruptedException ie) {
-                        if (response != null) {
-                            response.close();
-                        }
                         TosUtils.getLogger().debug("tos: request interrupted while sleeping in retry");
                         printAccessLogFailed(e);
                         throw new TosClientException("tos: request interrupted", e);
                     }
                 }
-                if (response != null) {
-                    response.close();
-                }
                 printAccessLogFailed(e);
                 throw e;
+            } catch (URISyntaxException e) {
+                TosUtils.getLogger().debug("tos: request interrupted while sleeping in retry");
+                printAccessLogFailed(e);
+                throw new TosClientException("tos: request interrupted", e);
             }
         }
         long end = System.currentTimeMillis();
-        ParamsChecker.ensureNotNull(response, "okhttp response");
-        printAccessLogSucceed(response.code(), response.header(TosHeader.HEADER_REQUEST_ID), end - start, reqTimes);
-        checkCrc(tosRequest, response);
-        InputStream inputStream = response.body() == null ? null : response.body().byteStream();
-        return new TosResponse().setStatusCode(response.code())
-                .setContentLength(getSize(response))
-                .setHeaders(getHeaders(response))
-                .setInputStream(inputStream)
-                .setSource(response.body() == null ? null : response.body().source());
+        if (wrappedHttpResponse == null) {
+            throw new TosClientException("empty wrappedHttpResponse", null);
+        }
+        ParamsChecker.ensureNotNull(wrappedHttpResponse.getHttpResponse(), "okhttp response");
+        printAccessLogSucceed(wrappedHttpResponse.getCode(), wrappedHttpResponse.getReqID(), end - start, reqTimes);
+        if (wrappedHttpResponse.getResponse() == null) {
+            // means retry also error, return code and header out
+            return new TosResponse().setStatusCode(wrappedHttpResponse.getCode())
+                    .setContentLength(getSize(wrappedHttpResponse.getHttpResponse()))
+                    .setHeaders(getHeaders(wrappedHttpResponse.getHttpResponse()))
+                    .setInputStream(null);
+        }
+        return wrappedHttpResponse.getResponse();
     }
 
     private void printAccessLogSucceed(int code, String reqId, long cost, int reqTimes) {
@@ -267,9 +318,9 @@ public class RequestTransport implements Transport, Closeable {
         TosUtils.getLogger().info("tos: request exception: {}\n", e.toString());
     }
 
-    private void checkCrc(TosRequest tosRequest, Response response) {
+    private void checkCrc(TosRequest tosRequest, ClassicHttpResponse response) {
         boolean needCheckCrc = tosRequest.isEnableCrcCheck()
-                && response.code() < HttpStatus.MULTIPLE_CHOICE
+                && response.getCode() < HttpStatus.MULTIPLE_CHOICE
                 && tosRequest.getContent() != null
                 && tosRequest.getContent() instanceof CheckedInputStream;
         if (!needCheckCrc) {
@@ -278,24 +329,59 @@ public class RequestTransport implements Transport, Closeable {
         // request successfully, check crc64
         long clientCrcLong = ((CheckedInputStream) tosRequest.getContent()).getChecksum().getValue();
         String clientHashCrc64Ecma = CRC64Utils.longToUnsignedLongString(clientCrcLong);
-        String serverHashCrc64Ecma = response.header(TosHeader.HEADER_CRC64);
+        String serverHashCrc64Ecma = response.getFirstHeader(TosHeader.HEADER_CRC64).getValue();
         if (StringUtils.isNotEmpty(serverHashCrc64Ecma) && !StringUtils.equals(clientHashCrc64Ecma, serverHashCrc64Ecma)) {
-            throw new TosClientException("tos: crc64 check failed, " +
-                    "expected:" + serverHashCrc64Ecma +
-                    ", in fact:" + clientHashCrc64Ecma,
+            throw new TosClientException("tos: crc64 check failed, "
+                    + "expected:" + serverHashCrc64Ecma
+                    + ", in fact:" + clientHashCrc64Ecma,
                     null);
         }
     }
 
-    private Request.Builder buildRequest(TosRequest request) throws IOException {
-        HttpUrl url = request.toURL();
-        Request.Builder builder = new Request.Builder().url(url);
-        addHeader(request, builder);
+    private WrappedHttpResponse handleResponse(ClassicHttpResponse response, TosRequest tosRequest) throws IOException {
+        ParamsChecker.ensureNotNull(response, "http response");
+        int code = response.getCode();
+        String reqID = null;
+        String headEC = null;
+        if (response.getFirstHeader(TosHeader.HEADER_REQUEST_ID) != null) {
+            reqID = response.getFirstHeader(TosHeader.HEADER_REQUEST_ID).getValue();
+        }
+
+        if (response.getFirstHeader(TosHeader.HEADER_EC) != null) {
+            headEC = response.getFirstHeader(TosHeader.HEADER_EC).getValue();
+        }
+
+        if (code >= HttpStatus.INTERNAL_SERVER_ERROR
+                || code == HttpStatus.TOO_MANY_REQUESTS
+                || code == HttpStatus.REQUEST_TIMEOUT
+                || (code == HttpStatus.BAD_REQUEST && "0005-00000044".equals(headEC))) {
+            if (response.getFirstHeader(TosHeader.HEADER_RETRY_AFTER) == null) {
+                // retry on 5xx, 429, 400+0005-00000044
+                return new WrappedHttpResponse(null, true, code, null, reqID);
+            }
+            String retryAfter = response.getFirstHeader(TosHeader.HEADER_RETRY_AFTER).getValue();
+            // retry on 5xx, 429, 400+0005-00000044
+            return new WrappedHttpResponse(null, true, code, retryAfter, reqID);
+        }
+        ParamsChecker.ensureNotNull(response, "http response");
+        checkCrc(tosRequest, response);
+        HttpEntity entity = response.getEntity();
+        InputStream inputStream = entity == null ? null : entity.getContent();
+        return new WrappedHttpResponse(new TosResponse().setStatusCode(code)
+                .setContentLength(getSize(response))
+                .setHeaders(getHeaders(response))
+                .setInputStream(inputStream), false, code, null, reqID);
+    }
+
+    private ClassicHttpRequest buildRequest(TosRequest request) throws IOException, URISyntaxException {
+        URI uri = request.toURL();
+        ClassicHttpRequest builder;
         switch (request.getMethod() == null ? "" : request.getMethod().toUpperCase()) {
             case HttpMethod.GET:
-                builder.get();
+                builder = new HttpGet(uri);
                 break;
             case HttpMethod.POST:
+                builder = new HttpPost(uri);
                 if (request.getContent() != null && request.getContentLength() <= 0) {
                     // 兼容 ClientV1 旧接口，有bug，ClientV2 新接口不会走到这里
                     byte[] data = new byte[request.getContent().available()];
@@ -303,7 +389,7 @@ public class RequestTransport implements Transport, Closeable {
                     if (exact != -1 && exact != data.length) {
                         throw new IOException("expected " + data.length + " bytes, but got " + exact + " bytes.");
                     }
-                    builder.post(RequestBody.create(getMediaType(request), data));
+                    builder.setEntity(new ByteArrayEntity(data, getContentType(request)));
                 } else if (request.getContent() != null) {
                     if (this.except100ContinueThreshold > 0 && (request.getContentLength() < 0
                             || request.getContentLength() > this.except100ContinueThreshold)) {
@@ -311,53 +397,59 @@ public class RequestTransport implements Transport, Closeable {
                     }
                     // only appendObject use, not support chunk
                     // make sure the content length is set
-                    builder.post(new WrappedTransportRequestBody(getMediaType(request), request));
+                    builder.setEntity(new WrappedApacheTransportRequestBody(getContentType(request), request));
                 } else if (request.getData() != null) {
                     if (this.except100ContinueThreshold > 0 && request.getData().length > this.except100ContinueThreshold) {
                         builder.addHeader(TosHeader.HEADER_EXPECT, "100-continue");
                     }
-                    builder.post(RequestBody.create(getMediaType(request), request.getData()));
+                    builder.setEntity(new ByteArrayEntity(request.getData(), getContentType(request)));
                 } else {
-                    builder.post(RequestBody.create(getMediaType(request), new byte[0]));
+                    builder.setEntity(new ByteArrayEntity(new byte[0], getContentType(request)));
                 }
                 break;
             case HttpMethod.PUT: {
+                builder = new HttpPut(uri);
                 if (request.getContent() != null) {
                     if (this.except100ContinueThreshold > 0 && (request.getContentLength() < 0
                             || request.getContentLength() > this.except100ContinueThreshold)) {
                         builder.addHeader(TosHeader.HEADER_EXPECT, "100-continue");
                     }
-                    builder.put(new WrappedTransportRequestBody(getMediaType(request), request));
+                    builder.setEntity(new WrappedApacheTransportRequestBody(getContentType(request), request));
                 } else if (request.getData() != null) {
                     if (this.except100ContinueThreshold > 0 && request.getData().length > this.except100ContinueThreshold) {
                         builder.addHeader(TosHeader.HEADER_EXPECT, "100-continue");
                     }
-                    builder.put(RequestBody.create(getMediaType(request), request.getData()));
+                    builder.setEntity(new ByteArrayEntity(request.getData(), getContentType(request)));
                 } else {
-                    builder.put(RequestBody.create(getMediaType(request), new byte[0]));
+                    builder.setEntity(new ByteArrayEntity(new byte[0], getContentType(request)));
                 }
                 break;
             }
             case HttpMethod.HEAD:
-                builder.head();
+                builder = new HttpHead(uri);
                 break;
             case HttpMethod.DELETE:
-                builder.delete();
+                builder = new HttpDelete(uri);
                 break;
             default:
                 throw new TosClientException("Method is not supported: " + request.getMethod(), null);
         }
+        addHeader(request, builder);
         return builder;
     }
 
-    private void addHeader(TosRequest request, Request.Builder builder) {
+    private void addHeader(TosRequest request, ClassicHttpRequest builder) {
         if (request == null || builder == null || request.getHeaders() == null) {
             return;
         }
         for (Map.Entry<String, String> entry : request.getHeaders().entrySet()) {
             String key = entry.getKey();
+            if (key == TosHeader.HEADER_CONTENT_LENGTH) {
+                // content-length will be calculated by set entity
+                continue;
+            }
             String value = entry.getValue();
-            builder.header(key, value);
+            builder.addHeader(key, value);
         }
     }
 
@@ -401,35 +493,39 @@ public class RequestTransport implements Transport, Closeable {
         request.setContent(wrappedInputStream);
     }
 
-
-    private MediaType getMediaType(TosRequest request) {
+    private ContentType getContentType(TosRequest request) {
         String type = "";
         if (request.getHeaders() != null && request.getHeaders().containsKey(TosHeader.HEADER_CONTENT_TYPE)) {
             type = request.getHeaders().get(TosHeader.HEADER_CONTENT_TYPE);
         }
-        return StringUtils.isEmpty(type) ? DEFAULT_MEDIA_TYPE : MediaType.parse(type);
+        return StringUtils.isEmpty(type) ? DEFAULT_MEDIA_TYPE : ContentType.parse(type);
     }
 
-    private long getSize(Response response) {
-        String size = response.header(TosHeader.HEADER_CONTENT_LENGTH);
+    private long getSize(ClassicHttpResponse response) {
+        Header header = response.getFirstHeader(TosHeader.HEADER_CONTENT_LENGTH);
+        if (header == null) {
+            return 0;
+        }
+        String size = header.getValue();
         if (StringUtils.isEmpty(size)) {
             return 0;
         }
         return Long.parseLong(size);
     }
 
-    private Map<String, String> getHeaders(Response response) {
-        Map<String, String> headers = new HashMap<>(response.headers().size());
-        for (String name : response.headers().names()) {
-            parseHeader(response, headers, name);
+    private Map<String, String> getHeaders(ClassicHttpResponse response) {
+        Header[] headers = response.getHeaders();
+        Map<String, String> headersMap = new HashMap<>(headers.length);
+        for (Header head : response.getHeaders()) {
+            parseHeader(response, headersMap, head.getName());
         }
-        return headers;
+        return headersMap;
     }
 
-    private void parseHeader(Response response, Map<String, String> headers, String name) {
+    private void parseHeader(ClassicHttpResponse response, Map<String, String> headers, String name) {
         // 原始的 key/value 值
         String key = name;
-        String value = response.header(name);
+        String value = response.getFirstHeader(name).getValue();
         if (!this.disableEncodingMeta) {
             // 在此统一处理 header 的解码
             if (StringUtils.startWithIgnoreCase(key, TosHeader.HEADER_META_PREFIX)) {
@@ -450,20 +546,22 @@ public class RequestTransport implements Transport, Closeable {
             ((Closeable) this.dnsCacheService).close();
         }
         if (this.client != null) {
-            this.client.connectionPool().evictAll();
+            this.client.close();
         }
     }
 }
 
-class WrappedTransportRequestBody extends RequestBody implements Closeable {
-    private InputStream content;
-    private final MediaType contentType;
+class WrappedApacheTransportRequestBody extends AbstractHttpEntity implements Closeable {
+
+    private final InputStream content;
+    private final ContentType contentType;
     private final boolean useTrailerHeader;
     private long contentLength;
     private long decodedContentLength;
     private volatile long totalBytesRead = 0;
 
-    WrappedTransportRequestBody(final MediaType contentType, final InputStream content, final long contentLength) {
+    WrappedApacheTransportRequestBody(final ContentType contentType, final InputStream content, final long contentLength) {
+        super(contentType, null);
         ParamsChecker.ensureNotNull(content, "Content");
         this.content = content;
         this.contentType = contentType;
@@ -476,7 +574,8 @@ class WrappedTransportRequestBody extends RequestBody implements Closeable {
         this.useTrailerHeader = false;
     }
 
-    WrappedTransportRequestBody(MediaType contentType, TosRequest request) {
+    WrappedApacheTransportRequestBody(ContentType contentType, TosRequest request) {
+        super(contentType, null);
         ParamsChecker.ensureNotNull(request.getContent(), "Content");
         this.content = request.getContent();
         this.contentType = contentType;
@@ -493,116 +592,44 @@ class WrappedTransportRequestBody extends RequestBody implements Closeable {
     }
 
     @Override
-    public MediaType contentType() {
-        return contentType;
+    public boolean isRepeatable() {
+        return this.content.markSupported() || this.content instanceof Retryable;
     }
 
     @Override
-    public long contentLength() {
+    public long getContentLength() {
         return this.contentLength;
     }
 
     @Override
-    public void writeTo(BufferedSink sink) throws IOException {
+    public InputStream getContent() throws IOException, UnsupportedOperationException {
+        return this.content;
+    }
+
+    @Override
+    public void writeTo(OutputStream outStream) throws IOException {
         this.reset();
         if (this.contentLength < 0) {
             if (this.useTrailerHeader) {
-                this.writeAllWithChunkedWithTrailerHeader(sink);
-                this.writeTosChunkedTrailer(sink);
-                this.writeTrailerHeader(sink);
+                this.writeAllWithChunkedWithTrailerHeader(outStream);
+                this.writeTosChunkedTrailer(outStream);
+                this.writeTrailerHeader(outStream);
             } else {
-                writeAllWithChunked(sink);
+                writeAllWithChunked(outStream);
             }
         } else {
             long remaining = this.decodedContentLength;
             if (this.useTrailerHeader) {
-                this.writeTosChunkedHeader(sink, remaining);
-                this.writeAll(sink, remaining);
-                this.writeTosChunkedTrailer(sink);
-                this.writeTrailerHeader(sink);
+                this.writeTosChunkedHeader(outStream, remaining);
+                this.writeAll(outStream, remaining);
+                this.writeTosChunkedTrailer(outStream);
+                this.writeTrailerHeader(outStream);
             } else {
-                this.writeAll(sink, remaining);
+                this.writeAll(outStream, remaining);
             }
         }
-    }
-
-    void writeTosChunkedHeader(BufferedSink sink, long chunkSize) throws IOException {
-        sink.writeUtf8(Long.toHexString(chunkSize));
-        sink.writeByte('\r');
-        sink.writeByte('\n');
-    }
-
-    void writeTosChunkedTrailer(BufferedSink sink) throws IOException {
-        if (this.totalBytesRead > 0) {
-            sink.writeByte('\r');
-            sink.writeByte('\n');
-        }
-        this.writeTosChunkedHeader(sink, 0);
-    }
-
-    void writeTrailerHeader(BufferedSink sink) throws IOException {
-        sink.writeUtf8(TosHeader.HEADER_CRC64);
-        sink.writeUtf8(":");
-        long crc64 = ((CheckedInputStream) this.content).getChecksum().getValue();
-        sink.write(Base64.encodeBase64(TosUtils.longToByteArray(crc64)));
-        sink.writeByte('\r');
-        sink.writeByte('\n');
-        sink.writeByte('\r');
-        sink.writeByte('\n');
-    }
-
-
-    void reset() throws IOException {
-        if (totalBytesRead > 0 && this.content != null) {
-            if (this.content.markSupported()) {
-                TosUtils.getLogger().debug("tos: okhttp writeTo call reset");
-                this.content.reset();
-                totalBytesRead = 0;
-            } else if (this.content instanceof Retryable) {
-                TosUtils.getLogger().debug("tos: okhttp writeTo call reset");
-                ((Retryable) this.content).reset();
-                totalBytesRead = 0;
-            }
-        }
-    }
-
-    private void writeAll(BufferedSink sink, long remaining) throws IOException {
-        int bytesRead = 0;
-        byte[] tmp = new byte[Consts.DEFAULT_READ_BUFFER_SIZE];
-        while (remaining > 0) {
-            int maxToRead = tmp.length < remaining ? tmp.length : (int) remaining;
-            bytesRead = this.content.read(tmp, 0, maxToRead);
-            if (bytesRead == -1) {
-                // eof
-                break;
-            }
-            sink.write(tmp, 0, bytesRead);
-            totalBytesRead += bytesRead;
-            remaining -= bytesRead;
-        }
-    }
-
-    private void writeAllWithChunked(BufferedSink sink) throws IOException {
-        int bytesRead = 0;
-        byte[] tmp = new byte[Consts.DEFAULT_READ_BUFFER_SIZE];
-        // chunked
-        bytesRead = this.content.read(tmp);
-        while (bytesRead != -1) {
-            sink.write(tmp, 0, bytesRead);
-            totalBytesRead += bytesRead;
-            bytesRead = this.content.read(tmp);
-        }
-    }
-
-    private void writeAllWithChunkedWithTrailerHeader(BufferedSink sink) throws IOException {
-        int bytesRead = 0;
-        byte[] tmp = new byte[Consts.DEFAULT_TOS_CHUNK_SIZE];
-        bytesRead = this.content.read(tmp);
-        while (bytesRead != -1) {
-            this.writeTosChunkedHeader(sink, bytesRead);
-            sink.write(tmp, 0, bytesRead);
-            totalBytesRead += bytesRead;
-            bytesRead = this.content.read(tmp);
+        if (this.decodedContentLength >= 0 && this.decodedContentLength > totalBytesRead) {
+            throw new IOException("tos: content length inconsistent, totalBytesRead: " + totalBytesRead + ", contentLength: " + this.decodedContentLength);
         }
     }
 
@@ -613,11 +640,95 @@ class WrappedTransportRequestBody extends RequestBody implements Closeable {
         }
     }
 
-    protected InputStream getContent() {
-        return this.content;
+    void writeTosChunkedHeader(OutputStream outStream, long chunkSize) throws IOException {
+        outStream.write(this.toUft8(Long.toHexString(chunkSize)));
+        outStream.write('\r');
+        outStream.write('\n');
     }
 
-    protected long getTotalBytesRead() {
-        return totalBytesRead;
+    void writeTosChunkedTrailer(OutputStream outStream) throws IOException {
+        if (this.totalBytesRead > 0) {
+            outStream.write('\r');
+            outStream.write('\n');
+        }
+        this.writeTosChunkedHeader(outStream, 0);
+    }
+
+    void writeTrailerHeader(OutputStream outStream) throws IOException {
+        outStream.write(toUft8(TosHeader.HEADER_CRC64));
+        outStream.write(toUft8(":"));
+        long crc64 = ((CheckedInputStream) this.content).getChecksum().getValue();
+        outStream.write(Base64.encodeBase64(TosUtils.longToByteArray(crc64)));
+        outStream.write('\r');
+        outStream.write('\n');
+        outStream.write('\r');
+        outStream.write('\n');
+    }
+
+    void reset() throws IOException {
+        if (totalBytesRead > 0 && this.content != null) {
+            if (this.content.markSupported()) {
+                TosUtils.getLogger().debug("tos: apache http writeTo call reset");
+                this.content.reset();
+                totalBytesRead = 0;
+            } else if (this.content instanceof Retryable) {
+                TosUtils.getLogger().debug("tos: apache http writeTo call reset");
+                ((Retryable) this.content).reset();
+                totalBytesRead = 0;
+            }
+        }
+    }
+
+    byte[] toUft8(String str) {
+        return str.getBytes(StandardCharsets.UTF_8);
+    }
+
+    private void writeAll(OutputStream outStream, long remaining) throws IOException {
+        int bytesRead;
+        byte[] tmp = new byte[Consts.DEFAULT_READ_BUFFER_SIZE];
+        while (remaining > 0) {
+            int maxToRead = tmp.length < remaining ? tmp.length : (int) remaining;
+            bytesRead = this.content.read(tmp, 0, maxToRead);
+            if (bytesRead == -1) {
+                // eof
+                break;
+            }
+            outStream.write(tmp, 0, bytesRead);
+            totalBytesRead += bytesRead;
+            remaining -= bytesRead;
+        }
+    }
+
+    private void writeAllWithChunked(OutputStream outStream) throws IOException {
+        int bytesRead;
+        byte[] tmp = new byte[Consts.DEFAULT_READ_BUFFER_SIZE];
+        // chunked
+        bytesRead = this.content.read(tmp);
+        while (bytesRead != -1) {
+            outStream.write(tmp, 0, bytesRead);
+            totalBytesRead += bytesRead;
+            bytesRead = this.content.read(tmp);
+        }
+    }
+
+    private void writeAllWithChunkedWithTrailerHeader(OutputStream outStream) throws IOException {
+        int bytesRead;
+        byte[] tmp = new byte[Consts.DEFAULT_TOS_CHUNK_SIZE];
+        bytesRead = this.content.read(tmp);
+        while (bytesRead != -1) {
+            this.writeTosChunkedHeader(outStream, bytesRead);
+            outStream.write(tmp, 0, bytesRead);
+            totalBytesRead += bytesRead;
+            bytesRead = this.content.read(tmp);
+        }
+    }
+
+    public ContentType contentType() {
+        return this.contentType;
+    }
+
+    @Override
+    public boolean isStreaming() {
+        return true;
     }
 }

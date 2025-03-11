@@ -41,6 +41,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.zip.CRC32;
 
 public class TOSV2ClientTest {
+
     private static TOSV2 client = new TOSV2ClientBuilder().build(TOSClientConfiguration.builder().region(Consts.region).endpoint(Consts.endpoint)
             .credentials(new StaticCredentials(Consts.accessKey, Consts.secretKey)).build());
 
@@ -501,8 +502,8 @@ public class TOSV2ClientTest {
         String data = StringUtils.randomString(1024);
         String key = "object-meta-" + System.currentTimeMillis();
         try {
-            PutObjectOutput put = client.putObject(Consts.bucket, key, new ByteArrayInputStream(data.getBytes(StandardCharsets.UTF_8))
-                    , RequestOptions.withContentType("image"));
+            PutObjectOutput put = client.putObject(Consts.bucket, key, new ByteArrayInputStream(data.getBytes(StandardCharsets.UTF_8)),
+                     RequestOptions.withContentType("image"));
             GetObjectOutput got = client.getObject(Consts.bucket, key);
             // NOTICE: 注意在对象很大的时候不要这样一次性读取
             Assert.assertEquals(crc32Check(data.getBytes()), crc32Check(StringUtils.toByteArray(got.getContent())));
@@ -952,7 +953,6 @@ public class TOSV2ClientTest {
                 .setBucket(Consts.bucket).setKey(key).setContent(new ByteArrayInputStream("hello world".getBytes())));
         Assert.assertTrue(output.getRequestInfo().getRequestId().length() > 0);
 
-
         try (GetObjectV2Output goutput = client.getObject(new GetObjectV2Input().setBucket(Consts.bucket).setKey(key))) {
             Assert.assertTrue(goutput.getRequestInfo().getRequestId().length() > 0);
             StringUtils.toString(goutput.getContent(), "helloworld");
@@ -1018,6 +1018,7 @@ public class TOSV2ClientTest {
             cli.putObject(input);
             Assert.assertTrue(false);
         } catch (TosException ex) {
+            System.out.println(ex.getMessage());
             Assert.assertTrue(ex.getMessage().length() > 0);
             System.out.println(ex.getCause());
         }
@@ -1060,8 +1061,7 @@ public class TOSV2ClientTest {
                 input.setIncludedObjectVersions(InventoryIncludedObjType.INVENTORY_INCLUDED_OBJ_TYPE_ALL);
             }
             input.setDestination(new BucketInventoryConfiguration.InventoryDestination()
-                    .setTosBucketDestination(new BucketInventoryConfiguration
-                            .TOSBucketDestination().setBucket(Consts.bucket)
+                    .setTosBucketDestination(new BucketInventoryConfiguration.TOSBucketDestination().setBucket(Consts.bucket)
                             .setPrefix("destination_prefix" + i).setFormat(InventoryFormatType.INVENTORY_FORMAT_CSV)
                             .setRole("TosArchiveTOSInventory").setAccountId(accountId)));
             input.setOptionalFields(new BucketInventoryConfiguration.InventoryOptionalFields().setField(Arrays.asList("Size", "ETag", "CRC64")));
@@ -1267,12 +1267,12 @@ public class TOSV2ClientTest {
     @Test
     void testEcsCredentialsProvider() throws IOException, InterruptedException {
         MockWebServer server = new MockWebServer();
-        server.enqueue(new MockResponse().setResponseCode(200).setBody("{\n" +
-                "    \"AccessKeyId\" : \"abc\",\n" +
-                "    \"SecretAccessKey\" : \"123\",\n" +
-                "    \"SessionToken\" : \"999\",\n" +
-                "    \"ExpiredTime\" : \"2099-01-01T08:00:01+08:00\"\n" +
-                "}"));
+        server.enqueue(new MockResponse().setResponseCode(200).setBody("{\n"
+                + "    \"AccessKeyId\" : \"abc\",\n"
+                + "    \"SecretAccessKey\" : \"123\",\n"
+                + "    \"SessionToken\" : \"999\",\n"
+                + "    \"ExpiredTime\" : \"2099-01-01T08:00:01+08:00\"\n"
+                + "}"));
         server.start();
         String url = "http://" + server.getHostName() + ":" + server.getPort() + "/volcstack/latest/iam/security_credentials";
         final EcsCredentialsProvider provider = new EcsCredentialsProvider("test_role", url);
@@ -1456,7 +1456,6 @@ public class TOSV2ClientTest {
                     .setKey(rootFolder).setRecursive(true).setRecursiveOption(option));
             Assert.assertTrue(doutput.getRequestInfo() != null);
 
-
             ListObjectsType2Output lloutput = client.listObjectsType2(new ListObjectsType2Input().setBucket(bucket).setMaxKeys(1000).setPrefix(rootFolder).setDelimiter("/"));
             Assert.assertTrue(lloutput.getRequestInfo().getRequestId().length() > 0);
             Assert.assertTrue(!lloutput.isTruncated());
@@ -1485,12 +1484,12 @@ public class TOSV2ClientTest {
                 throw new RuntimeException(e);
             }
             for (int i = 0; i < 10; i++) {
-                server.enqueue(new MockResponse().setResponseCode(200).setBody("{\n" +
-                        "    \"AccessKeyId\" : \"abc\",\n" +
-                        "    \"SecretAccessKey\" : \"123\",\n" +
-                        "    \"SessionToken\" : \"999\",\n" +
-                        "    \"ExpiredTime\" : \"2099-01-01T08:00:01+08:00\"\n" +
-                        "}"));
+                server.enqueue(new MockResponse().setResponseCode(200).setBody("{\n"
+                        + "    \"AccessKeyId\" : \"abc\",\n"
+                        + "    \"SecretAccessKey\" : \"123\",\n"
+                        + "    \"SessionToken\" : \"999\",\n"
+                        + "    \"ExpiredTime\" : \"2099-01-01T08:00:01+08:00\"\n"
+                        + "}"));
             }
         });
         t.start();
@@ -1591,7 +1590,6 @@ public class TOSV2ClientTest {
                 throw new RuntimeException(e);
             }
         }
-
 
         for (String key : keys) {
             try (GetObjectV2Output output = cli.getObject(new GetObjectV2Input().setBucket(bucket).setKey(key))) {
@@ -1745,7 +1743,6 @@ public class TOSV2ClientTest {
             goutput = cli.getObject(new GetObjectV2Input().setBucket(Consts.bucket).setKey(key));
             Assert.assertTrue(goutput.getRequestInfo().getRequestId().length() > 0);
             Assert.assertEquals(StringUtils.toString(goutput.getContent(), ""), data);
-
 
             // specify length
             poutput = cli.putObject(new PutObjectInput().setBucket(Consts.bucket).setKey(key).setContent(new ByteArrayInputStream("hello".getBytes())).setContentLength(3));

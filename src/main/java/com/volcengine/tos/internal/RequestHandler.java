@@ -1,5 +1,10 @@
 package com.volcengine.tos.internal;
 
+import java.io.IOException;
+import java.net.URISyntaxException;
+import java.util.List;
+import java.util.Map;
+
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.volcengine.tos.TosClientException;
@@ -12,11 +17,8 @@ import com.volcengine.tos.comm.TosHeader;
 import com.volcengine.tos.internal.util.StringUtils;
 import com.volcengine.tos.internal.util.TosUtils;
 
-import java.io.IOException;
-import java.util.List;
-import java.util.Map;
-
 class RequestHandler {
+
     private Transport transport;
 
     RequestHandler(Transport transport) {
@@ -42,14 +44,18 @@ class RequestHandler {
         } catch (IOException e) {
             throw new TosClientException("tos: close body failed", e);
         } catch (TosException e) {
-            throw e.setRequestUrl(request.toURL().toString());
+            try {
+                throw e.setRequestUrl(request.toURL().toString());
+            } catch (URISyntaxException e1) {
+                throw new TosClientException("tos: request url is invalid", e1);
+            }
         }
     }
 
     // 特殊场景下 server 会返回非常规状态码，此时不能直接抛 UnexpectedStatusCodeException
     protected <T> T doRequest(TosRequest request,
-                              int expectedCode, List<Integer> unexpectedCodes,
-                              Action<TosResponse, T> action) {
+            int expectedCode, List<Integer> unexpectedCodes,
+            Action<TosResponse, T> action) {
         try (TosResponse res = doRequest(request)) {
             if (containExpectedCode(res.getStatusCode(), expectedCode)) {
                 return action.apply(res);
@@ -69,9 +75,17 @@ class RequestHandler {
             }
             throw new UnexpectedStatusCodeException(res.getStatusCode(), expectedCode, res.getRequesID());
         } catch (IOException e) {
-            throw new TosClientException("tos: close body failed", e).setRequestUrl(request.toURL().toString());
+            try {
+                throw new TosClientException("tos: close body failed", e).setRequestUrl(request.toURL().toString());
+            } catch (URISyntaxException e1) {
+                throw new TosClientException("tos: request url is invalid", e1);
+            }
         } catch (TosException e) {
-            throw e.setRequestUrl(request.toURL().toString());
+            try {
+                throw e.setRequestUrl(request.toURL().toString());
+            } catch (URISyntaxException e1) {
+                throw new TosClientException("tos: request url is invalid", e1);
+            }
         }
     }
 
@@ -79,9 +93,17 @@ class RequestHandler {
         try (TosResponse res = doRequest(request, expectedCodes)) {
             return action.apply(res);
         } catch (IOException e) {
-            throw new TosClientException("tos: close body failed", e).setRequestUrl(request.toURL().toString());
+            try {
+                throw new TosClientException("tos: close body failed", e).setRequestUrl(request.toURL().toString());
+            } catch (URISyntaxException e1) {
+                throw new TosClientException("tos: request url is invalid", e1);
+            }
         } catch (TosException e) {
-            throw e.setRequestUrl(request.toURL().toString());
+            try {
+                throw e.setRequestUrl(request.toURL().toString());
+            } catch (URISyntaxException e1) {
+                throw new TosClientException("tos: request url is invalid", e1);
+            }
         }
     }
 
@@ -92,19 +114,20 @@ class RequestHandler {
                 return response;
             }
         }
-        try{
+        try {
             checkException(response);
             throw new UnexpectedStatusCodeException(response.getStatusCode(), expectedCodes, response.getRequesID());
-        }finally {
+        } finally {
             try {
                 response.close();
-            } catch (IOException e) {}
+            } catch (IOException e) {
+            }
         }
     }
 
     private TosResponse doRequest(TosRequest request) {
         TosResponse res;
-        try{
+        try {
             res = transport.roundTrip(request);
         } catch (IOException e) {
             throw new TosClientException("tos: request exception", e);
@@ -143,13 +166,14 @@ class RequestHandler {
     private static void checkException(String rspBody, int statusCode, String reqId, Map<String, String> headers) {
         if (StringUtils.isNotEmpty(rspBody)) {
             ServerExceptionJson se = null;
-            try{
-                se = TosUtils.getJsonMapper().readValue(rspBody, new TypeReference<ServerExceptionJson>(){});
+            try {
+                se = TosUtils.getJsonMapper().readValue(rspBody, new TypeReference<ServerExceptionJson>() {
+                });
             } catch (JsonProcessingException e) {
                 if (statusCode == HttpStatus.BAD_REQUEST) {
                     throw new TosClientException("tos: bad request" + rspBody, null);
                 }
-                throw new TosClientException("tos: parse server exception failed"+ rspBody, null);
+                throw new TosClientException("tos: parse server exception failed" + rspBody, null);
             }
             throw new TosServerException(statusCode, se.getCode(), se.getMessage(), se.getRequestID(), se.getHostID())
                     .setEc(se.getEc()).setKey(se.getKey());
@@ -172,5 +196,6 @@ class RequestHandler {
 
 @FunctionalInterface
 interface Action<T, R> {
+
     R apply(T t);
 }

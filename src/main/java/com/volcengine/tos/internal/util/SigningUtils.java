@@ -18,6 +18,7 @@ import java.util.Map;
 import static com.volcengine.tos.internal.util.TosUtils.uriEncode;
 
 public class SigningUtils {
+
     public static final String emptySHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
     public static final String unsignedPayload = "UNSIGNED-PAYLOAD";
     public static final String signPrefix = "TOS4-HMAC-SHA256";
@@ -102,12 +103,34 @@ public class SigningUtils {
         });
         for (Map.Entry<String, String> kv : query) {
             String keyEscaped = uriEncode(kv.getKey(), true);
-            if (buf.length() > 0){
+            if (buf.length() > 0) {
                 buf.append('&');
             }
             buf.append(keyEscaped);
             buf.append('=');
             buf.append(uriEncode(kv.getValue() == null ? "" : kv.getValue(), true));
+        }
+        return buf.toString();
+    }
+
+    public static String toQuery(List<Map.Entry<String, String>> query) {
+        if (query == null || query.isEmpty()) {
+            return "";
+        }
+        StringBuilder buf = new StringBuilder(512);
+        Collections.sort(query, new Comparator<Map.Entry<String, String>>() {
+            @Override
+            public int compare(Map.Entry<String, String> o1, Map.Entry<String, String> o2) {
+                return o1.getKey().compareTo(o2.getKey());
+            }
+        });
+        for (Map.Entry<String, String> kv : query) {
+            if (buf.length() > 0) {
+                buf.append('&');
+            }
+            buf.append(kv.getKey());
+            buf.append('=');
+            buf.append(kv.getValue() == null ? "" : kv.getValue());
         }
         return buf.toString();
     }

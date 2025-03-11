@@ -1,22 +1,182 @@
 package com.volcengine.tos;
 
-import com.volcengine.tos.comm.common.*;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.zip.CheckedInputStream;
+
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpPost;
+import org.apache.hc.client5.http.entity.mime.ByteArrayBody;
+import org.apache.hc.client5.http.entity.mime.ContentBody;
+import org.apache.hc.client5.http.entity.mime.MultipartEntityBuilder;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.core5.http.ClassicHttpRequest;
+import org.apache.hc.core5.http.ClassicHttpResponse;
+import org.testng.Assert;
+import org.testng.annotations.Test;
+
+import com.volcengine.tos.comm.HttpStatus;
+import com.volcengine.tos.comm.common.ACLType;
+import com.volcengine.tos.comm.common.AzRedundancyType;
+import com.volcengine.tos.comm.common.BucketType;
+import com.volcengine.tos.comm.common.InventoryFormatType;
+import com.volcengine.tos.comm.common.InventoryIncludedObjType;
+import com.volcengine.tos.comm.common.RedirectType;
+import com.volcengine.tos.comm.common.StatusType;
+import com.volcengine.tos.comm.common.StorageClassType;
+import com.volcengine.tos.comm.common.TaggingDirectiveType;
+import com.volcengine.tos.comm.common.TierType;
+import com.volcengine.tos.comm.common.VersioningStatusType;
 import com.volcengine.tos.credential.StaticCredentialsProvider;
 import com.volcengine.tos.internal.model.CRC64Checksum;
 import com.volcengine.tos.internal.util.CRC64Utils;
 import com.volcengine.tos.internal.util.StringUtils;
 import com.volcengine.tos.internal.util.TosUtils;
-import com.volcengine.tos.model.bucket.*;
-import com.volcengine.tos.model.object.*;
-import okhttp3.*;
-import org.testng.Assert;
-import org.testng.annotations.Test;
-
-import java.io.*;
-import java.util.*;
-import java.util.zip.CheckedInputStream;
+import com.volcengine.tos.model.bucket.AccessLogConfiguration;
+import com.volcengine.tos.model.bucket.BucketEncryptionRule;
+import com.volcengine.tos.model.bucket.BucketInventoryConfiguration;
+import com.volcengine.tos.model.bucket.CORSRule;
+import com.volcengine.tos.model.bucket.CloudFunctionConfiguration;
+import com.volcengine.tos.model.bucket.Condition;
+import com.volcengine.tos.model.bucket.CreateBucketV2Input;
+import com.volcengine.tos.model.bucket.CreateBucketV2Output;
+import com.volcengine.tos.model.bucket.CustomDomainRule;
+import com.volcengine.tos.model.bucket.DeleteBucketCORSInput;
+import com.volcengine.tos.model.bucket.DeleteBucketCustomDomainInput;
+import com.volcengine.tos.model.bucket.DeleteBucketEncryptionInput;
+import com.volcengine.tos.model.bucket.DeleteBucketInput;
+import com.volcengine.tos.model.bucket.DeleteBucketInventoryInput;
+import com.volcengine.tos.model.bucket.DeleteBucketLifecycleInput;
+import com.volcengine.tos.model.bucket.DeleteBucketMirrorBackInput;
+import com.volcengine.tos.model.bucket.DeleteBucketRealTimeLogInput;
+import com.volcengine.tos.model.bucket.DeleteBucketRenameInput;
+import com.volcengine.tos.model.bucket.DeleteBucketReplicationInput;
+import com.volcengine.tos.model.bucket.DeleteBucketWebsiteInput;
+import com.volcengine.tos.model.bucket.Destination;
+import com.volcengine.tos.model.bucket.DestinationVeFaaS;
+import com.volcengine.tos.model.bucket.ErrorDocument;
+import com.volcengine.tos.model.bucket.Expiration;
+import com.volcengine.tos.model.bucket.Filter;
+import com.volcengine.tos.model.bucket.FilterKey;
+import com.volcengine.tos.model.bucket.FilterRule;
+import com.volcengine.tos.model.bucket.GetBucketCORSInput;
+import com.volcengine.tos.model.bucket.GetBucketEncryptionInput;
+import com.volcengine.tos.model.bucket.GetBucketInventoryInput;
+import com.volcengine.tos.model.bucket.GetBucketLifecycleInput;
+import com.volcengine.tos.model.bucket.GetBucketMirrorBackInput;
+import com.volcengine.tos.model.bucket.GetBucketNotificationInput;
+import com.volcengine.tos.model.bucket.GetBucketNotificationType2Input;
+import com.volcengine.tos.model.bucket.GetBucketRealTimeLogInput;
+import com.volcengine.tos.model.bucket.GetBucketRenameInput;
+import com.volcengine.tos.model.bucket.GetBucketReplicationInput;
+import com.volcengine.tos.model.bucket.GetBucketVersioningInput;
+import com.volcengine.tos.model.bucket.GetBucketWebsiteInput;
+import com.volcengine.tos.model.bucket.HeadBucketV2Input;
+import com.volcengine.tos.model.bucket.HeadBucketV2Output;
+import com.volcengine.tos.model.bucket.IndexDocument;
+import com.volcengine.tos.model.bucket.LifecycleRule;
+import com.volcengine.tos.model.bucket.ListBucketCustomDomainInput;
+import com.volcengine.tos.model.bucket.ListBucketsV2Input;
+import com.volcengine.tos.model.bucket.ListBucketsV2Output;
+import com.volcengine.tos.model.bucket.ListedBucket;
+import com.volcengine.tos.model.bucket.MirrorBackRule;
+import com.volcengine.tos.model.bucket.NotificationDestination;
+import com.volcengine.tos.model.bucket.NotificationRule;
+import com.volcengine.tos.model.bucket.PublicSource;
+import com.volcengine.tos.model.bucket.PutBucketCORSInput;
+import com.volcengine.tos.model.bucket.PutBucketCustomDomainInput;
+import com.volcengine.tos.model.bucket.PutBucketEncryptionInput;
+import com.volcengine.tos.model.bucket.PutBucketInventoryInput;
+import com.volcengine.tos.model.bucket.PutBucketLifecycleInput;
+import com.volcengine.tos.model.bucket.PutBucketMirrorBackInput;
+import com.volcengine.tos.model.bucket.PutBucketNotificationInput;
+import com.volcengine.tos.model.bucket.PutBucketNotificationType2Input;
+import com.volcengine.tos.model.bucket.PutBucketRealTimeLogInput;
+import com.volcengine.tos.model.bucket.PutBucketRenameInput;
+import com.volcengine.tos.model.bucket.PutBucketReplicationInput;
+import com.volcengine.tos.model.bucket.PutBucketStorageClassInput;
+import com.volcengine.tos.model.bucket.PutBucketVersioningInput;
+import com.volcengine.tos.model.bucket.PutBucketWebsiteInput;
+import com.volcengine.tos.model.bucket.RealTimeLogConfiguration;
+import com.volcengine.tos.model.bucket.Redirect;
+import com.volcengine.tos.model.bucket.ReplicationRule;
+import com.volcengine.tos.model.bucket.SourceEndpoint;
+import com.volcengine.tos.model.object.AbortMultipartUploadInput;
+import com.volcengine.tos.model.object.AppendObjectInput;
+import com.volcengine.tos.model.object.AppendObjectOutput;
+import com.volcengine.tos.model.object.CompleteMultipartUploadV2Input;
+import com.volcengine.tos.model.object.CompleteMultipartUploadV2Output;
+import com.volcengine.tos.model.object.CopyObjectV2Input;
+import com.volcengine.tos.model.object.CopyObjectV2Output;
+import com.volcengine.tos.model.object.CreateMultipartUploadInput;
+import com.volcengine.tos.model.object.CreateMultipartUploadOutput;
+import com.volcengine.tos.model.object.DeleteMultiObjectsV2Input;
+import com.volcengine.tos.model.object.DeleteMultiObjectsV2Output;
+import com.volcengine.tos.model.object.DeleteObjectInput;
+import com.volcengine.tos.model.object.DeleteObjectOutput;
+import com.volcengine.tos.model.object.FetchObjectInput;
+import com.volcengine.tos.model.object.GetFetchTaskInput;
+import com.volcengine.tos.model.object.GetFileStatusInput;
+import com.volcengine.tos.model.object.GetFileStatusOutput;
+import com.volcengine.tos.model.object.GetObjectACLV2Input;
+import com.volcengine.tos.model.object.GetObjectTaggingInput;
+import com.volcengine.tos.model.object.GetObjectTaggingOutput;
+import com.volcengine.tos.model.object.GetObjectV2Input;
+import com.volcengine.tos.model.object.GetObjectV2Output;
+import com.volcengine.tos.model.object.GetSymlinkInput;
+import com.volcengine.tos.model.object.HeadObjectV2Input;
+import com.volcengine.tos.model.object.HeadObjectV2Output;
+import com.volcengine.tos.model.object.ListMultipartUploadsV2Input;
+import com.volcengine.tos.model.object.ListMultipartUploadsV2Output;
+import com.volcengine.tos.model.object.ListObjectVersionsV2Input;
+import com.volcengine.tos.model.object.ListObjectsType2Input;
+import com.volcengine.tos.model.object.ListObjectsType2Output;
+import com.volcengine.tos.model.object.ListObjectsV2Input;
+import com.volcengine.tos.model.object.ListedCommonPrefix;
+import com.volcengine.tos.model.object.ListedObjectV2;
+import com.volcengine.tos.model.object.ListedUpload;
+import com.volcengine.tos.model.object.ModifyObjectInput;
+import com.volcengine.tos.model.object.ModifyObjectOutput;
+import com.volcengine.tos.model.object.ObjectMetaRequestOptions;
+import com.volcengine.tos.model.object.ObjectTobeDeleted;
+import com.volcengine.tos.model.object.PolicySignatureCondition;
+import com.volcengine.tos.model.object.PreSignedPolicyURLInput;
+import com.volcengine.tos.model.object.PreSignedPolicyURLOutput;
+import com.volcengine.tos.model.object.PreSignedPostSignatureInput;
+import com.volcengine.tos.model.object.PreSignedPostSignatureOutput;
+import com.volcengine.tos.model.object.PutFetchTaskInput;
+import com.volcengine.tos.model.object.PutObjectACLInput;
+import com.volcengine.tos.model.object.PutObjectInput;
+import com.volcengine.tos.model.object.PutObjectOutput;
+import com.volcengine.tos.model.object.PutSymlinkInput;
+import com.volcengine.tos.model.object.RenameObjectInput;
+import com.volcengine.tos.model.object.RenameObjectOutput;
+import com.volcengine.tos.model.object.RestoreJobParameters;
+import com.volcengine.tos.model.object.RestoreObjectInput;
+import com.volcengine.tos.model.object.SetObjectMetaInput;
+import com.volcengine.tos.model.object.SetObjectTimeInput;
+import com.volcengine.tos.model.object.UploadPartCopyV2Input;
+import com.volcengine.tos.model.object.UploadPartCopyV2Output;
+import com.volcengine.tos.model.object.UploadPartV2Input;
+import com.volcengine.tos.model.object.UploadPartV2Output;
+import com.volcengine.tos.model.object.UploadedPartV2;
 
 public class DirectoryBucketTest {
+
     private static TOSV2 client = new TOSV2ClientBuilder().build(TOSClientConfiguration.builder().region(Consts.region).endpoint(Consts.endpoint)
             .credentialsProvider(new StaticCredentialsProvider(Consts.accessKey, Consts.secretKey)).build());
 
@@ -87,7 +247,7 @@ public class DirectoryBucketTest {
                     .setFetchMeta(true).setDelimiter("/").setMaxKeys(1000));
             Assert.assertTrue(lsRootOutput.getRequestInfo().getRequestId().length() > 0);
             Assert.assertTrue(lsRootOutput.getCommonPrefixes().size() >= 1);
-            for (ListedCommonPrefix prefix: lsRootOutput.getCommonPrefixes()) {
+            for (ListedCommonPrefix prefix : lsRootOutput.getCommonPrefixes()) {
                 Assert.assertNotNull(prefix.getLastModified());
                 Assert.assertTrue(prefix.getLastModified().toString().length() > 0);
             }
@@ -136,7 +296,6 @@ public class DirectoryBucketTest {
                 Assert.assertEquals(ex.getStatusCode(), 404);
                 Assert.assertEquals(ex.getCode(), "NoSuchKey");
             }
-
 
             String key3 = "directory-bucket/" + System.currentTimeMillis();
             CreateMultipartUploadOutput cccoutput = client.createMultipartUpload(new CreateMultipartUploadInput()
@@ -434,6 +593,49 @@ public class DirectoryBucketTest {
     }
 
     @Test
+    void setObjectTimeTest() {
+        for (String bucket : Arrays.asList(Consts.bucket, TosUtils.genUuid())) {
+            try {
+                if (!bucket.equals(Consts.bucket)) {
+                    CreateBucketV2Output coutput = client.createBucket(new CreateBucketV2Input().setBucket(bucket).setBucketType(BucketType.BUCKET_TYPE_HNS));
+                    Assert.assertTrue(coutput.getRequestInfo().getRequestId().length() > 0);
+                }
+
+                String prefix = TosUtils.genUuid() + "/";
+                String key = prefix + System.currentTimeMillis();
+                String data = StringUtils.randomString(new Random().nextInt(128));
+                InputStream content = new ByteArrayInputStream(data.getBytes(StandardCharsets.UTF_8));
+                PutObjectOutput putRes = client.putObject(PutObjectInput.builder().bucket(bucket).key(key).content(content).build());
+                HeadObjectV2Output headRes = client.headObject(HeadObjectV2Input.builder().bucket(bucket).key(key).build());
+                Date lastModifyTime = headRes.getLastModifiedInDate();
+
+                Assert.assertEquals(headRes.getContentLength(), data.length());
+                Assert.assertEquals(headRes.getEtag(), putRes.getEtag());
+
+                Date newDate = Date.from(lastModifyTime.toInstant().plus(1, ChronoUnit.HOURS));
+                SetObjectTimeInput setObjectTimeInput = SetObjectTimeInput.builder().bucket(bucket).key(key).modifyTimestamp(newDate).build();
+
+                if (bucket.equals(Consts.bucket)) {
+                    try {
+                        client.setObjectTime(setObjectTimeInput);
+                    } catch (TosServerException e) {
+                        Assert.assertEquals(e.getStatusCode(), HttpStatus.METHOD_NOT_ALLOWED);
+                    }
+                } else {
+                    client.setObjectTime(setObjectTimeInput);
+                    HeadObjectV2Output newHeadRes = client.headObject(HeadObjectV2Input.builder().bucket(bucket).key(key).build());
+                    Assert.assertEquals(newHeadRes.getLastModifiedInDate().getTime(), newDate.getTime());
+                }
+                client.deleteObject(new DeleteObjectInput().setBucket(bucket).setKey(key));
+            } finally {
+                if (!bucket.equals(Consts.bucket)) {
+                    this.cleanAndDeleteBucket(bucket);
+                }
+            }
+        }
+    }
+
+    @Test
     void testModifyObjectAndDeleteFolder() throws IOException {
         String bucket = TosUtils.genUuid();
         try {
@@ -619,8 +821,8 @@ public class DirectoryBucketTest {
             try {
                 client.putBucketReplication(new PutBucketReplicationInput().setBucket(bucket)
                         .setRole("TosArchiveTOSInventory").setRules(Arrays.asList(new ReplicationRule()
-                                .setStatus(StatusType.STATUS_ENABLED).setId("1")
-                                .setDestination(new Destination().setBucket(Consts.bucket).setLocation(Consts.region)))));
+                        .setStatus(StatusType.STATUS_ENABLED).setId("1")
+                        .setDestination(new Destination().setBucket(Consts.bucket).setLocation(Consts.region)))));
                 Assert.assertTrue(false);
             } catch (TosServerException ex) {
                 Assert.assertEquals(ex.getStatusCode(), 405);
@@ -754,8 +956,7 @@ public class DirectoryBucketTest {
                 input.setFilter(new BucketInventoryConfiguration.InventoryFilter().setPrefix("filter_prefix"));
                 input.setIncludedObjectVersions(InventoryIncludedObjType.INVENTORY_INCLUDED_OBJ_TYPE_CURRENT);
                 input.setDestination(new BucketInventoryConfiguration.InventoryDestination()
-                        .setTosBucketDestination(new BucketInventoryConfiguration
-                                .TOSBucketDestination().setBucket(Consts.bucket)
+                        .setTosBucketDestination(new BucketInventoryConfiguration.TOSBucketDestination().setBucket(Consts.bucket)
                                 .setPrefix("destination_prefix").setFormat(InventoryFormatType.INVENTORY_FORMAT_CSV)
                                 .setRole("TosArchiveTOSInventory").setAccountId("test-accountid")));
                 input.setOptionalFields(new BucketInventoryConfiguration.InventoryOptionalFields().setField(Arrays.asList("Size", "ETag", "CRC64")));
@@ -799,7 +1000,7 @@ public class DirectoryBucketTest {
             try {
                 client.putBucketNotificationType2(new PutBucketNotificationType2Input()
                         .setBucket(bucket).setRules(Arrays.asList(new NotificationRule().setRuleId("1")
-                                .setDestination(new NotificationDestination().setVeFaaS(Arrays.asList(new DestinationVeFaaS().setFunctionId("functionid")))))));
+                        .setDestination(new NotificationDestination().setVeFaaS(Arrays.asList(new DestinationVeFaaS().setFunctionId("functionid")))))));
                 Assert.assertTrue(false);
             } catch (TosServerException ex) {
                 Assert.assertEquals(ex.getStatusCode(), 405);
@@ -852,22 +1053,23 @@ public class DirectoryBucketTest {
             PreSignedPolicyURLOutput output = client.preSignedPolicyURL(new PreSignedPolicyURLInput().setBucket(bucket).setExpires(3600)
                     .setConditions(Arrays.asList(new PolicySignatureCondition().setKey("key").setValue("prefix").setOperator("starts-with"))));
             Assert.assertTrue(output.getPreSignedPolicyURLGenerator().getSignedURLForList(null).length() > 0);
-            OkHttpClient c = TosUtils.defaultOkHttpClient();
-            Response r = c.newCall(new Request.Builder().url(output.getPreSignedPolicyURLGenerator()
-                    .getSignedURLForList(null)).method("GET", null).build()).execute();
-            Assert.assertEquals(r.code(), 400);
+            CloseableHttpClient c = TosUtils.defaultApacheHttpClient();
+            ClassicHttpResponse r = c.executeOpen(null, new HttpGet(output.getPreSignedPolicyURLGenerator().getSignedURLForList(null)), null);
+            Assert.assertEquals(r.getCode(), 400);
             // presign post signature
             String key = "post-signature-" + System.currentTimeMillis();
             PreSignedPostSignatureOutput poutput = client.preSignedPostSignature(new PreSignedPostSignatureInput().setBucket(bucket).setKey(key).setExpires(3600));
             Assert.assertTrue(poutput.getSignature().length() > 0);
-            MultipartBody.Builder builder = new MultipartBody.Builder().setType(MultipartBody.FORM);
-            builder.addFormDataPart("key", key);
-            builder.addFormDataPart("policy", poutput.getPolicy());
-            builder.addFormDataPart("x-tos-algorithm", poutput.getAlgorithm());
-            builder.addFormDataPart("x-tos-credential", poutput.getCredential());
-            builder.addFormDataPart("x-tos-date", poutput.getDate());
-            builder.addFormDataPart("x-tos-signature", poutput.getSignature());
-            builder.addFormDataPart("file", key, RequestBody.create(MediaType.parse("text/plain"), "helloworld"));
+            MultipartEntityBuilder builder = MultipartEntityBuilder.create();
+            //MultipartBody.Builder builder = new MultipartBody.Builder().setType(MultipartBody.FORM);
+            builder.addTextBody("key", key);
+            builder.addTextBody("policy", poutput.getPolicy());
+            builder.addTextBody("x-tos-algorithm", poutput.getAlgorithm());
+            builder.addTextBody("x-tos-credential", poutput.getCredential());
+            builder.addTextBody("x-tos-date", poutput.getDate());
+            builder.addTextBody("x-tos-signature", poutput.getSignature());
+            ContentBody body = new ByteArrayBody("helloworld".getBytes(), org.apache.hc.core5.http.ContentType.parse("text/plain"), key);
+            builder.addPart("file", body);
             String endpoint = Consts.endpoint.toLowerCase();
             if (endpoint.startsWith("https://")) {
                 endpoint = "https://" + bucket + "." + endpoint.substring("https://".length());
@@ -876,8 +1078,10 @@ public class DirectoryBucketTest {
             } else {
                 endpoint = "http://" + bucket + "." + endpoint;
             }
-            r = c.newCall(new Request.Builder().url(endpoint).post(builder.build()).build()).execute();
-            Assert.assertEquals(r.code(), 400);
+            ClassicHttpRequest req = new HttpPost(endpoint);
+            req.setEntity(builder.build());
+            r = c.executeOpen(null, req, null);
+            Assert.assertEquals(r.getCode(), 400);
 
         } finally {
             this.cleanAndDeleteBucket(bucket);
@@ -1173,7 +1377,6 @@ public class DirectoryBucketTest {
             for (ListedObjectV2 obj : loutput.getContents()) {
                 Assert.assertTrue(folder4Keys.contains(obj.getKey().replaceAll(folder6, folder4)));
             }
-
 
             // createmultipart
             String folder5 = TosUtils.genUuid() + "/";
