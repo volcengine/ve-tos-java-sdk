@@ -23,6 +23,8 @@ public class UploadFileV2Checkpoint {
     private long lastModified;
     private long fileSize;
     private String encodingType;
+    private String callback;
+    private String callbackVar;
     private List<UploadPartInfo> uploadPartInfos;
 
     public boolean isValid(long uploadFileSize, long uploadFileLastModifiedTime,
@@ -33,11 +35,11 @@ public class UploadFileV2Checkpoint {
                 !StringUtils.equals(this.filePath, uploadFilePath)) {
             return false;
         }
-        return this.fileSize== uploadFileSize && this.lastModified == uploadFileLastModifiedTime;
+        return this.fileSize == uploadFileSize && this.lastModified == uploadFileLastModifiedTime;
     }
 
     public synchronized void writeToFile(String checkpointFile) throws IOException {
-        try(FileOutputStream fos = new FileOutputStream(checkpointFile)) {
+        try (FileOutputStream fos = new FileOutputStream(checkpointFile)) {
             fos.write(TosUtils.getJsonMapper().writeValueAsBytes(this));
         } catch (JsonProcessingException e) {
             throw new TosClientException("tos: unable to do serialization", e);
@@ -143,6 +145,24 @@ public class UploadFileV2Checkpoint {
         return this;
     }
 
+    public String getCallback() {
+        return callback;
+    }
+
+    public UploadFileV2Checkpoint setCallback(String callback) {
+        this.callback = callback;
+        return this;
+    }
+
+    public String getCallbackVar() {
+        return callbackVar;
+    }
+
+    public UploadFileV2Checkpoint setCallbackVar(String callbackVar) {
+        this.callbackVar = callbackVar;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "UploadFileV2Checkpoint{" +
@@ -156,6 +176,8 @@ public class UploadFileV2Checkpoint {
                 ", lastModified=" + lastModified +
                 ", fileSize=" + fileSize +
                 ", encodingType='" + encodingType + '\'' +
+                ", callback='" + callback + '\'' +
+                ", callbackVar='" + callbackVar + '\'' +
                 ", uploadPartInfos=" + uploadPartInfos +
                 '}';
     }

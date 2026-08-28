@@ -116,6 +116,20 @@ public class ParamsChecker {
         }
     }
 
+    public static void isValidVectorBucketName(String name) {
+        if (StringUtils.isEmpty(name) || name.length() < Consts.MIN_VECTOR_BUCKET_NAME_LENGTH
+                || name.length() > Consts.MAX_VECTOR_BUCKET_NAME_LENGTH) {
+            throw new TosClientException("invalid vector bucket name, the length must be [3, 32]", null);
+        }
+        if (name.startsWith(BUCKET_INVALID_PREFIX_SUFFIX) || name.endsWith(BUCKET_INVALID_PREFIX_SUFFIX)) {
+            throw new TosClientException("invalid vector bucket name, the vector bucket name can be neither " +
+                    "starting with '-' nor ending with '-'", null);
+        }
+        if (!name.matches(BUCKET_NAME_PATTERN)) {
+            throw new TosClientException("invalid vector bucket name, the character set is illegal", null);
+        }
+    }
+
     public static void isValidKey(String key) {
         if (StringUtils.isEmpty(key)) {
             throw new TosClientException("invalid object name, the length must be larger than 0", null);
@@ -166,4 +180,14 @@ public class ParamsChecker {
         }
         throw new TosClientException("method input is invalid", null);
     }
+    
+    public static void isValidAccountId(String accountId) {
+        if (StringUtils.isEmpty(accountId)) {
+            throw new TosClientException("empty account id", null);
+        }
+        if (!accountId.matches("^\\d+$") && !accountId.isEmpty()) {
+            throw new TosClientException("invalid account id, the account id must be a number", null);
+        }
+    }
+    
 }

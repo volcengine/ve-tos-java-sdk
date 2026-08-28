@@ -1,0 +1,191 @@
+package com.volcengine.tos;
+import com.volcengine.tos.credential.CredentialsProvider;
+import com.volcengine.tos.credential.EcsCredentialsProvider;
+import com.volcengine.tos.credential.EnvCredentialsProvider;
+import com.volcengine.tos.credential.StaticCredentialsProvider;
+import com.volcengine.tos.internal.CredentialsProviderWrapper;
+import com.volcengine.tos.transport.TransportConfig;
+import java.util.HashMap;
+import java.util.Map;
+
+public class TOSVectorsClientConfiguration {
+    private CredentialsProvider credentialsProvider;
+    private String endpoint;
+    private String region;
+    private TransportConfig transportConfig;
+    private String clientCrt;
+    private String clientKey;
+    private String CaCrt;
+    private String userAgentProductName;
+    private String userAgentSoftName;
+    private String userAgentSoftVersion;
+    private Map<String, String> userAgentCustomizedKeyValues;
+    private TOSVectorsClientConfiguration() {
+    }
+    public TransportConfig getTransportConfig() {
+        return this.transportConfig;
+    }
+    public String getEndpoint() {
+        return this.endpoint;
+    }
+    public String getRegion() {
+        return this.region;
+    }
+    public CredentialsProvider getCredentialsProvider() {
+        return this.credentialsProvider;
+    }
+    public String getClientCrt() {
+        return this.clientCrt;
+    }
+    public String getClientKey() {
+        return this.clientKey;
+    }
+    public String getCaCrt() {
+        return this.CaCrt;
+    }
+    public void setEndpoint(String endpoint) {
+        this.endpoint = endpoint;
+    }
+    public TOSVectorsClientConfiguration setCredentialsProvider(CredentialsProvider credentialsProvider) {
+        if (credentialsProvider != null) {
+            if (!(credentialsProvider instanceof StaticCredentialsProvider)
+                    && !(credentialsProvider instanceof EnvCredentialsProvider)
+                    && !(credentialsProvider instanceof EcsCredentialsProvider)
+                    && !(credentialsProvider instanceof CredentialsProviderWrapper)) {
+                credentialsProvider = new CredentialsProviderWrapper(credentialsProvider);
+            }
+        }
+        this.credentialsProvider = credentialsProvider;
+        return this;
+    }
+    public TOSVectorsClientConfiguration setRegion(String region) {
+        this.region = region;
+        return this;
+    }
+    public TOSVectorsClientConfiguration setTransportConfig(TransportConfig transportConfig) {
+        this.transportConfig = transportConfig;
+        return this;
+    }
+    public String getUserAgentProductName() {
+        return this.userAgentProductName;
+    }
+    public TOSVectorsClientConfiguration setUserAgentProductName(String userAgentProductName) {
+        this.userAgentProductName = userAgentProductName;
+        return this;
+    }
+    public String getUserAgentSoftName() {
+        return this.userAgentSoftName;
+    }
+    public TOSVectorsClientConfiguration setUserAgentSoftName(String userAgentSoftName) {
+        this.userAgentSoftName = userAgentSoftName;
+        return this;
+    }
+    public String getUserAgentSoftVersion() {
+        return this.userAgentSoftVersion;
+    }
+    public TOSVectorsClientConfiguration setUserAgentSoftVersion(String userAgentSoftVersion) {
+        this.userAgentSoftVersion = userAgentSoftVersion;
+        return this;
+    }
+    public Map<String, String> getUserAgentCustomizedKeyValues() {
+        return this.userAgentCustomizedKeyValues;
+    }
+    public TOSVectorsClientConfiguration setUserAgentCustomizedKeyValues(Map<String, String> userAgentCustomizedKeyValues) {
+        if (userAgentCustomizedKeyValues != null) {
+            this.userAgentCustomizedKeyValues = new HashMap<>(userAgentCustomizedKeyValues.size());
+            for (Map.Entry<String, String> e : userAgentCustomizedKeyValues.entrySet()) {
+                this.userAgentCustomizedKeyValues.put(e.getKey(), e.getValue());
+            }
+        }
+        return this;
+    }
+    public TOSVectorsClientConfiguration setClientCrt(String clientCrt) {
+        this.clientCrt = clientCrt;
+        return this;
+    }
+    public TOSVectorsClientConfiguration setClientKey(String clientKey) {
+        this.clientKey = clientKey;
+        return this;
+    }
+    public TOSVectorsClientConfiguration setCaCrt(String caCrt) {
+        this.CaCrt = caCrt;
+        return this;
+    }
+    public static TosClientConfigurationBuilder builder() {
+        return new TosClientConfigurationBuilder();
+    }
+    public static final class TosClientConfigurationBuilder {
+        private CredentialsProvider credentialsProvider;
+        private String endpoint;
+        private String region;
+        private TransportConfig transportConfig = TransportConfig.builder().build();
+        private String userAgentProductName;
+        private String userAgentSoftName;
+        private String userAgentSoftVersion;
+        private Map<String, String> userAgentCustomizedKeyValues;
+        private String clientCrt;
+        private String clientKey;
+        private String caCrt;
+        private TosClientConfigurationBuilder() {
+        }
+        public TosClientConfigurationBuilder credentialsProvider(CredentialsProvider credentialsProvider) {
+            this.credentialsProvider = credentialsProvider;
+            return this;
+        }
+        public TosClientConfigurationBuilder endpoint(String endpoint) {
+            this.endpoint = endpoint;
+            return this;
+        }
+        public TosClientConfigurationBuilder region(String region) {
+            this.region = region;
+            return this;
+        }
+        public TosClientConfigurationBuilder transportConfig(TransportConfig transportConfig) {
+            this.transportConfig = transportConfig;
+            return this;
+        }
+        public TosClientConfigurationBuilder userAgentProductName(String userAgentProductName) {
+            this.userAgentProductName = userAgentProductName;
+            return this;
+        }
+        public TosClientConfigurationBuilder userAgentSoftName(String userAgentSoftName) {
+            this.userAgentSoftName = userAgentSoftName;
+            return this;
+        }
+        public TosClientConfigurationBuilder userAgentSoftVersion(String userAgentSoftVersion) {
+            this.userAgentSoftVersion = userAgentSoftVersion;
+            return this;
+        }
+        public TosClientConfigurationBuilder userAgentCustomizedKeyValues(Map<String, String> userAgentCustomizedKeyValues) {
+            this.userAgentCustomizedKeyValues = userAgentCustomizedKeyValues;
+            return this;
+        }
+        public TosClientConfigurationBuilder clientCrt(String clientCrt) {
+            this.clientCrt = clientCrt;
+            return this;
+        }
+        public TosClientConfigurationBuilder clientKey(String clientKey) {
+            this.clientKey = clientKey;
+            return this;
+        }
+        public TosClientConfigurationBuilder caCrt(String caCrt) {
+            this.caCrt = caCrt;
+            return this;
+        }
+        public TOSVectorsClientConfiguration build() {
+            TOSVectorsClientConfiguration tosClientConfiguration = new TOSVectorsClientConfiguration();
+            tosClientConfiguration.endpoint = this.endpoint;
+            tosClientConfiguration.transportConfig = this.transportConfig;
+            tosClientConfiguration.setCredentialsProvider(this.credentialsProvider);
+            tosClientConfiguration.region = this.region;
+            tosClientConfiguration.setUserAgentProductName(this.userAgentProductName);
+            tosClientConfiguration.setUserAgentSoftName(this.userAgentSoftName);
+            tosClientConfiguration.setUserAgentSoftVersion(this.userAgentSoftVersion);
+            tosClientConfiguration.setUserAgentCustomizedKeyValues(this.userAgentCustomizedKeyValues);
+            tosClientConfiguration.clientCrt = this.clientCrt;
+            tosClientConfiguration.clientKey = this.clientKey;
+            tosClientConfiguration.CaCrt = this.caCrt;
+            return tosClientConfiguration;
+        }
+    }
+}
