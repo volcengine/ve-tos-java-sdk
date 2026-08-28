@@ -18,6 +18,10 @@ public class TOSClientConfiguration {
     private String endpoint;
     private String region;
     private TransportConfig transportConfig;
+    private String controlEndpoint;
+    private String clientCrt;
+    private String clientKey;
+    private String CaCrt;
     /**
      * 客户端根据对象名后缀自动识别 Content-Type
      */
@@ -57,6 +61,10 @@ public class TOSClientConfiguration {
         return this.endpoint;
     }
 
+    public String getControlEndpoint(){
+        return this.controlEndpoint;
+    }
+
     public String getRegion() {
         return this.region;
     }
@@ -70,8 +78,24 @@ public class TOSClientConfiguration {
         return this.credentialsProvider;
     }
 
+    public String getClientCrt() {
+        return this.clientCrt;
+    }
+
+    public String getClientKey() {
+        return this.clientKey;
+    }
+
+    public String getCaCrt() {
+        return this.CaCrt;
+    }
+
     public void setEndpoint(String endpoint) {
         this.endpoint = endpoint;
+    }
+
+    public void setControlEndpoint(String controlEndpoint) {
+        this.controlEndpoint = controlEndpoint;
     }
 
     @Deprecated
@@ -180,6 +204,21 @@ public class TOSClientConfiguration {
         return this;
     }
 
+    public TOSClientConfiguration setClientCrt(String clientCrt) {
+        this.clientCrt = clientCrt;
+        return this;
+    }
+
+    public TOSClientConfiguration setClientKey(String clientKey) {
+        this.clientKey = clientKey;
+        return this;
+    }
+
+    public TOSClientConfiguration setCaCrt(String caCrt) {
+        this.CaCrt = caCrt;
+        return this;
+    }
+
     public static TosClientConfigurationBuilder builder() {
         return new TosClientConfigurationBuilder();
     }
@@ -199,6 +238,10 @@ public class TOSClientConfiguration {
         private String userAgentSoftName;
         private String userAgentSoftVersion;
         private Map<String, String> userAgentCustomizedKeyValues;
+        private String controlEndpoint;
+        private String clientCrt;
+        private String clientKey;
+        private String caCrt;
 
         private TosClientConfigurationBuilder() {
         }
@@ -216,6 +259,11 @@ public class TOSClientConfiguration {
 
         public TosClientConfigurationBuilder endpoint(String endpoint) {
             this.endpoint = endpoint;
+            return this;
+        }
+
+        public TosClientConfigurationBuilder controlEndpoint(String controlEndpoint) {
+            this.controlEndpoint = controlEndpoint;
             return this;
         }
 
@@ -274,11 +322,27 @@ public class TOSClientConfiguration {
             return this;
         }
 
+        public TosClientConfigurationBuilder clientCrt(String clientCrt) {
+            this.clientCrt = clientCrt;
+            return this;
+        }
+
+        public TosClientConfigurationBuilder clientKey(String clientKey) {
+            this.clientKey = clientKey;
+            return this;
+        }
+
+        public TosClientConfigurationBuilder caCrt(String caCrt) {
+            this.caCrt = caCrt;
+            return this;
+        }
+
         public TOSClientConfiguration build() {
             TOSClientConfiguration tosClientConfiguration = new TOSClientConfiguration();
             tosClientConfiguration.enableCrc = this.enableCrc;
             tosClientConfiguration.disableTrailerHeader = this.disableTrailerHeader;
             tosClientConfiguration.endpoint = this.endpoint;
+            tosClientConfiguration.controlEndpoint = this.controlEndpoint;
             tosClientConfiguration.transportConfig = this.transportConfig;
             tosClientConfiguration.credentials = this.credentials;
             tosClientConfiguration.setCredentialsProvider(this.credentialsProvider);
@@ -290,6 +354,9 @@ public class TOSClientConfiguration {
             tosClientConfiguration.setUserAgentSoftName(this.userAgentSoftName);
             tosClientConfiguration.setUserAgentSoftVersion(this.userAgentSoftVersion);
             tosClientConfiguration.setUserAgentCustomizedKeyValues(this.userAgentCustomizedKeyValues);
+            tosClientConfiguration.clientCrt = this.clientCrt;
+            tosClientConfiguration.clientKey = this.clientKey;
+            tosClientConfiguration.CaCrt = this.caCrt;
             return tosClientConfiguration;
         }
     }

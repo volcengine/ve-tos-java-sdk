@@ -8,6 +8,7 @@ public class HeadObjectV2Input extends GenericInput {
     private String bucket;
     private String key;
     private String versionID;
+    private boolean isOnlyInTOS;
 
     private ObjectMetaRequestOptions options;
 
@@ -31,6 +32,11 @@ public class HeadObjectV2Input extends GenericInput {
         return this;
     }
 
+    public HeadObjectV2Input setOnlyInTOS(boolean isOnlyInTOS) {
+        this.isOnlyInTOS = isOnlyInTOS;
+        return this;
+    }
+
     public String getBucket() {
         return bucket;
     }
@@ -49,6 +55,10 @@ public class HeadObjectV2Input extends GenericInput {
 
     public Map<String, String> getAllSettedHeaders() {
         return options == null ? null : options.headers();
+    }
+
+    public boolean isOnlyInTOS() {
+        return isOnlyInTOS;
     }
 
     @Override

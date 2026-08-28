@@ -168,6 +168,7 @@ public class PutObjectACLInput extends GenericInput {
         private Owner owner;
         private List<GrantV2> grants;
         private boolean bucketOwnerEntrusted;
+        private boolean isDefault;
 
         private PutObjectACLInputBuilder() {
         }
@@ -227,6 +228,11 @@ public class PutObjectACLInput extends GenericInput {
             return this;
         }
 
+        public PutObjectACLInputBuilder isDefault(boolean isDefault) {
+            this.isDefault = isDefault;
+            return this;
+        }
+
         public PutObjectACLInput build() {
             PutObjectACLInput putObjectACLInput = new PutObjectACLInput();
             putObjectACLInput.key = this.key;
@@ -239,7 +245,7 @@ public class PutObjectACLInput extends GenericInput {
             putObjectACLInput.versionID = this.versionID;
             putObjectACLInput.objectAclRules = new ObjectAclRulesV2()
                     .setOwner(this.owner).setGrants(this.grants)
-                    .setBucketOwnerEntrusted(bucketOwnerEntrusted);
+                    .setBucketOwnerEntrusted(bucketOwnerEntrusted).setIsdefault(isDefault);
             return putObjectACLInput;
         }
     }

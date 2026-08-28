@@ -1,7 +1,9 @@
 package com.volcengine.tos.model.bucket;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.volcengine.tos.comm.common.AuthProtocolType;
 import com.volcengine.tos.comm.common.CertStatusType;
+import com.volcengine.tos.comm.common.ProtocolType;
 
 public class CustomDomainRule {
     @JsonProperty("CertId")
@@ -16,6 +18,8 @@ public class CustomDomainRule {
     private boolean forbidden;
     @JsonProperty("ForbiddenReason")
     private String forbiddenReason;
+    @JsonProperty("Protocol")
+    private AuthProtocolType authProtocolType;
 
     public String getCertID() {
         return certID;
@@ -71,6 +75,15 @@ public class CustomDomainRule {
         return this;
     }
 
+    public AuthProtocolType getAuthProtocolType() {
+        return authProtocolType;
+    }
+
+    public CustomDomainRule setAuthProtocolType(AuthProtocolType authProtocolType) {
+        this.authProtocolType = authProtocolType;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "CustomDomainRule{" +
@@ -80,6 +93,7 @@ public class CustomDomainRule {
                 ", domain='" + domain + '\'' +
                 ", forbidden=" + forbidden +
                 ", forbiddenReason='" + forbiddenReason + '\'' +
+                ", authProtocolType=" + authProtocolType +
                 '}';
     }
 
@@ -94,6 +108,7 @@ public class CustomDomainRule {
         private String domain;
         private boolean forbidden;
         private String forbiddenReason;
+        private AuthProtocolType authProtocolType;
 
         private CustomDomainRuleBuilder() {
         }
@@ -123,6 +138,11 @@ public class CustomDomainRule {
             return this;
         }
 
+        public CustomDomainRuleBuilder protocolType(AuthProtocolType authProtocolType) {
+            this.authProtocolType = authProtocolType;
+            return this;
+        }
+
         public CustomDomainRuleBuilder cname(String cname) {
             this.cname = cname;
             return this;
@@ -136,6 +156,7 @@ public class CustomDomainRule {
             customDomainRule.setDomain(domain);
             customDomainRule.setForbidden(forbidden);
             customDomainRule.setForbiddenReason(forbiddenReason);
+            customDomainRule.setAuthProtocolType(authProtocolType);
             return customDomainRule;
         }
     }
