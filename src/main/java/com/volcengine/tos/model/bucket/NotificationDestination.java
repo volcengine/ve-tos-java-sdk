@@ -9,6 +9,8 @@ public class NotificationDestination {
     private List<DestinationRocketMQ> rocketMQ;
     @JsonProperty("VeFaaS")
     private List<DestinationVeFaaS> veFaaS;
+    @JsonProperty("Kafka")
+    private List<DestinationKafka> kafka;
 
     public List<DestinationRocketMQ> getRocketMQ() {
         return rocketMQ;
@@ -28,11 +30,21 @@ public class NotificationDestination {
         return this;
     }
 
+    public List<DestinationKafka> getKafka() {
+        return kafka;
+    }
+
+    public NotificationDestination setKafka(List<DestinationKafka> kafka) {
+        this.kafka = kafka;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "NotificationDestination{" +
                 "rocketMQ=" + rocketMQ +
                 ", veFaaS=" + veFaaS +
+                ", kafka=" + kafka +
                 '}';
     }
 
@@ -43,6 +55,7 @@ public class NotificationDestination {
     public static final class NotificationDestinationBuilder {
         private List<DestinationRocketMQ> rocketMQ;
         private List<DestinationVeFaaS> veFaaS;
+        private List<DestinationKafka> kafka;
 
         private NotificationDestinationBuilder() {
         }
@@ -57,10 +70,16 @@ public class NotificationDestination {
             return this;
         }
 
+        public NotificationDestinationBuilder kafka(List<DestinationKafka> kafka) {
+            this.kafka = kafka;
+            return this;
+        }
+
         public NotificationDestination build() {
             NotificationDestination notificationDestination = new NotificationDestination();
             notificationDestination.setRocketMQ(rocketMQ);
             notificationDestination.setVeFaaS(veFaaS);
+            notificationDestination.setKafka(kafka);
             return notificationDestination;
         }
     }

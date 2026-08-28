@@ -277,16 +277,26 @@ public class DownloadFileTaskHandler {
     }
 
     private List<DownloadPartInfo> getPartsFromFile(long partSize, long contentLength) {
+        // 特殊处理空文件
+        if (contentLength == 0) {
+            return Collections.singletonList(new DownloadPartInfo().setPartNumber(1).setRangeStart(0).setRangeEnd(0));
+        }
+
+        // 计算总分片数量
         long partNum = contentLength / partSize;
         long lastPartSize = contentLength % partSize;
         if (lastPartSize != 0) {
             partNum++;
+        } else { // 整除时最后分片大小应为完整分片
+            lastPartSize = partSize;
         }
+
         List<DownloadPartInfo> partInfoList = new ArrayList<>((int) partNum);
         for (int i = 0; i < partNum; i++) {
-            partInfoList.add(new DownloadPartInfo().setPartNumber(i + 1).setRangeStart(i * partSize).setRangeEnd((i + 1) * partSize - 1));
+            long currentEndSize = (i == partNum - 1) ? i * partSize + lastPartSize - 1 : (i + 1) * partSize - 1;
+            partInfoList.add(new DownloadPartInfo().setPartNumber(i + 1).setRangeStart(i * partSize).setRangeEnd(currentEndSize));
         }
-        partInfoList.get((int) partNum - 1).setRangeEnd((partNum - 1) * partSize + lastPartSize - 1);
+
         return partInfoList;
     }
 
