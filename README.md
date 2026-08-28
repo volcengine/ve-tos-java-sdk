@@ -140,5 +140,9 @@ try {
 }
 ```
 
+## Security and privacy
+
+This project takes security seriously. For vulnerability reporting and supported versions, see [SECURITY.md](SECURITY.md).
+
 ## License
 [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0.html)
