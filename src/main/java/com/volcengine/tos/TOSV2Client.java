@@ -14,6 +14,12 @@ import com.volcengine.tos.model.acl.PutObjectAclInput;
 import com.volcengine.tos.model.acl.PutObjectAclOutput;
 import com.volcengine.tos.model.bucket.*;
 import com.volcengine.tos.model.object.*;
+import com.volcengine.tos.model.bucket.PutAudioConvertTemplateInput;
+import com.volcengine.tos.model.bucket.PutAudioConvertTemplateOutput;
+import com.volcengine.tos.model.bucket.GetAudioConvertTemplateInput;
+import com.volcengine.tos.model.bucket.GetAudioConvertTemplateOutput;
+import com.volcengine.tos.model.bucket.DeleteAudioConvertTemplateInput;
+import com.volcengine.tos.model.bucket.DeleteAudioConvertTemplateOutput;
 import com.volcengine.tos.transport.TransportConfig;
 
 import java.io.Closeable;
@@ -35,6 +41,7 @@ public class TOSV2Client implements TOSV2 {
     private Transport transport;
     private Signer signer;
     private TosRequestFactory factory;
+
 
     protected TOSV2Client(TOSClientConfiguration conf) {
         validateAndInitConfig(conf);
@@ -75,8 +82,10 @@ public class TOSV2Client implements TOSV2 {
             }
             this.factory = new TosRequestFactory(this.signer, this.config.getEndpoint())
                     .setIsCustomDomain(config.isCustomDomain())
+                    .setControlEndpoint(this.config.getControlEndpoint())
                     .setDisableEncodingMeta(this.config.isDisableEncodingMeta()).setUserAgent(this.buildUserAgent());
         }
+
         this.bucketRequestHandler = new TosBucketRequestHandler(this.transport, this.factory);
         this.objectRequestHandler = new TosObjectRequestHandler(this.transport, this.factory, this.bucketRequestHandler)
                 .setClientAutoRecognizeContentType(this.config.isClientAutoRecognizeContentType())
@@ -247,6 +256,11 @@ public class TOSV2Client implements TOSV2 {
     @Override
     public HeadBucketV2Output headBucket(HeadBucketV2Input input) throws TosException {
         return bucketRequestHandler.headBucket(input);
+    }
+
+    @Override
+    public boolean doesBucketExist(DoesBucketExistInput input) throws TosException {
+        return bucketRequestHandler.doesBucketExist(input);
     }
 
     @Override
@@ -514,6 +528,35 @@ public class TOSV2Client implements TOSV2 {
         return bucketRequestHandler.deleteBucketInventory(input);
     }
 
+    public GetBucketInfoOutput getBucketInfo(GetBucketInfoInput input) throws TosException {
+        return bucketRequestHandler.getBucketInfo(input);
+    }
+
+    @Override
+    public PutBucketAccessMonitorOutput putBucketAccessMonitor(PutBucketAccessMonitorInput input) throws TosException {
+        return bucketRequestHandler.putBucketAccessMonitor(input);
+    }
+
+    @Override
+    public GetBucketAccessMonitorOutput getBucketAccessMonitor(GetBucketAccessMonitorInput input) throws TosException {
+        return bucketRequestHandler.getBucketAccessMonitor(input);
+    }
+
+    @Override
+    public PutQosPolicyOutput putQosPolicy(PutQosPolicyInput input) throws TosException {
+        return bucketRequestHandler.putQosPolicy(input);
+    }
+
+    @Override
+    public GetQosPolicyOutput getQosPolicy(GetQosPolicyInput input) throws TosException {
+        return bucketRequestHandler.getQosPolicy(input);
+    }
+
+    @Override
+    public DeleteQosPolicyOutput deleteQosPolicy(DeleteQosPolicyInput input) throws TosException {
+        return bucketRequestHandler.deleteQosPolicy(input);
+    }
+
     @Override
     public GetObjectV2Output getObject(GetObjectV2Input input) throws TosException {
         return objectRequestHandler.getObject(input);
@@ -549,6 +592,11 @@ public class TOSV2Client implements TOSV2 {
     }
 
     @Override
+    public boolean doesObjectExist(DoesObjectExistInput input) throws TosException {
+        return objectRequestHandler.doesObjectExist(input);
+    }
+
+    @Override
     public DeleteObjectOutput deleteObject(DeleteObjectInput input) throws TosException {
         return objectRequestHandler.deleteObject(input);
     }
@@ -576,6 +624,16 @@ public class TOSV2Client implements TOSV2 {
     @Override
     public SetObjectMetaOutput setObjectMeta(SetObjectMetaInput input) throws TosException {
         return objectRequestHandler.setObjectMeta(input);
+    }
+
+    @Override
+    public SetObjectTimeOutput setObjectTime(SetObjectTimeInput input) throws TosException {
+        return objectRequestHandler.setObjectTime(input);
+    }
+
+    @Override
+    public SetObjectExpiresOutput setObjectExpires(SetObjectExpiresInput input) {
+        return objectRequestHandler.setObjectExpires(input);
     }
 
     @Override
@@ -733,6 +791,11 @@ public class TOSV2Client implements TOSV2 {
     }
 
     @Override
+    public GetBucketTypeOutput getBucketType(GetBucketTypeInput bucket) throws TosException {
+        return objectRequestHandler.getBucketType(bucket);
+    }
+
+    @Override
     public CreateBucketOutput createBucket(CreateBucketInput input) throws TosException {
         return clientV1Adapter.createBucket(input);
     }
@@ -862,6 +925,7 @@ public class TOSV2Client implements TOSV2 {
         return clientV1Adapter.preSignedURL(httpMethod, bucket, objectKey, ttl, builders);
     }
 
+
     @Override
     public void close() throws IOException {
         if (this.transport != null && this.transport instanceof Closeable) {
@@ -878,5 +942,80 @@ public class TOSV2Client implements TOSV2 {
 
             }
         }
+    }
+
+    @Override
+    public PutAudioConvertTemplateOutput putAudioConvertTemplate(PutAudioConvertTemplateInput input) throws TosException {
+        return bucketRequestHandler.putAudioConvertTemplate(input);
+    }
+
+    @Override
+    public PutVideoConvertTemplateOutput putVideoConvertTemplate(PutVideoConvertTemplateInput input) throws TosException {
+        return bucketRequestHandler.putVideoConvertTemplate(input);
+    }
+
+    @Override
+    public GetVideoConvertTemplateOutput getVideoConvertTemplate(GetVideoConvertTemplateInput input) throws TosException {
+        return bucketRequestHandler.getVideoConvertTemplate(input);
+    }
+
+    @Override
+    public GetVideoConvertJobOutput getVideoConvertJob(GetVideoConvertJobInput input) throws TosException {
+        return bucketRequestHandler.getVideoConvertJob(input);
+    }
+
+    @Override
+    public GetAudioConvertJobOutput getAudioConvertJob(GetAudioConvertJobInput input) throws TosException {
+        return bucketRequestHandler.getAudioConvertJob(input);
+    }
+
+    @Override
+    public GetAudioConvertTemplateOutput getAudioConvertTemplate(GetAudioConvertTemplateInput input) throws TosException {
+        return bucketRequestHandler.getAudioConvertTemplate(input);
+    }
+
+    @Override
+    public DeleteAudioConvertTemplateOutput deleteAudioConvertTemplate(DeleteAudioConvertTemplateInput input) throws TosException {
+        return bucketRequestHandler.deleteAudioConvertTemplate(input);
+    }
+
+    @Override
+    public DeleteVideoConvertTemplateOutput deleteVideoConvertTemplate(DeleteVideoConvertTemplateInput input) throws TosException {
+        return bucketRequestHandler.deleteVideoConvertTemplate(input);
+    }
+
+    @Override
+    public ListAudioConvertTemplatesOutput listAudioConvertTemplates(ListAudioConvertTemplatesInput input) throws TosException {
+        return bucketRequestHandler.listAudioConvertTemplates(input);
+    }
+
+    @Override
+    public ListVideoConvertTemplatesOutput listVideoConvertTemplates(ListVideoConvertTemplatesInput input) throws TosException {
+        return bucketRequestHandler.listVideoConvertTemplates(input);
+    }
+
+    @Override
+    public PutConvertWorkflowOutput putConvertWorkflow(PutConvertWorkflowInput input) throws TosException {
+        return bucketRequestHandler.putConvertWorkflow(input);
+    }
+
+    @Override
+    public GetConvertWorkflowOutput getConvertWorkflow(GetConvertWorkflowInput input) throws TosException {
+        return bucketRequestHandler.getConvertWorkflow(input);
+    }
+
+    @Override
+    public DeleteConvertWorkflowOutput deleteConvertWorkflow(DeleteConvertWorkflowInput input) throws TosException {
+        return bucketRequestHandler.deleteConvertWorkflow(input);
+    }
+
+    @Override
+    public CreateVideoConvertJobOutput createVideoConvertJob(CreateVideoConvertJobInput input) throws TosException {
+        return bucketRequestHandler.createVideoConvertJob(input);
+    }
+
+    @Override
+    public CreateAudioConvertJobOutput createAudioConvertJob(CreateAudioConvertJobInput input) throws TosException {
+        return bucketRequestHandler.createAudioConvertJob(input);
     }
 }

@@ -22,6 +22,8 @@ public class BucketInventoryConfiguration {
     protected InventoryIncludedObjType includedObjectVersions;
     @JsonProperty("OptionalFields")
     protected InventoryOptionalFields optionalFields;
+    @JsonProperty("IsUnCompressed")
+    protected boolean isUnCompressed;
 
     public String getId() {
         return id;
@@ -86,6 +88,15 @@ public class BucketInventoryConfiguration {
         return this;
     }
 
+    public boolean isUnCompressed() {
+        return isUnCompressed;
+    }
+
+    public BucketInventoryConfiguration setUnCompressed(boolean isUnCompressed) {
+        this.isUnCompressed = isUnCompressed;
+        return this;
+    }
+
     public static class InventoryFilter {
         @JsonProperty("Prefix")
         private String prefix;
@@ -128,7 +139,7 @@ public class BucketInventoryConfiguration {
         }
     }
 
-    public static class TOSBucketDestination{
+    public static class TOSBucketDestination {
         @JsonProperty("Format")
         private InventoryFormatType format;
         @JsonProperty("AccountId")

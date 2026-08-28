@@ -28,14 +28,11 @@ import com.volcengine.tos.transport.TransportConfig;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.*;
 
 @Deprecated
-public class TOSClient implements TOS{
+public class TOSClient implements TOS {
     /**
      * URL_MODE_DEFAULT url pattern is http(s)://{bucket}.domain/{object}
      */
@@ -56,14 +53,14 @@ public class TOSClient implements TOS{
         return ParamsChecker.parseFromEndpoint(endpoint);
     }
 
-    private void schemeHost(String endpoint){
+    private void schemeHost(String endpoint) {
         List<String> schemeHost = getSchemeAndHost(endpoint);
         this.scheme = schemeHost.get(0);
         this.host = schemeHost.get(1);
         this.urlMode = URL_MODE_DEFAULT;
     }
 
-    public TOSClient(Session session){
+    public TOSClient(Session session) {
         Objects.requireNonNull(session.getEndpoint(), "the endpoint is null");
         Objects.requireNonNull(session.getRegion(), "the region is null");
         Objects.requireNonNull(session.getCredentials(), "the credentials is null");
@@ -86,7 +83,7 @@ public class TOSClient implements TOS{
             this.config.setTransportConfig(tc);
             // each TOSClient get the singleton HttpClient
             this.transport = SessionTransport.getInstance();
-        } else{
+        } else {
             // first init
             this.transport = SessionTransport.getInstance(this.config.getTransportConfig());
         }
@@ -96,12 +93,12 @@ public class TOSClient implements TOS{
             this.signer = new SignV4(cred, session.getRegion());
         }
 
-        if (userAgent == null || "".equals(userAgent)){
+        if (userAgent == null || "".equals(userAgent)) {
             userAgent = USER_AGENT;
         }
     }
 
-    public TOSClient(String endpoint, ClientOptionsBuilder...options) {
+    public TOSClient(String endpoint, ClientOptionsBuilder... options) {
         this.config = new Config().defaultConfig();
         this.config.setEndpoint(endpoint);
 
@@ -120,12 +117,12 @@ public class TOSClient implements TOS{
             this.signer = new SignV4(cred, this.config.getRegion());
         }
 
-        if (userAgent == null || "".equals(userAgent)){
+        if (userAgent == null || "".equals(userAgent)) {
             userAgent = USER_AGENT;
         }
     }
 
-    protected RequestBuilder newBuilder(String bucket, String object, RequestOptionsBuilder...builders){
+    protected RequestBuilder newBuilder(String bucket, String object, RequestOptionsBuilder... builders) {
         RequestBuilder rb = new RequestBuilder(this.signer, this.scheme, this.host,
                 bucket, object, this.urlMode, new HashMap<>(), new HashMap<>());
         rb.withHeader(TosHeader.HEADER_USER_AGENT, this.userAgent);
@@ -137,9 +134,9 @@ public class TOSClient implements TOS{
 
     TosResponse roundTrip(TosRequest request, int expectedCode) throws TosException {
         TosResponse res;
-        try{
+        try {
             res = transport.roundTrip(request);
-        } catch (IOException e){
+        } catch (IOException e) {
             throw new TosClientException("request exception", e);
         }
         if (res.getStatusCode() == expectedCode) {
@@ -148,8 +145,9 @@ public class TOSClient implements TOS{
         if (res.getStatusCode() >= HttpStatus.BAD_REQUEST) {
             String s = StringUtils.toString(res.getInputStream(), "response body");
             if (s.length() > 0) {
-                try{
-                    ServerExceptionJson se = TosUtils.getJsonMapper().readValue(s, new TypeReference<ServerExceptionJson>(){});
+                try {
+                    ServerExceptionJson se = TosUtils.getJsonMapper().readValue(s, new TypeReference<ServerExceptionJson>() {
+                    });
                     throw new TosServerException(res.getStatusCode(), se.getCode(), se.getMessage(), se.getRequestID(), se.getHostID())
                             .setEc(se.getEc()).setKey(se.getKey());
                 } catch (JsonProcessingException e) {
@@ -176,7 +174,7 @@ public class TOSClient implements TOS{
 
 
     @Override
-    public CreateBucketOutput createBucket(CreateBucketInput input)  throws TosException{
+    public CreateBucketOutput createBucket(CreateBucketInput input) throws TosException {
         Objects.requireNonNull(input, "CreateBucketInput is null");
         Objects.requireNonNull(input.getBucket(), "bucket name is null");
         isValidBucketName(input.getBucket());
@@ -216,7 +214,8 @@ public class TOSClient implements TOS{
     public ListBucketsOutput listBuckets(ListBucketsInput input) throws TosException {
         TosRequest req = this.newBuilder("", "").buildRequest(HttpMethod.GET, null);
         TosResponse res = roundTrip(req, HttpStatus.OK);
-        return marshalOutput(res.getInputStream(), new TypeReference<ListBucketsOutput>(){})
+        return marshalOutput(res.getInputStream(), new TypeReference<ListBucketsOutput>() {
+        })
                 .setRequestInfo(res.RequestInfo());
     }
 
@@ -249,7 +248,7 @@ public class TOSClient implements TOS{
 
     private int expectedCode(RequestBuilder rb) {
         Objects.requireNonNull(rb, "requestBuilder is null");
-        return rb.getHeaders().get(TosHeader.HEADER_RANGE) != null? HttpStatus.PARTIAL_CONTENT : HttpStatus.OK;
+        return rb.getHeaders().get(TosHeader.HEADER_RANGE) != null ? HttpStatus.PARTIAL_CONTENT : HttpStatus.OK;
     }
 
     @Override
@@ -299,16 +298,17 @@ public class TOSClient implements TOS{
                 .withQuery("delete", "")
                 .buildRequest(HttpMethod.POST, null).setData(inputRes.getData());
         TosResponse res = roundTrip(req, HttpStatus.OK);
-        return marshalOutput(res.getInputStream(), new TypeReference<DeleteMultiObjectsOutput>(){})
+        return marshalOutput(res.getInputStream(), new TypeReference<DeleteMultiObjectsOutput>() {
+        })
                 .setRequestInfo(res.RequestInfo());
     }
 
-    private void setContentType(RequestBuilder rb, String objectKey) throws TosClientException{
+    private void setContentType(RequestBuilder rb, String objectKey) throws TosClientException {
         String contentType = rb.getHeaders().get(TosHeader.HEADER_CONTENT_TYPE);
-        if (StringUtils.isEmpty(contentType)){
+        if (StringUtils.isEmpty(contentType)) {
             // request does not attach content-type
             // auto recognize default, check if user disable it by withAutoRecognizeContentType(false)
-            if (rb.isAutoRecognizeContentType()){
+            if (rb.isAutoRecognizeContentType()) {
                 // set content type before upload
                 contentType = MimeType.getInstance().getMimetype(objectKey);
                 rb.getHeaders().put(TosHeader.HEADER_CONTENT_TYPE, contentType);
@@ -384,18 +384,18 @@ public class TOSClient implements TOS{
         }
     }
 
-    private UploadFileInfo getUploadFileInfo(String uploadFilePath){
+    private UploadFileInfo getUploadFileInfo(String uploadFilePath) {
         File file = new File(uploadFilePath);
         return new UploadFileInfo().setFilePath(uploadFilePath).setFileSize(file.length()).setLastModified(file.lastModified());
     }
 
     private UploadFileCheckpoint getCheckpoint(String bucket, UploadFileInput input, UploadFileInfo fileInfo,
-                                               RequestOptionsBuilder... builders) throws TosException{
+                                               RequestOptionsBuilder... builders) throws TosException {
         UploadFileCheckpoint checkpoint = null;
         if (input.isEnableCheckpoint()) {
-            try{
+            try {
                 checkpoint = loadCheckpointFromFile(input.getCheckpointFile());
-            } catch (IOException | ClassNotFoundException e){
+            } catch (IOException | ClassNotFoundException e) {
                 deleteCheckpointFile(input.getCheckpointFile());
             }
         }
@@ -410,7 +410,7 @@ public class TOSClient implements TOS{
         if (checkpoint == null || !valid) {
             checkpoint = initCheckpoint(bucket, input, fileInfo, builders);
             if (input.isEnableCheckpoint()) {
-                try{
+                try {
                     checkpoint.writeToFile(input.getCheckpointFile(), TosUtils.getJsonMapper());
                 } catch (IOException e) {
                     throw new TosClientException("record to checkpoint file failed", e);
@@ -428,18 +428,18 @@ public class TOSClient implements TOS{
         return false;
     }
 
-    private UploadFileCheckpoint loadCheckpointFromFile(String checkpointFilePath) throws IOException, ClassNotFoundException{
+    private UploadFileCheckpoint loadCheckpointFromFile(String checkpointFilePath) throws IOException, ClassNotFoundException {
         Objects.requireNonNull(checkpointFilePath, "checkpointFilePath is null");
         File f = new File(checkpointFilePath);
-        try(FileInputStream checkpointFile = new FileInputStream(f))
-        {
-            byte[] data = new byte[(int)f.length()];
+        try (FileInputStream checkpointFile = new FileInputStream(f)) {
+            byte[] data = new byte[(int) f.length()];
             checkpointFile.read(data);
-            return TosUtils.getJsonMapper().readValue(data, new TypeReference<UploadFileCheckpoint>(){});
+            return TosUtils.getJsonMapper().readValue(data, new TypeReference<UploadFileCheckpoint>() {
+            });
         }
     }
 
-    private UploadFileCheckpoint initCheckpoint(String bucket, UploadFileInput input, UploadFileInfo info, RequestOptionsBuilder... builders) throws TosException{
+    private UploadFileCheckpoint initCheckpoint(String bucket, UploadFileInput input, UploadFileInfo info, RequestOptionsBuilder... builders) throws TosException {
         UploadFileCheckpoint checkpoint = new UploadFileCheckpoint()
                 .setBucket(bucket).setKey(input.getObjectKey()).setFileInfo(info)
                 .setPartInfoList(getPartsFromFile(info.getFileSize(), input.getPartSize()));
@@ -449,22 +449,29 @@ public class TOSClient implements TOS{
     }
 
     private List<UploadFilePartInfo> getPartsFromFile(long uploadFileSize, long partSize) {
+        // 特殊处理空文件
+        if (uploadFileSize == 0) {
+            return Collections.singletonList(new UploadFilePartInfo().setPartNum(1).setPartSize(0).setOffset(0));
+        }
+
+        // 计算总分片数量
         long partNum = uploadFileSize / partSize;
         long lastPartSize = uploadFileSize % partSize;
         if (lastPartSize != 0) {
             partNum++;
+        } else { // 整除时最后分片大小应为完整分片
+            lastPartSize = partSize;
         }
-        if (partNum > 10000) {
+
+        if (partNum > Consts.MAX_PART_NUM) {
             throw new IllegalArgumentException("The split file parts number is larger than 10000, please increase your part size");
         }
         List<UploadFilePartInfo> partInfoList = new ArrayList<>((int) partNum);
-        for(int i = 0; i < partNum; i++) {
-            if (i < partNum-1) {
-                partInfoList.add(new UploadFilePartInfo().setPartSize(partSize).setPartNum(i+1).setOffset(i * partSize));
-            } else {
-                partInfoList.add(new UploadFilePartInfo().setPartSize(lastPartSize).setPartNum(i+1).setOffset(i * partSize));
-            }
+        for (int i = 0; i < partNum; i++) {
+            long currentPartSize = (i == partNum - 1) ? lastPartSize : partSize;
+            partInfoList.add(new UploadFilePartInfo().setPartNum(i + 1).setPartSize(currentPartSize).setOffset((long) i * partSize));
         }
+
         return partInfoList;
     }
 
@@ -496,7 +503,7 @@ public class TOSClient implements TOS{
                         checkpoint.writeToFile(input.getCheckpointFile(), TosUtils.getJsonMapper());
                     }
                     long end = System.nanoTime();
-                    TosUtils.getLogger().debug("Upload No.{} part cost {} milliseconds, part size is {}", (finalI +1), (end-start) / 1000000, partInfo.getPartSize());
+                    TosUtils.getLogger().debug("Upload No.{} part cost {} milliseconds, part size is {}", (finalI + 1), (end - start) / 1000000, partInfo.getPartSize());
                     return output;
                 });
                 futures.add(future);
@@ -517,7 +524,7 @@ public class TOSClient implements TOS{
         }
 
         executor.shutdown();
-        try{
+        try {
             executor.awaitTermination(Long.MAX_VALUE, TimeUnit.SECONDS);
         } catch (InterruptedException e) {
             if (!input.isEnableCheckpoint()) {
@@ -555,10 +562,10 @@ public class TOSClient implements TOS{
         TosResponse res = roundTrip(req, HttpStatus.OK);
         String nextOffset = res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_NEXT_APPEND_OFFSET);
         int appendOffset;
-        try{
+        try {
             appendOffset = Integer.parseInt(nextOffset);
-        } catch (NumberFormatException nfe){
-            throw new TosClientException("server return unexpected Next-Append-Offset header: "+nextOffset, nfe);
+        } catch (NumberFormatException nfe) {
+            throw new TosClientException("server return unexpected Next-Append-Offset header: " + nextOffset, nfe);
         }
         return new AppendObjectOutput()
                 .setRequestInfo(res.RequestInfo())
@@ -591,7 +598,8 @@ public class TOSClient implements TOS{
                 .withQuery("encoding-type", input.getEncodingType())
                 .buildRequest(HttpMethod.GET, null);
         TosResponse res = roundTrip(req, HttpStatus.OK);
-        return marshalOutput(res.getInputStream(), new TypeReference<ListObjectsOutput>(){})
+        return marshalOutput(res.getInputStream(), new TypeReference<ListObjectsOutput>() {
+        })
                 .setRequestInfo(res.RequestInfo());
     }
 
@@ -608,7 +616,8 @@ public class TOSClient implements TOS{
                 .withQuery("versions", "")
                 .buildRequest(HttpMethod.GET, null);
         TosResponse res = roundTrip(req, HttpStatus.OK);
-        return marshalOutput(res.getInputStream(), new TypeReference<ListObjectVersionsOutput>(){})
+        return marshalOutput(res.getInputStream(), new TypeReference<ListObjectVersionsOutput>() {
+        })
                 .setRequestInfo(res.RequestInfo());
     }
 
@@ -634,7 +643,7 @@ public class TOSClient implements TOS{
     }
 
     @Deprecated
-    private static class InnerUploadPartCopyOutput{
+    private static class InnerUploadPartCopyOutput {
         @JsonProperty("ETag")
         String etag;
         @JsonProperty("LastModified")
@@ -648,6 +657,7 @@ public class TOSClient implements TOS{
             return lastModified;
         }
     }
+
     @Override
     public UploadPartCopyOutput uploadPartCopy(String bucket, UploadPartCopyInput input, RequestOptionsBuilder... builders) throws TosException {
         Objects.requireNonNull(input, "UploadPartCopyInput is null");
@@ -660,7 +670,8 @@ public class TOSClient implements TOS{
                 .withHeader(TosHeader.HEADER_COPY_SOURCE_RANGE, copyRange(input.getStartOffset(), input.getPartSize()))
                 .buildRequestWithCopySource(HttpMethod.PUT, input.getSourceBucket(), input.getSourceKey());
         TosResponse res = roundTrip(req, HttpStatus.OK);
-        InnerUploadPartCopyOutput out = marshalOutput(res.getInputStream(), new TypeReference<InnerUploadPartCopyOutput>(){});
+        InnerUploadPartCopyOutput out = marshalOutput(res.getInputStream(), new TypeReference<InnerUploadPartCopyOutput>() {
+        });
         return new UploadPartCopyOutput().setRequestInfo(res.RequestInfo())
                 .setVersionID(res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_VERSIONID))
                 .setSourceVersionID(res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_COPY_SOURCE_VERSION_ID))
@@ -670,11 +681,12 @@ public class TOSClient implements TOS{
                 .setCrc64(res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_CRC64));
     }
 
-    private CopyObjectOutput copyObject(String dstBucket, String dstObject, String srcBucket, String srcObject, RequestOptionsBuilder...builders) throws TosException {
+    private CopyObjectOutput copyObject(String dstBucket, String dstObject, String srcBucket, String srcObject, RequestOptionsBuilder... builders) throws TosException {
         TosRequest req = this.newBuilder(dstBucket, dstObject, builders)
                 .buildRequestWithCopySource(HttpMethod.PUT, srcBucket, srcObject);
         TosResponse res = this.roundTrip(req, HttpStatus.OK);
-        return marshalOutput(res.getInputStream(), new TypeReference<CopyObjectOutput>(){})
+        return marshalOutput(res.getInputStream(), new TypeReference<CopyObjectOutput>() {
+        })
                 .setRequestInfo(res.RequestInfo())
                 .setVersionID(res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_VERSIONID))
                 .setSourceVersionID(res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_COPY_SOURCE_VERSION_ID))
@@ -721,7 +733,8 @@ public class TOSClient implements TOS{
                 .withQuery("acl", "")
                 .buildRequest(HttpMethod.GET, null);
         TosResponse res = roundTrip(req, HttpStatus.OK);
-        return marshalOutput(res.getInputStream(), new TypeReference<GetObjectAclOutput>(){})
+        return marshalOutput(res.getInputStream(), new TypeReference<GetObjectAclOutput>() {
+        })
                 .setRequestInfo(res.RequestInfo()).setVersionId(res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_VERSIONID));
     }
 
@@ -735,7 +748,8 @@ public class TOSClient implements TOS{
         TosRequest req = rb.buildRequest(HttpMethod.POST, null);
         TosResponse res = roundTrip(req, HttpStatus.OK);
         multipartUpload upload = marshalOutput(res.getInputStream(),
-                new TypeReference<multipartUpload>(){});
+                new TypeReference<multipartUpload>() {
+                });
         return new CreateMultipartUploadOutput().setRequestInfo(res.RequestInfo())
                 .setBucket(upload.getBucket())
                 .setKey(upload.getKey())
@@ -774,7 +788,8 @@ public class TOSClient implements TOS{
                 .buildRequest(HttpMethod.POST, null).setData(data);
         TosResponse res = roundTrip(req, HttpStatus.OK);
         CompleteMultipartUploadOutput output = PayloadConverter.parsePayload(
-                res.getInputStream(), new TypeReference<CompleteMultipartUploadOutput>(){});
+                res.getInputStream(), new TypeReference<CompleteMultipartUploadOutput>() {
+                });
         return output.setRequestInfo(res.RequestInfo())
                 .setVersionID(res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_VERSIONID))
                 .setCrc64(res.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_CRC64));
@@ -807,7 +822,8 @@ public class TOSClient implements TOS{
                 .withQuery("part-number-marker", String.valueOf(input.getPartNumberMarker()))
                 .buildRequest(HttpMethod.GET, null);
         TosResponse res = roundTrip(req, HttpStatus.OK);
-        return marshalOutput(res.getInputStream(), new TypeReference<ListUploadedPartsOutput>(){})
+        return marshalOutput(res.getInputStream(), new TypeReference<ListUploadedPartsOutput>() {
+        })
                 .setRequestInfo(res.RequestInfo());
     }
 
@@ -824,12 +840,13 @@ public class TOSClient implements TOS{
                 .withQuery("max-uploads", String.valueOf(input.getMaxUploads()))
                 .buildRequest(HttpMethod.GET, null);
         TosResponse res = roundTrip(req, HttpStatus.OK);
-        return marshalOutput(res.getInputStream(), new TypeReference<ListMultipartUploadsOutput>(){})
+        return marshalOutput(res.getInputStream(), new TypeReference<ListMultipartUploadsOutput>() {
+        })
                 .setRequestInfo(res.RequestInfo());
     }
 
     @Override
-    public String preSignedURL(String httpMethod, String bucket, String objectKey, Duration ttl, RequestOptionsBuilder...builders) throws TosException{
+    public String preSignedURL(String httpMethod, String bucket, String objectKey, Duration ttl, RequestOptionsBuilder... builders) throws TosException {
         isValidBucketName(bucket);
         isValidKey(objectKey);
         return newBuilder(bucket, objectKey, builders).preSignedURL(httpMethod, ttl);
@@ -848,11 +865,11 @@ public class TOSClient implements TOS{
 //        }
 //        return new TosMarshalResult(dataMD5, data);
 //    }
-    
-    private <T> T marshalOutput(InputStream reader, TypeReference<T> valueTypeRef) throws TosException{
-        try{
+
+    private <T> T marshalOutput(InputStream reader, TypeReference<T> valueTypeRef) throws TosException {
+        try {
             return TosUtils.getJsonMapper().readValue(reader, valueTypeRef);
-        } catch (IOException e){
+        } catch (IOException e) {
             throw new TosClientException("Marshal Output Exception", e);
         }
     }
@@ -861,12 +878,12 @@ public class TOSClient implements TOS{
         String cr = "";
         if (startOffset != 0) {
             if (partSize != 0) {
-                cr = String.format("bytes=%d-%d", startOffset, startOffset+partSize-1);
+                cr = String.format("bytes=%d-%d", startOffset, startOffset + partSize - 1);
             } else {
                 cr = String.format("bytes=%d-", startOffset);
             }
-        } else if (partSize != 0){
-            cr = String.format("bytes=0-%d", partSize-1);
+        } else if (partSize != 0) {
+            cr = String.format("bytes=0-%d", partSize - 1);
         }
         return cr;
     }
@@ -877,29 +894,29 @@ public class TOSClient implements TOS{
         }
         char[] cn = name.toCharArray();
         for (char c : cn) {
-            if (!(('a' <= c && c <= 'z') || ('0' <= c && c <= '9') || c == '-')){
+            if (!(('a' <= c && c <= 'z') || ('0' <= c && c <= '9') || c == '-')) {
                 throw new IllegalArgumentException("tos: bucket name can consist only of lowercase letters, numbers, and '-' ");
             }
         }
-        if (cn[0] == '-' || cn[name.length()-1] == '-'){
+        if (cn[0] == '-' || cn[name.length() - 1] == '-') {
             throw new IllegalArgumentException("tos: bucket name must begin and end with a letter or number");
         }
     }
 
-    static void isValidNames(String bucket, String key, String ...keys){
+    static void isValidNames(String bucket, String key, String... keys) {
         isValidBucketName(bucket);
         isValidKey(key);
         isValidKeySet(keys);
     }
 
-    private static void isValidKey(String key){
+    private static void isValidKey(String key) {
         if (StringUtils.isEmpty(key)) {
             throw new IllegalArgumentException("tos: object name is empty");
         }
     }
 
-    private static void isValidKeySet(String ...keys) {
-        for (String k: keys) {
+    private static void isValidKeySet(String... keys) {
+        for (String k : keys) {
             isValidKey(k);
         }
     }

@@ -16,12 +16,12 @@ public class PayloadConverter {
     public static TosMarshalResult serializePayloadAndComputeMD5(Object input) throws TosClientException {
         byte[] content;
         String contentMD5;
-        try{
+        try {
             content = TosUtils.getJsonMapper().setSerializationInclusion(JsonInclude.Include.NON_NULL).writeValueAsBytes(input);
             MessageDigest md = MessageDigest.getInstance("MD5");
             byte[] bytes = md.digest(content);
             contentMD5 = new String(Base64.encodeBase64(bytes));
-        } catch (JsonProcessingException | NoSuchAlgorithmException e){
+        } catch (JsonProcessingException | NoSuchAlgorithmException e) {
             throw new TosClientException("tos: unable to do serialization", e);
         }
         return new TosMarshalResult(contentMD5, content);
@@ -29,26 +29,26 @@ public class PayloadConverter {
 
     public static TosMarshalResult serializePayload(Object input) throws TosClientException {
         byte[] content;
-        try{
+        try {
             content = TosUtils.getJsonMapper().setSerializationInclusion(JsonInclude.Include.NON_NULL).writeValueAsBytes(input);
-        } catch (JsonProcessingException e){
+        } catch (JsonProcessingException e) {
             throw new TosClientException("tos: unable to do serialization", e);
         }
         return new TosMarshalResult("", content);
     }
 
     public static <T> T parsePayload(InputStream reader, TypeReference<T> valueTypeRef) throws TosClientException {
-        try{
+        try {
             return TosUtils.getJsonMapper().readValue(reader, valueTypeRef);
-        } catch (IOException e){
+        } catch (IOException e) {
             throw new TosClientException("tos: unable to do deserialization", e);
         }
     }
 
     public static <T> T parsePayload(String reader, TypeReference<T> valueTypeRef) throws TosClientException {
-        try{
+        try {
             return TosUtils.getJsonMapper().readValue(reader, valueTypeRef);
-        } catch (IOException e){
+        } catch (IOException e) {
             throw new TosClientException("tos: unable to do deserialization of " + reader, e);
         }
     }

@@ -80,7 +80,7 @@ public class TosFileRequestHandler {
             input.getGetObjectInputV2().setRequestDate(input.getRequestDate());
             input.getGetObjectInputV2().setRequestHost(input.getRequestHost());
         }
-        try(GetObjectV2Output output = objectHandler.getObject(input.getGetObjectInputV2())){
+        try (GetObjectV2Output output = objectHandler.getObject(input.getGetObjectInputV2())) {
             String filePath = getFilePath(input);
             String newFilePath = FileUtils.parseFilePath(filePath, input.getKey());
             if (StringUtils.isEmpty(newFilePath)) {
@@ -90,9 +90,9 @@ public class TosFileRequestHandler {
             File srcFile = new File(newFilePath);
             File tmpFile = new File(newFilePath + Consts.TEMP_FILE_SUFFIX + "." + TosUtils.genUuid());
             if (output.getContent() != null) {
-                try(FileOutputStream writer = new FileOutputStream(tmpFile);
-                    InputStream inputStream = this.enableCrcCheck ?
-                            new CheckedInputStream(output.getContent(), new CRC64Checksum()) : output.getContent()) {
+                try (FileOutputStream writer = new FileOutputStream(tmpFile);
+                     InputStream inputStream = this.enableCrcCheck ?
+                             new CheckedInputStream(output.getContent(), new CRC64Checksum()) : output.getContent()) {
                     int once = 0;
                     byte[] buffer = new byte[4096];
                     while ((once = inputStream.read(buffer)) > 0) {
@@ -102,13 +102,13 @@ public class TosFileRequestHandler {
                     throw new TosClientException("tos: write data to local file failed", e);
                 }
             } else {
-                try{
+                try {
                     tmpFile.createNewFile();
                 } catch (IOException e) {
                     throw new TosClientException("tos: create new local file failed", e);
                 }
             }
-            if (!tmpFile.renameTo(srcFile)) {
+            if (!FileUtils.renameTo(tmpFile, srcFile, input.isForceOverwrite())) {
                 throw new TosClientException("tos: move temp file to dst file failed, src: " + tmpFile.getPath()
                         + ", dst: " + srcFile.getPath(), null);
             }
