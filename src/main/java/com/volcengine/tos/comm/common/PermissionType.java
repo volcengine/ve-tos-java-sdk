@@ -9,6 +9,7 @@ public enum PermissionType {
     PERMISSION_READ_ACP("READ_ACP"),
     PERMISSION_WRITE_ACP("WRITE_ACP"),
     PERMISSION_FULL_CONTROL("FULL_CONTROL"),
+    PERMISSION_READ_NON_LIST("READ_NON_LIST"),
     @JsonEnumDefaultValue
     PERMISSION_UNKNOWN("UNKNOWN");
     private String permission;

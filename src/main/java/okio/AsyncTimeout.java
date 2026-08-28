@@ -79,7 +79,7 @@ public class AsyncTimeout extends Timeout {
         if (!this.inQueue.compareAndSet(false, true)) {
             throw new IllegalStateException("Unbalanced enter/exit");
         }
-        this.slot.startWatch();
+//        this.slot.startWatch();
         long now = System.nanoTime();
         if (timeoutNanos != 0 && hasDeadline) {
             // Compute the earliest event; either timeout or deadline. Because nanoTime can wrap
@@ -94,29 +94,8 @@ public class AsyncTimeout extends Timeout {
         }
 
         AsyncTimeout head = this.slot.getHead();
-//        this.slot.acquireWriteLock();
-//        try {
-//            // Insert the node in sorted order.
-//            long remainingNanos = this.remainingNanos(now);
-//            AsyncTimeout prev = head;
-//            for (; ; ) {
-//                AsyncTimeout next = prev.next.get();
-//                if (next == null || remainingNanos < next.remainingNanos(now)) {
-//                    this.next.set(next);
-//                    prev.next.set(this);
-//                    if (prev == head) {
-//                        // Wake up the watchdog when inserting at the front.
-//                        this.slot.wakeUp();
-//                    }
-//                    return;
-//                }
-//                prev = next;
-//            }
-//        } finally {
-//            this.slot.releaseWriteLock();
-//        }
-
         this.slot.acquireReadLock();
+        this.slot.startWatch();
         boolean released = false;
         try {
             for (; ; ) {
@@ -334,7 +313,7 @@ public class AsyncTimeout extends Timeout {
             this.watchStarted = new AtomicBoolean(false);
             this.rwLock = new ReentrantReadWriteLock();
             this.cond = this.rwLock.writeLock().newCondition();
-            this.head = new AsyncTimeout();
+            this.head = new AsyncTimeout(this);
             this.startWatchThread = startWatchThread;
         }
 
@@ -372,7 +351,7 @@ public class AsyncTimeout extends Timeout {
             }
 
             if (this.watchStarted.compareAndSet(false, true)) {
-                Thread t = new Thread(new Watchdog(this));
+                Thread t = new Thread(new Watchdog(this),"Watchdog");
                 t.setDaemon(true);
                 t.start();
             }
@@ -453,6 +432,16 @@ public class AsyncTimeout extends Timeout {
                     AsyncTimeout timedOut = this.slot.awaitTimeout();
                     // The queue is completely empty.
                     if (timedOut == this.slot.getHead()) {
+
+                        this.slot.acquireWriteLock();
+                        try {
+                            if (this.slot.getHead().next.get() == null && this.slot.watchStarted.compareAndSet(true, false)) {
+                                break;
+                            }
+                        }
+                        finally {
+                            this.slot.releaseWriteLock();
+                        }
                         continue;
                     }
                     // Close the timed out node, if one was found.

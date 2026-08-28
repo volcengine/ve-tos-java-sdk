@@ -12,19 +12,26 @@ public class Consts {
 
     // boe
     // bucket with multi-version enabled
+    public static final String accountId = System.getenv("TEST_ACCOUNT_ID");
     public static final String bucket = System.getenv("TEST_BUCKET");
     // bucket with multi-version disabled
     public static final String bucketMultiVersionDisabled = System.getenv("TEST_BUCKET_VERSIONING_DISABLED");
     // bucket for multi-version test
     public static final String bucketForVersioning = System.getenv("TEST_BUCKET_VERSIONING");
     public static final String endpoint = System.getenv("TEST_ENDPOINT");
+    public static final String controlEndpoint = System.getenv("TEST_CONTROL_ENDPOINT");
     public static final String region = System.getenv("TEST_REGION");
     public static final String accessKey = System.getenv("TEST_ACCESS_KEY");
     public static final String secretKey = System.getenv("TEST_SECRET_KEY");
     public static final String bucketCopy = System.getenv("TEST_BUCKET_COPY");
+    public static final String hnsTrashBucket = System.getenv("TEST_HNS_TRASH_BUCKET");
     public static final String region2 = System.getenv("TEST_REGION2");
     public static final String endpoint2 = System.getenv("TEST_ENDPOINT2");
     public static final String bucketInRegion2 = System.getenv("TEST_BUCKET2");
+    public static final String kafkaInstanceId = System.getenv("TEST_KAFKA_INSTANCE_ID");
+    public static final String kafkaTopic = System.getenv("TEST_KAFKA_TOPIC");
+    public static final String kafkaUser = System.getenv("TEST_KAFKA_USER");
+    public static final String notificationRole = System.getenv("TEST_NOTIFICATION_ROLE");
 
     // for internal package uts
     public static final String internalBucketCrudPrefix = "internal-bucket-crud-test-prefix-";

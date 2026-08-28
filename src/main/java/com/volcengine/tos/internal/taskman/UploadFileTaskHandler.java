@@ -117,7 +117,9 @@ public class UploadFileTaskHandler {
                 .setBucket(this.checkpoint.getBucket())
                 .setKey(this.checkpoint.getKey())
                 .setUploadID(this.checkpoint.getUploadID())
-                .setUploadedParts(uploadedParts);
+                .setUploadedParts(uploadedParts)
+                .setCallback(this.checkpoint.getCallback())
+                .setCallbackVar(this.checkpoint.getCallbackVar());
         CompleteMultipartUploadV2Output comp;
         UploadEvent event = new UploadEvent().setUploadID(this.checkpoint.getUploadID())
                 .setBucket(this.checkpoint.getBucket())
@@ -155,7 +157,8 @@ public class UploadFileTaskHandler {
                 .setVersionID(comp.getVersionID())
                 .setSsecAlgorithm(checkpoint.getSseAlgorithm())
                 .setSsecKeyMD5(checkpoint.getSseKeyMd5())
-                .setEncodingType(checkpoint.getEncodingType());
+                .setEncodingType(checkpoint.getEncodingType())
+                .setCallbackResult(comp.getCallbackResult());
     }
 
     private boolean readyForComplete() {
@@ -261,7 +264,8 @@ public class UploadFileTaskHandler {
                 .setBucket(input.getBucket())
                 .setKey(input.getKey())
                 .setUploadPartInfos(getPartsFromFile(info.getFileSize(), input.getPartSize()))
-                .setFilePath(info.getFilePath()).setFileSize(info.getFileSize()).setLastModified(info.getLastModified());
+                .setFilePath(info.getFilePath()).setFileSize(info.getFileSize()).setLastModified(info.getLastModified())
+                .setCallback(input.getCallback()).setCallbackVar(input.getCallbackVar());
         CreateMultipartUploadOutput output;
         UploadEvent createMultipart = new UploadEvent()
                 .setBucket(input.getBucket())

@@ -26,6 +26,11 @@ public class LifecycleRule {
     private AbortInCompleteMultipartUpload abortInCompleteMultipartUpload;
     @JsonProperty("Filter")
     private LifecycleRuleFilter filter;
+    @JsonProperty("AccessTimeTransitions")
+    private List<AccessTimeTransition> accessTimeTransitions;
+    @JsonProperty("NoncurrentVersionAccessTimeTransitions")
+    private List<NonCurrentVersionAccessTimeTransition> nonCurrentVersionAccessTimeTransitions;
+
 
     public String getId() {
         return id;
@@ -117,6 +122,24 @@ public class LifecycleRule {
         return this;
     }
 
+    public List<AccessTimeTransition> getAccessTimeTransitions() {
+        return accessTimeTransitions;
+    }
+
+    public LifecycleRule setAccessTimeTransitions(List<AccessTimeTransition> accessTimeTransitions) {
+        this.accessTimeTransitions = accessTimeTransitions;
+        return this;
+    }
+
+    public List<NonCurrentVersionAccessTimeTransition> getNonCurrentVersionAccessTimeTransitions() {
+        return nonCurrentVersionAccessTimeTransitions;
+    }
+
+    public LifecycleRule setNonCurrentVersionAccessTimeTransitions(List<NonCurrentVersionAccessTimeTransition> nonCurrentVersionAccessTimeTransitions) {
+        this.nonCurrentVersionAccessTimeTransitions = nonCurrentVersionAccessTimeTransitions;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "LifecycleRule{" +
@@ -130,6 +153,8 @@ public class LifecycleRule {
                 ", tags=" + tags +
                 ", abortInCompleteMultipartUpload=" + abortInCompleteMultipartUpload +
                 ", filter=" + filter +
+                ", accessTimeTransitions=" + accessTimeTransitions +
+                ", nonCurrentVersionAccessTimeTransitions=" + nonCurrentVersionAccessTimeTransitions +
                 '}';
     }
 
@@ -148,6 +173,8 @@ public class LifecycleRule {
         private List<Tag> tags;
         private AbortInCompleteMultipartUpload abortInCompleteMultipartUpload;
         private LifecycleRuleFilter filter;
+        private List<AccessTimeTransition> accessTimeTransitions;
+        private List<NonCurrentVersionAccessTimeTransition> nonCurrentVersionAccessTimeTransitions;
 
         private LifecycleRuleBuilder() {
         }
@@ -202,6 +229,16 @@ public class LifecycleRule {
             return this;
         }
 
+        public LifecycleRuleBuilder accessTimeTransitions(List<AccessTimeTransition> accessTimeTransitions) {
+            this.accessTimeTransitions = accessTimeTransitions;
+            return this;
+        }
+
+        public LifecycleRuleBuilder NoncurrentVersionAccessTimeTransitions(List<NonCurrentVersionAccessTimeTransition> nonCurrentVersionAccessTimeTransitions) {
+            this.nonCurrentVersionAccessTimeTransitions = nonCurrentVersionAccessTimeTransitions;
+            return this;
+        }
+
         public LifecycleRule build() {
             LifecycleRule lifecycleRule = new LifecycleRule();
             lifecycleRule.setId(id);
@@ -214,6 +251,8 @@ public class LifecycleRule {
             lifecycleRule.setTags(tags);
             lifecycleRule.setAbortInCompleteMultipartUpload(abortInCompleteMultipartUpload);
             lifecycleRule.setFilter(filter);
+            lifecycleRule.setAccessTimeTransitions(accessTimeTransitions);
+            lifecycleRule.setNonCurrentVersionAccessTimeTransitions(nonCurrentVersionAccessTimeTransitions);
             return lifecycleRule;
         }
     }
