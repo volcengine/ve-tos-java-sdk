@@ -15,6 +15,9 @@ public class RestoreObjectInput extends GenericInput {
     private int days;
     @JsonProperty("RestoreJobParameters")
     private RestoreJobParameters restoreJobParameters;
+    @JsonIgnore
+    private String notificationCustomParameters;
+
 
     public String getBucket() {
         return bucket;
@@ -61,6 +64,15 @@ public class RestoreObjectInput extends GenericInput {
         return this;
     }
 
+    public String getNotificationCustomParameters() {
+        return notificationCustomParameters;
+    }
+
+    public RestoreObjectInput setNotificationCustomParameters(String notificationCustomParameters) {
+        this.notificationCustomParameters = notificationCustomParameters;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "RestoreObjectInput{" +
@@ -69,6 +81,7 @@ public class RestoreObjectInput extends GenericInput {
                 ", versionID='" + versionID + '\'' +
                 ", days=" + days +
                 ", restoreJobParameters=" + restoreJobParameters +
+                ", notificationCustomParameters='" + notificationCustomParameters + '\'' +
                 '}';
     }
 
@@ -82,6 +95,7 @@ public class RestoreObjectInput extends GenericInput {
         private String versionID;
         private int days;
         private RestoreJobParameters restoreJobParameters;
+        private String notificationCustomParameters;
 
         private RestoreObjectInputBuilder() {
         }
@@ -111,6 +125,11 @@ public class RestoreObjectInput extends GenericInput {
             return this;
         }
 
+        public RestoreObjectInputBuilder notificationCustomParameters(String notificationCustomParameters) {
+            this.notificationCustomParameters = notificationCustomParameters;
+            return this;
+        }
+
         public RestoreObjectInput build() {
             RestoreObjectInput restoreObjectInput = new RestoreObjectInput();
             restoreObjectInput.setBucket(bucket);
@@ -118,6 +137,7 @@ public class RestoreObjectInput extends GenericInput {
             restoreObjectInput.setVersionID(versionID);
             restoreObjectInput.setDays(days);
             restoreObjectInput.setRestoreJobParameters(restoreJobParameters);
+            restoreObjectInput.setNotificationCustomParameters(notificationCustomParameters);
             return restoreObjectInput;
         }
     }

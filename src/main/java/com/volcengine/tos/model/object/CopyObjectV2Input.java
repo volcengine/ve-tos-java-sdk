@@ -77,6 +77,7 @@ public class CopyObjectV2Input extends GenericInput {
     private String tagging;
     private TaggingDirectiveType taggingDirective;
     private long objectExpires = -1;
+    private String notificationCustomParameters;
 
     private Map<String, String> headers;
 
@@ -136,6 +137,7 @@ public class CopyObjectV2Input extends GenericInput {
         if (objectExpires >= 0) {
             withHeader(TosHeader.HEADER_OBJECT_EXPIRES, Long.toString(objectExpires));
         }
+        withHeader(TosHeader.HEADER_NOTIFICATION_CUSTOM_PARAMETERS, notificationCustomParameters);
         return headers;
     }
 
@@ -143,7 +145,7 @@ public class CopyObjectV2Input extends GenericInput {
         if (this.headers == null) {
             this.headers = new HashMap<>();
         }
-        if(value != null && value.length() != 0){
+        if (value != null && value.length() != 0) {
             this.headers.put(key, value);
         }
     }
@@ -295,6 +297,15 @@ public class CopyObjectV2Input extends GenericInput {
         return this;
     }
 
+    public String getNotificationCustomParameters() {
+        return notificationCustomParameters;
+    }
+
+    public CopyObjectV2Input setNotificationCustomParameters(String notificationCustomParameters) {
+        this.notificationCustomParameters = notificationCustomParameters;
+        return this;
+    }
+
     public static CopyObjectV2InputBuilder builder() {
         return new CopyObjectV2InputBuilder();
     }
@@ -344,6 +355,7 @@ public class CopyObjectV2Input extends GenericInput {
         private String tagging;
         private TaggingDirectiveType taggingDirective;
         private long objectExpires = -1;
+        private String notificationCustomParameters;
 
         private CopyObjectV2InputBuilder() {
         }
@@ -443,6 +455,11 @@ public class CopyObjectV2Input extends GenericInput {
             return this;
         }
 
+        public CopyObjectV2InputBuilder notificationCustomParameters(String notificationCustomParameters) {
+            this.notificationCustomParameters = notificationCustomParameters;
+            return this;
+        }
+
         public CopyObjectV2Input build() {
             CopyObjectV2Input copyObjectV2Input = new CopyObjectV2Input();
             copyObjectV2Input.setBucket(bucket);
@@ -464,6 +481,7 @@ public class CopyObjectV2Input extends GenericInput {
             copyObjectV2Input.setTagging(tagging);
             copyObjectV2Input.setTaggingDirective(taggingDirective);
             copyObjectV2Input.setObjectExpires(objectExpires);
+            copyObjectV2Input.setNotificationCustomParameters(notificationCustomParameters);
             return copyObjectV2Input;
         }
     }

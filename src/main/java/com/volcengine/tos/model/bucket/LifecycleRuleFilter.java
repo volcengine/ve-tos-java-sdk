@@ -3,6 +3,8 @@ package com.volcengine.tos.model.bucket;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.volcengine.tos.comm.common.StatusType;
 
+import java.util.List;
+
 public class LifecycleRuleFilter {
     @JsonProperty("ObjectSizeGreaterThan")
     private int objectSizeGreaterThan;
@@ -12,6 +14,8 @@ public class LifecycleRuleFilter {
     private int objectSizeLessThan;
     @JsonProperty("LessThanIncludeEqual")
     private StatusType LessThanIncludeEqual;
+    @JsonProperty("Not")
+    private List<BucketLifecycleNotFilter> not;
 
     public int getObjectSizeGreaterThan() {
         return objectSizeGreaterThan;
@@ -46,6 +50,15 @@ public class LifecycleRuleFilter {
 
     public LifecycleRuleFilter setLessThanIncludeEqual(StatusType lessThanIncludeEqual) {
         LessThanIncludeEqual = lessThanIncludeEqual;
+        return this;
+    }
+
+    public List<BucketLifecycleNotFilter> getNot() {
+        return not;
+    }
+
+    public LifecycleRuleFilter setNot(List<BucketLifecycleNotFilter> not) {
+        this.not = not;
         return this;
     }
 }
