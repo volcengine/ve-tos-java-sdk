@@ -28,6 +28,8 @@ public class PutBucketACLInput extends GenericInput {
     private Owner owner;
     @JsonProperty("Grants")
     private List<GrantV2> grants;
+    @JsonProperty("BucketAclDelivered")
+    private boolean bucketAclDelivered;
 
     public String getBucket() {
         return bucket;
@@ -110,6 +112,15 @@ public class PutBucketACLInput extends GenericInput {
         return this;
     }
 
+    public boolean isBucketAclDelivered() {
+        return bucketAclDelivered;
+    }
+
+    public PutBucketACLInput setBucketAclDelivered(boolean bucketAclDelivered) {
+        this.bucketAclDelivered = bucketAclDelivered;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "PutBucketACLInput{" +
@@ -120,8 +131,9 @@ public class PutBucketACLInput extends GenericInput {
                 ", grantReadAcp='" + grantReadAcp + '\'' +
                 ", grantWrite='" + grantWrite + '\'' +
                 ", grantWriteAcp='" + grantWriteAcp + '\'' +
-                ", owner=" + owner +
-                ", grants=" + grants +
+                ", owner=" + owner + '\'' +
+                ", grants=" + grants + '\'' +
+                ", bucketAclDelivered=" + bucketAclDelivered +
                 '}';
     }
 
@@ -139,6 +151,7 @@ public class PutBucketACLInput extends GenericInput {
         private String grantWriteAcp;
         private Owner owner;
         private List<GrantV2> grants;
+        private boolean bucketAclDelivered;
 
         private PutBucketACLInputBuilder() {
         }
@@ -188,6 +201,11 @@ public class PutBucketACLInput extends GenericInput {
             return this;
         }
 
+        public PutBucketACLInputBuilder bucketAclDelivered(boolean bucketAclDelivered) {
+            this.bucketAclDelivered = bucketAclDelivered;
+            return this;
+        }
+
         public PutBucketACLInput build() {
             PutBucketACLInput putBucketACLInput = new PutBucketACLInput();
             putBucketACLInput.setBucket(bucket);
@@ -199,6 +217,7 @@ public class PutBucketACLInput extends GenericInput {
             putBucketACLInput.setGrantWriteAcp(grantWriteAcp);
             putBucketACLInput.setOwner(owner);
             putBucketACLInput.setGrants(grants);
+            putBucketACLInput.setBucketAclDelivered(bucketAclDelivered);
             return putBucketACLInput;
         }
     }

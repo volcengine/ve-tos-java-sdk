@@ -4,7 +4,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.volcengine.tos.model.acl.GrantV2;
 import com.volcengine.tos.model.acl.Owner;
 
-import java.util.Arrays;
 import java.util.List;
 
 public class ObjectAclRulesV2 {
@@ -14,6 +13,8 @@ public class ObjectAclRulesV2 {
     private List<GrantV2> grants;
     @JsonProperty("BucketOwnerEntrusted")
     private boolean bucketOwnerEntrusted;
+    @JsonProperty("IsDefault")
+    private boolean isdefault;
 
     public Owner getOwner() {
         return owner;
@@ -42,12 +43,22 @@ public class ObjectAclRulesV2 {
         return this;
     }
 
+    public boolean isIsdefault() {
+        return isdefault;
+    }
+
+    public ObjectAclRulesV2 setIsdefault(boolean isdefault) {
+        this.isdefault = isdefault;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "ObjectAclRulesV2{" +
                 "owner=" + owner +
                 ", grants=" + grants +
                 ", bucketOwnerEntrusted=" + bucketOwnerEntrusted +
+                ", isDefault=" + isdefault +
                 '}';
     }
 
@@ -59,6 +70,7 @@ public class ObjectAclRulesV2 {
         private Owner owner;
         private List<GrantV2> grants;
         private boolean bucketOwnerEntrusted;
+        private boolean isDefault;
 
         private ObjectAclRulesV2Builder() {
         }
@@ -78,11 +90,17 @@ public class ObjectAclRulesV2 {
             return this;
         }
 
+        public ObjectAclRulesV2Builder isDefault(boolean isDefault) {
+            this.isDefault = isDefault;
+            return this;
+        }
+
         public ObjectAclRulesV2 build() {
             ObjectAclRulesV2 objectAclRulesV2 = new ObjectAclRulesV2();
             objectAclRulesV2.owner = this.owner;
             objectAclRulesV2.grants = this.grants;
             objectAclRulesV2.bucketOwnerEntrusted = this.bucketOwnerEntrusted;
+            objectAclRulesV2.isdefault = this.isDefault;
             return objectAclRulesV2;
         }
     }
