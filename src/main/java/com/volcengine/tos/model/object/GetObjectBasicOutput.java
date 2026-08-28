@@ -22,6 +22,7 @@ public class GetObjectBasicOutput {
     private String contentRange;
     private String etag;
     private String lastModified;
+    private String lastModifiedNs;
     private boolean deleteMarker;
 
     private String ssecAlgorithm;
@@ -47,6 +48,8 @@ public class GetObjectBasicOutput {
     private ReplicationStatusType replicationStatus;
     private boolean isDirectory;
     private int taggingCount;
+    private String expiration;
+    private String storageTier;
 
     public RequestInfo getRequestInfo() {
         return requestInfo;
@@ -71,6 +74,19 @@ public class GetObjectBasicOutput {
 
     public Date getLastModifiedInDate() {
         return DateConverter.rfc1123StringToDate(lastModified);
+    }
+
+    public Date getLastModifyTimestamp() {
+        Date date = DateConverter.rfc1123StringToDate(lastModified);
+        if (date == null || lastModifiedNs == null) {
+            return date;
+        }
+
+        long modifyTimestamp = date.getTime();
+        long nsModifyTimeStamp = Integer.parseInt(lastModifiedNs);
+        modifyTimestamp = modifyTimestamp + nsModifyTimeStamp / 1000 / 1000;
+
+        return new Date(modifyTimestamp);
     }
 
     public boolean isDeleteMarker() {
@@ -169,6 +185,14 @@ public class GetObjectBasicOutput {
         return taggingCount;
     }
 
+    public String getExpiration() {
+        return expiration;
+    }
+
+    public String getStorageTier() {
+        return storageTier;
+    }
+
     public GetObjectBasicOutput parseFromTosResponse(TosResponse response) {
         try {
             this.contentLength = response.getContentLength();
@@ -194,6 +218,7 @@ public class GetObjectBasicOutput {
             }
             this.contentDisposition = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_CONTENT_DISPOSITION);
             this.lastModified = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_LAST_MODIFIED);
+            this.lastModifiedNs = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_LAST_MODIFIED_NS);
             this.cacheControl = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_CACHE_CONTROL);
             this.expires = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_EXPIRES);
             this.etag = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_ETAG);
@@ -212,6 +237,8 @@ public class GetObjectBasicOutput {
             this.contentRange = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_CONTENT_RANGE);
             this.replicationStatus = ReplicationStatusType.parse(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_REPLICATION_STATUS));
             this.isDirectory = Boolean.parseBoolean(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_DIRECTORY));
+            this.expiration = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_EXPIRATION);
+            this.storageTier = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_STORAGE_TIER);
             String taggingCount = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_TAGGING_COUNT);
             if (StringUtils.isNotEmpty(taggingCount)) {
                 this.taggingCount = Integer.parseInt(taggingCount);
@@ -278,7 +305,8 @@ public class GetObjectBasicOutput {
                 "requestInfo=" + requestInfo +
                 ", contentRange='" + contentRange + '\'' +
                 ", etag='" + etag + '\'' +
-                ", lastModified=" + lastModified +
+                ", lastModified='" + lastModified + '\'' +
+                ", lastModifiedNs='" + lastModifiedNs + '\'' +
                 ", deleteMarker=" + deleteMarker +
                 ", ssecAlgorithm='" + ssecAlgorithm + '\'' +
                 ", ssecKeyMD5='" + ssecKeyMD5 + '\'' +
@@ -287,17 +315,23 @@ public class GetObjectBasicOutput {
                 ", versionID='" + versionID + '\'' +
                 ", websiteRedirectLocation='" + websiteRedirectLocation + '\'' +
                 ", objectType='" + objectType + '\'' +
-                ", hashCrc64ecma=" + hashCrc64ecma +
-                ", storageClass=" + storageClass +
-                ", metadata=" + customMetadata +
+                ", hashCrc64ecma='" + hashCrc64ecma + '\'' +
+                ", storageClass='" + storageClass + '\'' +
+                ", customMetadata=" + customMetadata +
+                ", contentLength=" + contentLength +
                 ", cacheControl='" + cacheControl + '\'' +
                 ", contentDisposition='" + contentDisposition + '\'' +
                 ", contentEncoding='" + contentEncoding + '\'' +
                 ", contentLanguage='" + contentLanguage + '\'' +
                 ", contentType='" + contentType + '\'' +
-                ", expires=" + expires + '\'' +
-                ", isDirectory=" + isDirectory + '\'' +
-                ", taggingCount=" + taggingCount + '\'' +
+                ", expires='" + expires + '\'' +
+                ", contentMD5='" + contentMD5 + '\'' +
+                ", restoreInfo=" + restoreInfo +
+                ", replicationStatus=" + replicationStatus +
+                ", isDirectory=" + isDirectory +
+                ", taggingCount=" + taggingCount +
+                ", expiration='" + expiration + '\'' +
+                ", storageTier='" + storageTier + '\'' +
                 '}';
     }
 }

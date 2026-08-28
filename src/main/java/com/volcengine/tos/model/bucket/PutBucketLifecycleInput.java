@@ -14,6 +14,7 @@ public class PutBucketLifecycleInput extends GenericInput {
     @JsonIgnore
     private boolean allowSameActionOverlap;
 
+
     public String getBucket() {
         return bucket;
     }

@@ -12,6 +12,7 @@ public interface TosHeader {
     String HEADER_CONTENT_ENCODING = "Content-Encoding";
     String HEADER_CONTENT_DISPOSITION = "Content-Disposition";
     String HEADER_LAST_MODIFIED = "Last-Modified";
+    String HEADER_LAST_MODIFIED_NS = "X-Tos-Last-Modified-Ns";
     String HEADER_CACHE_CONTROL = "Cache-Control";
     String HEADER_EXPIRES = "Expires";
     String HEADER_ETAG = "ETag";
@@ -37,6 +38,7 @@ public interface TosHeader {
     String HEADER_RAW_CONTENT_LENGTH = "x-tos-raw-content-length";
     String HEADER_VERSIONID = "X-Tos-Version-Id";
     String HEADER_DELETE_MARKER = "X-Tos-Delete-Marker";
+    String HEADER_TRASH_PATH = "X-Tos-Trash-Path";
     String HEADER_STORAGE_CLASS = "X-Tos-Storage-Class";
     String HEADER_AZ_REDUNDANCY = "X-Tos-Az-Redundancy";
     String HEADER_RESTORE = "X-Tos-Restore";
@@ -99,9 +101,15 @@ public interface TosHeader {
     String HEADER_NEXT_MODIFY_OFFSET = "x-tos-next-modify-offset";
     String HEADER_DIRECTORY = "x-tos-directory";
     String HEADER_TAGGING_COUNT = "x-tos-tagging-count";
+    String HEADER_MODIFY_TIMESTAMP = "x-tos-modify-timestamp";
+    String HEADER_MODIFY_TIMESTAMP_NS = "x-tos-modify-timestamp-ns";
+    String HEADER_ACCOUNT_ID = "x-tos-account-id";
+    String HEADER_EXPIRATION = "X-Tos-Expiration";
+    String HEADER_STORAGE_TIER = "x-tos-storage-tier";
+    String HEADER_NOTIFICATION_CUSTOM_PARAMETERS = "x-tos-notification-custom-parameters";
 
     /**
-     *  only for getObject() method queries
+     * only for getObject() method queries
      */
     String QUERY_RESPONSE_CONTENT_TYPE = "response-content-type";
     String QUERY_RESPONSE_CONTENT_LANGUAGE = "response-content-language";

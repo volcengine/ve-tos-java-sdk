@@ -17,6 +17,8 @@ public class TosRequestFactory {
     private String scheme;
     private String host;
     private int port;
+    private String controlScheme;
+    private String controlHost;
     private int urlMode = URL_MODE_DEFAULT;
     private boolean isCustomDomain;
     private boolean disableEncodingMeta;
@@ -43,6 +45,12 @@ public class TosRequestFactory {
         }
     }
 
+    private void parseControlEndpoint(String controlEndpoint) {
+        List<String> schemeAndHost = ParamsChecker.parseFromEndpoint(controlEndpoint);
+        this.controlScheme = schemeAndHost.get(0);
+        this.controlHost = schemeAndHost.get(1);
+    }
+
     public Signer getSigner() {
         return signer;
     }
@@ -54,6 +62,14 @@ public class TosRequestFactory {
 
     public TosRequestFactory setEndpoint(String endpoint) {
         parseEndpoint(endpoint);
+        return this;
+    }
+
+    public TosRequestFactory setControlEndpoint(String controlEndpoint) {
+        if (StringUtils.isNotEmpty(controlEndpoint)) {
+            parseControlEndpoint(controlEndpoint);
+        }
+
         return this;
     }
 
@@ -84,6 +100,24 @@ public class TosRequestFactory {
         return this;
     }
 
+    public String getControlScheme() {
+        return controlScheme;
+    }
+
+    public TosRequestFactory setControlScheme(String controlScheme) {
+        this.controlScheme = controlScheme;
+        return this;
+    }
+
+    public String getControlHost() {
+        return controlHost;
+    }
+
+    public TosRequestFactory setControlHost(String controlHost) {
+        this.controlHost = controlHost;
+        return this;
+    }
+
     public boolean isCustomDomain() {
         return isCustomDomain;
     }
@@ -110,12 +144,20 @@ public class TosRequestFactory {
         return newBuilder(bucket, object, headers).setUrlMode(urlMode).setPort(port);
     }
 
+    public RequestBuilder initVectorReq(String accountId, String bucket, String tableApiPath, Map<String, String> headers) {
+        return newVectorReqBuilder(accountId, bucket, tableApiPath, headers).setUrlMode(URL_MODE_CONTROL_DOMAIN).setPort(port);
+    }
+
+    public RequestBuilder initControlReq(String accountId, String controlApiPath, Map<String, String> headers) {
+        return newControlReqBuilder(accountId, controlApiPath, headers).setUrlMode(URL_MODE_CONTROL_DOMAIN).setPort(port);
+    }
+
     public TosRequest build(RequestBuilder builder, String method, InputStream content) {
         return builder.buildRequest(method, content);
     }
 
-    public TosRequest build(RequestBuilder builder, String method, long ttl) {
-        return builder.buildPreSignedUrlRequest(method, ttl);
+    public TosRequest build(RequestBuilder builder, String method, boolean isSignedAllHeaders, long ttl) {
+        return builder.buildPreSignedUrlRequest(method, isSignedAllHeaders, ttl);
     }
 
     public TosRequest buildWithCopy(RequestBuilder builder, String method, String srcBucket, String srcObject) {
@@ -138,5 +180,42 @@ public class TosRequestFactory {
             headers.forEach(rb::withHeader);
         }
         return rb;
+    }
+
+    private RequestBuilder newVectorReqBuilder(String accountId, String bucket, String vectorApiPath, Map<String, String> headers) {
+        String vectorHost;
+        if (StringUtils.isNotEmpty(accountId) && StringUtils.isNotEmpty(bucket)) {
+            vectorHost = bucket + "-" + accountId + "." + this.host;
+        } else  {
+            vectorHost = this.host;
+        };
+        RequestBuilder rb = new RequestBuilder(vectorApiPath, this.scheme, vectorHost, this.signer);
+        if (StringUtils.isEmpty(this.userAgent)) {
+            rb.withHeader(TosHeader.HEADER_USER_AGENT, TosUtils.getUserAgent());
+        } else {
+            rb.withHeader(TosHeader.HEADER_USER_AGENT, this.userAgent);
+        }
+        if (headers != null) {
+            headers.forEach(rb::withHeader);
+        }
+        return rb;
+    }
+
+    private RequestBuilder newControlReqBuilder(String accountId, String controlApiPath, Map<String, String> headers) {
+        String controlHost = accountId + "." + this.controlHost;
+        RequestBuilder rb = new RequestBuilder(controlApiPath, this.controlScheme, controlHost, this.signer)
+                .setDisableEncodingMeta(this.disableEncodingMeta);
+        if (StringUtils.isEmpty(this.userAgent)) {
+            rb.withHeader(TosHeader.HEADER_USER_AGENT, TosUtils.getUserAgent());
+        } else {
+            rb.withHeader(TosHeader.HEADER_USER_AGENT, this.userAgent);
+        }
+        rb.withHeader(TosHeader.HEADER_ACCOUNT_ID, accountId);
+
+        if (headers != null) {
+            headers.forEach(rb::withHeader);
+        }
+        return rb;
+
     }
 }

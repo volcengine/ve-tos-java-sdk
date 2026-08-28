@@ -51,6 +51,14 @@ public class SigningUtils {
         return hmacSha256(service, "request".getBytes(StandardCharsets.UTF_8));
     }
 
+    public static byte[] signKey(SignKeyInfo info, String serviceName) {
+        byte[] date = hmacSha256(info.getSk().getBytes(StandardCharsets.UTF_8),
+                info.getDate().getBytes(StandardCharsets.UTF_8));
+        byte[] region = hmacSha256(date, info.getRegion().getBytes(StandardCharsets.UTF_8));
+        byte[] service = hmacSha256(region, serviceName.getBytes(StandardCharsets.UTF_8));
+        return hmacSha256(service, "request".getBytes(StandardCharsets.UTF_8));
+    }
+
     public static byte[] hmacSha256(byte[] key, byte[] value) {
         try {
             Mac hmac = Mac.getInstance("HmacSHA256");

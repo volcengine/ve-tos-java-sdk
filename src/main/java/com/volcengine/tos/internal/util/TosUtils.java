@@ -70,7 +70,7 @@ public class TosUtils {
     }
 
     private static Map<String, List<String>> getInstance() throws TosClientException {
-        if (SUPPORTED_REGION != null){
+        if (SUPPORTED_REGION != null) {
             return SUPPORTED_REGION;
         }
         synchronized (TosUtils.class) {
@@ -113,6 +113,12 @@ public class TosUtils {
         return sb.toString();
     }
 
+    public static void withHeader(Map<String, String> headers, String key, String value) {
+        if (StringUtils.isNotEmpty(value)) {
+            headers.put(key, value);
+        }
+    }
+
     public static String decodeHeader(String str) {
         return tryDecodeValue("", str);
     }
@@ -134,7 +140,7 @@ public class TosUtils {
                         .replace("~", "%7E")
                         .replace("/", "%2F");
             } catch (UnsupportedEncodingException e) {
-                throw new TosClientException("tos: unsupported http header value in key: "+key, e);
+                throw new TosClientException("tos: unsupported http header value in key: " + key, e);
             }
         }
         return encodedValue;
@@ -218,23 +224,23 @@ public class TosUtils {
                 hexCount++;
             }
         }
-        byte[] encoded = new byte[inBytes.length+2*hexCount];
+        byte[] encoded = new byte[inBytes.length + 2 * hexCount];
         for (int i = 0, j = 0; i < inBytes.length; i++) {
             int uintByte = inBytes[i] & 0xFF;
-            if (uintByte == '/'){
+            if (uintByte == '/') {
                 if (encodeSlash) {
                     encoded[j] = '%';
-                    encoded[j+1] = '2';
-                    encoded[j+2] = 'F';
+                    encoded[j + 1] = '2';
+                    encoded[j + 2] = 'F';
                     j += 3;
-                } else{
+                } else {
                     encoded[j] = inBytes[i];
                     j++;
                 }
             } else if (!nonEscape[uintByte]) {
                 encoded[j] = '%';
-                encoded[j+1] = escapeChar[uintByte >> 4];
-                encoded[j+2] = escapeChar[uintByte & 15];
+                encoded[j + 1] = escapeChar[uintByte >> 4];
+                encoded[j + 2] = escapeChar[uintByte & 15];
                 j += 3;
             } else {
                 encoded[j] = inBytes[i];
@@ -257,11 +263,11 @@ public class TosUtils {
         if (backoff > max) {
             backoff = max;
         }
-        backoff *= 1 + jitter*(random.nextDouble(1) * 2 - 1);
+        backoff *= 1 + jitter * (random.nextDouble(1) * 2 - 1);
         if (backoff < 0) {
             return 0;
         }
-        return (long)(backoff * 1000);
+        return (long) (backoff * 1000);
     }
 
     public static String convertInteger(int value) {
