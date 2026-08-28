@@ -17,6 +17,7 @@ public class CreateBucketV2Input extends GenericInput {
     private StorageClassType storageClass;
     private AzRedundancyType azRedundancy;
     private String projectName;
+    private String tagging;
     private BucketType bucketType;
 
     public CreateBucketV2Input() {
@@ -116,6 +117,15 @@ public class CreateBucketV2Input extends GenericInput {
         return this;
     }
 
+    public String getTagging() {
+        return tagging;
+    }
+
+    public CreateBucketV2Input setTagging(String tagging) {
+        this.tagging = tagging;
+        return this;
+    }
+
     public BucketType getBucketType() {
         return bucketType;
     }
@@ -138,6 +148,7 @@ public class CreateBucketV2Input extends GenericInput {
                 ", storageClass=" + storageClass +
                 ", azRedundancy=" + azRedundancy +
                 ", projectName='" + projectName + '\'' +
+                ", tagging='" + tagging + '\'' +
                 ", bucketType=" + bucketType +
                 '}';
     }
@@ -157,6 +168,7 @@ public class CreateBucketV2Input extends GenericInput {
         private StorageClassType storageClass;
         private AzRedundancyType azRedundancy;
         private String projectName;
+        private String tagging;
         private BucketType bucketType;
 
         private CreateBucketInputV2Builder() {
@@ -212,10 +224,16 @@ public class CreateBucketV2Input extends GenericInput {
             return this;
         }
 
+        public CreateBucketInputV2Builder tagging(String tagging) {
+            this.tagging = tagging;
+            return this;
+        }
+
         public CreateBucketInputV2Builder bucketType(BucketType bucketType) {
             this.bucketType = bucketType;
             return this;
         }
+
         public CreateBucketV2Input build() {
             CreateBucketV2Input createBucketInputV2 = new CreateBucketV2Input();
             createBucketInputV2.bucket = this.bucket;
@@ -228,6 +246,7 @@ public class CreateBucketV2Input extends GenericInput {
             createBucketInputV2.storageClass = this.storageClass;
             createBucketInputV2.azRedundancy = this.azRedundancy;
             createBucketInputV2.projectName = this.projectName;
+            createBucketInputV2.tagging = this.tagging;
             createBucketInputV2.bucketType = this.bucketType;
             return createBucketInputV2;
         }

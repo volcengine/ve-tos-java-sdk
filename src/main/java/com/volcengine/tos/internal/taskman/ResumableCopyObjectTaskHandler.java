@@ -16,6 +16,7 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class ResumableCopyObjectTaskHandler {
@@ -269,26 +270,30 @@ public class ResumableCopyObjectTaskHandler {
     }
 
     private List<CopyPartInfo> getPartsFromSourceObject(long copySourceObjectSize, long partSize) {
+        // 特殊处理空文件
+        if (copySourceObjectSize == 0) {
+            return Collections.singletonList(new CopyPartInfo().setPartNumber(1).setCopySourceRangeStart(0).setCopySourceRangeEnd(0));
+        }
+
+        // 计算总分片数量
         long partNum = copySourceObjectSize / partSize;
         long lastPartSize = copySourceObjectSize % partSize;
         if (lastPartSize != 0) {
             partNum++;
+        } else { // 整除时最后分片大小应为完整分片
+            lastPartSize = partSize;
         }
+
         if (partNum > Consts.MAX_PART_NUM) {
             throw new TosClientException("unsupported part number, the maximum is 10000", null);
         }
+
         List<CopyPartInfo> partInfoList = new ArrayList<>((int) partNum);
         for (int i = 0; i < partNum; i++) {
-            if (i < partNum - 1) {
-                partInfoList.add(new CopyPartInfo().setPartNumber(i + 1).setCopySourceRangeStart(i * partSize).setCopySourceRangeEnd((i + 1) * partSize - 1));
-            } else {
-                partInfoList.add(new CopyPartInfo().setPartNumber(i + 1).setCopySourceRangeStart(i * partSize).setCopySourceRangeEnd((partNum - 1) * partSize + lastPartSize - 1));
-            }
+            long currentRangeEnd = (i == partNum - 1) ? i * partSize + lastPartSize - 1 : (i + 1) * partSize - 1;
+            partInfoList.add(new CopyPartInfo().setPartNumber(i + 1).setCopySourceRangeStart(i * partSize).setCopySourceRangeEnd(currentRangeEnd));
         }
-        if (partNum == 0) {
-            // 空对象场景
-            partInfoList.add(new CopyPartInfo().setPartNumber(1).setCopySourceRangeStart(0).setCopySourceRangeEnd(0));
-        }
+
         return partInfoList;
     }
 

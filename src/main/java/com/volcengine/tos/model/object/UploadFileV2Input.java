@@ -14,9 +14,13 @@ public class UploadFileV2Input {
     private DataTransferListener dataTransferListener;
     private UploadEventListener uploadEventListener;
     private CancelHook cancelHook;
-    /** 客户端限速，单位 Byte/s **/
+    /**
+     * 客户端限速，单位 Byte/s
+     **/
     private RateLimiter rateLimiter;
     private long trafficLimit;
+    private String callback;
+    private String callbackVar;
 
     public String getBucket() {
         return createMultipartUploadInput.getBucket();
@@ -148,6 +152,24 @@ public class UploadFileV2Input {
         return this;
     }
 
+    public String getCallback() {
+        return callback;
+    }
+
+    public UploadFileV2Input setCallback(String callback) {
+        this.callback = callback;
+        return this;
+    }
+
+    public String getCallbackVar() {
+        return callbackVar;
+    }
+
+    public UploadFileV2Input setCallbackVar(String callbackVar) {
+        this.callbackVar = callbackVar;
+        return this;
+    }
+
     @Deprecated
     public CreateMultipartUploadInput getCreateMultipartUploadInput() {
         return createMultipartUploadInput;
@@ -172,6 +194,8 @@ public class UploadFileV2Input {
                 ", enableCheckpoint=" + enableCheckpoint +
                 ", checkpointFile='" + checkpointFile + '\'' +
                 ", trafficLimit=" + trafficLimit +
+                ", callback='" + callback + '\'' +
+                ", callbackVar='" + callbackVar + '\'' +
                 '}';
     }
 
@@ -191,6 +215,8 @@ public class UploadFileV2Input {
         private CancelHook cancelHook;
         private RateLimiter rateLimiter;
         private long trafficLimit;
+        private String callback;
+        private String callbackVar;
 
         private UploadFileV2InputBuilder() {
         }
@@ -275,6 +301,16 @@ public class UploadFileV2Input {
             return this;
         }
 
+        public UploadFileV2InputBuilder callback(String callback) {
+            this.callback = callback;
+            return this;
+        }
+
+        public UploadFileV2InputBuilder callbackVar(String callbackVar) {
+            this.callbackVar = callbackVar;
+            return this;
+        }
+
         public UploadFileV2Input build() {
             UploadFileV2Input uploadFileV2Input = new UploadFileV2Input();
             uploadFileV2Input.setCreateMultipartUploadInput(createMultipartUploadInput);
@@ -288,6 +324,8 @@ public class UploadFileV2Input {
             uploadFileV2Input.cancelHook = cancelHook;
             uploadFileV2Input.setRateLimiter(rateLimiter);
             uploadFileV2Input.setTrafficLimit(trafficLimit);
+            uploadFileV2Input.setCallback(callback);
+            uploadFileV2Input.setCallbackVar(callbackVar);
             return uploadFileV2Input;
         }
     }
