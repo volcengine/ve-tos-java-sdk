@@ -171,6 +171,23 @@ public class ListObjectsType2Input extends GenericInput {
             return this;
         }
 
+        public ListObjectsType2InputBuilder copyFrom(ListObjectsType2Input input) {
+            if (input == null) {
+                return this;
+            }
+
+            this.bucket = input.getBucket();
+            this.prefix = input.getPrefix();
+            this.delimiter = input.getDelimiter();
+            this.startAfter = input.getStartAfter();
+            this.continuationToken = input.getContinuationToken();
+            this.maxKeys = input.getMaxKeys();
+            this.encodingType = input.getEncodingType();
+            this.listOnlyOnce = input.isListOnlyOnce();
+            this.fetchMeta = input.isFetchMeta();
+            return this;
+        }
+
         public ListObjectsType2Input build() {
             ListObjectsType2Input listObjectsType2Input = new ListObjectsType2Input();
             listObjectsType2Input.setBucket(bucket);

@@ -6,6 +6,7 @@ public class DeleteObjectOutput {
     private RequestInfo requestInfo;
     private boolean deleteMarker;
     private String versionID;
+    private String trashPath;
 
     public RequestInfo getRequestInfo() {
         return requestInfo;
@@ -34,12 +35,22 @@ public class DeleteObjectOutput {
         return this;
     }
 
+    public String getTrashPath() {
+        return trashPath;
+    }
+
+    public DeleteObjectOutput setTrashPath(String trashPath) {
+        this.trashPath = trashPath;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "DeleteObjectOutput{" +
                 "requestInfo=" + requestInfo +
                 ", deleteMarker=" + deleteMarker +
                 ", versionID='" + versionID + '\'' +
+                ", trashPath='" + trashPath + '\'' +
                 '}';
     }
 }

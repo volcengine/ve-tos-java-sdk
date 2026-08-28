@@ -440,7 +440,8 @@ public class RecursiveDeleter {
                             return;
                         }
                         DeleteMultiObjectsV2Output output = RecursiveDeleter.this.handler.deleteMultiObjects(new DeleteMultiObjectsV2Input()
-                                .setObjects(this.objects).setBucket(RecursiveDeleter.this.input.getBucket()));
+                                .setObjects(this.objects).setBucket(RecursiveDeleter.this.input.getBucket()).
+                                setNotificationCustomParameters(RecursiveDeleter.this.input.getNotificationCustomParameters()));
                         needRetry = this.checkAndEmitEvent(output, null);
                     } catch (TosException ex) {
                         needRetry = this.checkAndEmitEvent(null, ex);

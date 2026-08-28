@@ -3,18 +3,41 @@ package com.volcengine.tos.internal;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.volcengine.tos.TosClientException;
 import com.volcengine.tos.TosException;
+import com.volcengine.tos.TosServerException;
 import com.volcengine.tos.comm.HttpMethod;
 import com.volcengine.tos.comm.HttpStatus;
 import com.volcengine.tos.comm.TosHeader;
 import com.volcengine.tos.comm.common.AzRedundancyType;
 import com.volcengine.tos.comm.common.BucketType;
+import com.volcengine.tos.internal.model.AudioConvertJobRequest;
+import com.volcengine.tos.internal.model.PutTemplateInput;
+import com.volcengine.tos.internal.model.VideoConvertJobRequest;
 import com.volcengine.tos.internal.util.*;
 import com.volcengine.tos.model.GenericInput;
 import com.volcengine.tos.model.bucket.*;
+import com.volcengine.tos.model.object.*;
+import com.volcengine.tos.model.bucket.PutAudioConvertTemplateInput;
+import com.volcengine.tos.model.bucket.PutAudioConvertTemplateOutput;
+import com.volcengine.tos.model.bucket.GetAudioConvertTemplateInput;
+import com.volcengine.tos.model.bucket.GetAudioConvertTemplateOutput;
+import com.volcengine.tos.model.bucket.DeleteAudioConvertTemplateInput;
+import com.volcengine.tos.model.bucket.DeleteAudioConvertTemplateOutput;
+import com.volcengine.tos.model.bucket.GetVideoConvertTemplateInput;
+import com.volcengine.tos.model.bucket.GetVideoConvertTemplateOutput;
+import com.volcengine.tos.model.bucket.DeleteVideoConvertTemplateInput;
+import com.volcengine.tos.model.bucket.DeleteVideoConvertTemplateOutput;
+import com.volcengine.tos.model.bucket.GetVideoConvertJobInput;
+import com.volcengine.tos.model.bucket.GetVideoConvertJobOutput;
+import com.volcengine.tos.model.bucket.GetAudioConvertJobInput;
+import com.volcengine.tos.model.bucket.GetAudioConvertJobOutput;
 
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
 public class TosBucketRequestHandler {
     private RequestHandler bucketHandler;
@@ -32,7 +55,31 @@ public class TosBucketRequestHandler {
         if (input.getRequestDate() != null) {
             builder = builder.withHeader(SigningUtils.v4Date, SigningUtils.iso8601Layout.format(input.getRequestDate().toInstant().atOffset(ZoneOffset.UTC)));
         }
+
+        if (input.getRequestHeaders() != null && !input.getRequestHeaders().isEmpty()) {
+            Map<String, String> headers = builder.getHeaders();
+            for (Map.Entry<String, String> entry : input.getRequestHeaders().entrySet()) {
+                if (!containsKeyIgnoreCase(headers, entry.getKey())) {
+                    builder = builder.withHeader(entry.getKey(), entry.getValue());
+                }
+            }
+        }
+
+        if (input.getRequestQuery() != null && !input.getRequestQuery().isEmpty()) {
+            for (Map.Entry<String, String> entry : input.getRequestQuery().entrySet()) {
+                builder = builder.withQuery(entry.getKey(), entry.getValue());
+            }
+        }
         return builder;
+    }
+
+    public static boolean containsKeyIgnoreCase(Map<String, String> map, String key) {
+        for (String existingKey : map.keySet()) {
+            if (existingKey.equalsIgnoreCase(key)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public CreateBucketV2Output createBucket(CreateBucketV2Input input) throws TosException {
@@ -48,6 +95,7 @@ public class TosBucketRequestHandler {
                 .withHeader(TosHeader.HEADER_STORAGE_CLASS, input.getStorageClass() == null ? null : input.getStorageClass().toString())
                 .withHeader(TosHeader.HEADER_AZ_REDUNDANCY, input.getAzRedundancy() == null ? null : input.getAzRedundancy().toString())
                 .withHeader(TosHeader.HEADER_PROJECT_NAME, input.getProjectName())
+                .withHeader(TosHeader.HEADER_TAGGING, input.getTagging())
                 .withHeader(TosHeader.HEADER_BUCKET_TYPE, input.getBucketType() == null ? null : input.getBucketType().toString());
         builder = this.handleGenericInput(builder, input);
         TosRequest req = this.factory.build(builder, HttpMethod.PUT, null).setRetryableOnClientException(false);
@@ -99,8 +147,8 @@ public class TosBucketRequestHandler {
         ensureValidBucketName(input.getBucket());
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("policy", "");
         builder = this.handleGenericInput(builder, input);
-        TosRequest req = this.factory.build(builder, HttpMethod.PUT, new ByteArrayInputStream(input.getPolicy()
-                .getBytes(StandardCharsets.UTF_8))).setContentLength(input.getPolicy().length());
+        byte[] policyStr = input.getPolicy().getBytes(StandardCharsets.UTF_8);
+        TosRequest req = this.factory.build(builder, HttpMethod.PUT, new ByteArrayInputStream(policyStr)).setContentLength(policyStr.length);
         return bucketHandler.doRequest(req, HttpStatus.NO_CONTENT, res -> new PutBucketPolicyOutput()
                 .setRequestInfo(res.RequestInfo()));
     }
@@ -663,6 +711,62 @@ public class TosBucketRequestHandler {
                 .setRequestInfo(res.RequestInfo()));
     }
 
+    public GetBucketInfoOutput getBucketInfo(GetBucketInfoInput input) throws TosException {
+        ParamsChecker.ensureNotNull(input, "GetBucketInfoInput");
+        ensureValidBucketName(input.getBucket());
+        RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("bucketInfo", "");
+        builder = this.handleGenericInput(builder, input);
+        TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
+
+        return bucketHandler.doRequest(req, HttpStatus.OK, res -> PayloadConverter.parsePayload(res.getInputStream(),
+                new TypeReference<GetBucketInfoOutput>() {
+                }).setRequestInfo(res.RequestInfo()));
+    }
+
+    public boolean doesBucketExist(DoesBucketExistInput input) throws TosException {
+        ParamsChecker.ensureNotNull(input, "DoesBucketExistInput");
+        ensureValidBucketName(input.getBucket());
+
+        HeadBucketV2Input headBucketV2Input = new HeadBucketV2Input();
+        headBucketV2Input.setBucket(input.getBucket());
+        HeadBucketV2Output headBucketV2Output = null;
+        try {
+            headBucketV2Output = headBucket(headBucketV2Input);
+            if (headBucketV2Output.getRequestInfo().getStatusCode() == HttpStatus.OK) {
+                return true;
+            }
+        } catch (TosServerException e) {
+            if (Objects.equals(e.getEc(), Consts.EcNotFoundErr)) {
+                return false;
+            }
+            throw e;
+        }
+        return false;
+    }
+
+    public PutBucketAccessMonitorOutput putBucketAccessMonitor(PutBucketAccessMonitorInput input) {
+        ParamsChecker.ensureNotNull(input, "PutBucketAccessMonitorInput");
+        ensureValidBucketName(input.getBucket());
+        TosMarshalResult marshalResult = PayloadConverter.serializePayloadAndComputeMD5(input);
+        RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("accessmonitor", "");
+        builder = this.handleGenericInput(builder, input);
+        TosRequest req = this.factory.build(builder, HttpMethod.PUT, new ByteArrayInputStream(
+                marshalResult.getData())).setContentLength(marshalResult.getData().length);
+        return bucketHandler.doRequest(req, HttpStatus.OK, res -> new PutBucketAccessMonitorOutput(res.RequestInfo()));
+    }
+
+    public GetBucketAccessMonitorOutput getBucketAccessMonitor(GetBucketAccessMonitorInput input) {
+        ParamsChecker.ensureNotNull(input, "GetBucketAccessMonitorInput");
+        ensureValidBucketName(input.getBucket());
+        RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("accessmonitor", "");
+        builder = this.handleGenericInput(builder, input);
+        TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
+
+        return bucketHandler.doRequest(req, HttpStatus.OK, res -> PayloadConverter.parsePayload(res.getInputStream(),
+                new TypeReference<GetBucketAccessMonitorOutput>() {
+                }).setRequestInfo(res.RequestInfo()));
+
+    }
 
     public TosRequestFactory getFactory() {
         return factory;
@@ -695,5 +799,527 @@ public class TosBucketRequestHandler {
             return;
         }
         ParamsChecker.isValidBucketName(bucket);
+    }
+
+    public PutQosPolicyOutput putQosPolicy(PutQosPolicyInput input) {
+        ParamsChecker.ensureNotNull(input, "PutQosPolicyInput");
+        ParamsChecker.ensureNotNull(input.getPolicy(), "policy");
+
+        RequestBuilder builder = this.factory.initControlReq(input.getAccountId(), "qospolicy", null);
+        builder = this.handleGenericInput(builder, input);
+        byte[] policyStr = input.getPolicy().getBytes(StandardCharsets.UTF_8);
+        TosRequest req = this.factory.build(builder, HttpMethod.PUT, new ByteArrayInputStream(policyStr)).setContentLength(policyStr.length);
+
+        return bucketHandler.doRequest(req, HttpStatus.NO_CONTENT, res -> new PutQosPolicyOutput(res.RequestInfo()));
+    }
+
+    public DeleteQosPolicyOutput deleteQosPolicy(DeleteQosPolicyInput input) {
+        ParamsChecker.ensureNotNull(input, "DeleteQosPolicyInput");
+        RequestBuilder builder = this.factory.initControlReq(input.getAccountId(), "qospolicy", null);
+        builder = this.handleGenericInput(builder, input);
+        TosRequest req = this.factory.build(builder, HttpMethod.DELETE, null);
+
+        return bucketHandler.doRequest(req, HttpStatus.NO_CONTENT, res -> new DeleteQosPolicyOutput(res.RequestInfo()));
+    }
+
+    public GetQosPolicyOutput getQosPolicy(GetQosPolicyInput input) {
+        ParamsChecker.ensureNotNull(input, "GetQosPolicyInput");
+        RequestBuilder builder = this.factory.initControlReq(input.getAccountId(), "qospolicy", null);
+        builder = this.handleGenericInput(builder, input);
+        TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
+
+        return bucketHandler.doRequest(req, HttpStatus.OK, res -> new GetQosPolicyOutput().setRequestInfo(res.RequestInfo())
+                .setPolicy(StringUtils.toString(res.getInputStream(), "qos policy")));
+    }
+
+    public CreateAccessPointOutput createAccessPoint(CreateAccessPointInput input) throws TosException {
+        ParamsChecker.ensureNotNull(input, "CreateAccessPointInput");
+        ParamsChecker.ensureNotNull(input.getAccountId(), "accountId");
+        ParamsChecker.ensureNotNull(input.getAccessPointName(), "accessPointName");
+        ParamsChecker.ensureNotNull(input.getBucket(), "Bucket");
+        ParamsChecker.ensureNotNull(input.getNetworkOrigin(), "NetworkOrigin");
+
+        ensureValidBucketName(input.getBucket());
+
+        TosMarshalResult marshalResult = PayloadConverter.serializePayloadAndComputeMD5(input);
+        RequestBuilder builder = this.factory.initControlReq(input.getAccountId(), "accesspoint/" + input.getAccessPointName(), null)
+                .withHeader(TosHeader.HEADER_CONTENT_MD5, marshalResult.getContentMD5());
+        builder = this.handleGenericInput(builder, input);
+        TosRequest req = this.factory.build(builder, HttpMethod.PUT,
+                new ByteArrayInputStream(marshalResult.getData()))
+                .setContentLength(marshalResult.getData().length);
+
+        return bucketHandler.doRequest(req, HttpStatus.OK, res -> PayloadConverter.parsePayload(res.getInputStream(),
+                new TypeReference<CreateAccessPointOutput>() {
+                }).setRequestInfo(res.RequestInfo()));
+    }
+
+    public GetAccessPointOutput getAccessPoint(GetAccessPointInput input) throws TosException {
+        ParamsChecker.ensureNotNull(input, "GetAccessPointInput");
+        ParamsChecker.ensureNotNull(input.getAccountId(), "accountId");
+        ParamsChecker.ensureNotNull(input.getAccessPointName(), "accessPointName");
+
+        RequestBuilder builder = this.factory.initControlReq(input.getAccountId(), "accesspoint/" + input.getAccessPointName(), null);
+        builder = this.handleGenericInput(builder, input);
+        TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
+
+        return bucketHandler.doRequest(req, HttpStatus.OK, res -> PayloadConverter.parsePayload(res.getInputStream(),
+                new TypeReference<GetAccessPointOutput>() {
+                }).setRequestInfo(res.RequestInfo()));
+    }
+
+    public ListAccessPointsOutput listAccessPoints(ListAccessPointsInput input) throws TosException {
+        ParamsChecker.ensureNotNull(input, "ListAccessPointsInput");
+        ParamsChecker.ensureNotNull(input.getAccountId(), "accountId");
+
+        if (input.getBucket() != null) {
+            ensureValidBucketName(input.getBucket());
+        }
+
+        RequestBuilder builder = this.factory.initControlReq(input.getAccountId(), "accesspoint", null)
+                .withQuery("bucket", input.getBucket())
+                .withQuery("maxResults", TosUtils.convertInteger(input.getMaxResults()))
+                .withQuery("nextToken", input.getNextToken());
+        builder = this.handleGenericInput(builder, input);
+        TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
+
+        return bucketHandler.doRequest(req, HttpStatus.OK, res -> PayloadConverter.parsePayload(res.getInputStream(),
+                new TypeReference<ListAccessPointsOutput>() {
+                }).setRequestInfo(res.RequestInfo()));
+    }
+
+    public DeleteAccessPointOutput deleteAccessPoint(DeleteAccessPointInput input) throws TosException {
+        ParamsChecker.ensureNotNull(input, "DeleteAccessPointInput");
+        ParamsChecker.ensureNotNull(input.getAccountId(), "accountId");
+        ParamsChecker.ensureNotNull(input.getAccessPointName(), "accessPointName");
+
+        RequestBuilder builder = this.factory.initControlReq(input.getAccountId(), "accesspoint/" + input.getAccessPointName(), null);
+        builder = this.handleGenericInput(builder, input);
+        TosRequest req = this.factory.build(builder, HttpMethod.DELETE, null);
+
+        return bucketHandler.doRequest(req, HttpStatus.NO_CONTENT,
+                res -> new DeleteAccessPointOutput().setRequestInfo(res.RequestInfo()));
+    }
+
+    public ListBindAcceleratorForAccessPointOutput listBindAcceleratorForAccessPoint(ListBindAcceleratorForAccessPointInput input) throws TosException {
+        ParamsChecker.ensureNotNull(input, "ListBindAcceleratorForAccessPointInput");
+        ParamsChecker.ensureNotNull(input.getAccountId(), "accountId");
+        ParamsChecker.ensureNotNull(input.getAccessPointName(), "accessPointName");
+
+        RequestBuilder builder = this.factory.initControlReq(input.getAccountId(),
+                "accesspoint/" + input.getAccessPointName() + "/accelerator", null);
+        builder = this.handleGenericInput(builder, input);
+        TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
+
+        return bucketHandler.doRequest(req, HttpStatus.OK, res -> PayloadConverter.parsePayload(res.getInputStream(),
+                new TypeReference<ListBindAcceleratorForAccessPointOutput>() {
+                }).setRequestInfo(res.RequestInfo()));
+    }
+
+    public ListBindAccessPointForAcceleratorOutput listBindAccessPointForAccelerator(ListBindAccessPointForAcceleratorInput input) throws TosException {
+        ParamsChecker.ensureNotNull(input, "ListBindAccessPointForAcceleratorInput");
+        ParamsChecker.ensureNotNull(input.getAccountId(), "accountId");
+        ParamsChecker.ensureNotNull(input.getAcceleratorId(), "acceleratorId");
+
+        RequestBuilder builder = this.factory.initControlReq(input.getAccountId(),
+                "accelerator/" + input.getAcceleratorId() + "/accesspoint", null);
+        builder = this.handleGenericInput(builder, input);
+        TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
+
+        return bucketHandler.doRequest(req, HttpStatus.OK, res -> PayloadConverter.parsePayload(res.getInputStream(),
+                new TypeReference<ListBindAccessPointForAcceleratorOutput>() {
+                }).setRequestInfo(res.RequestInfo()));
+    }
+
+    public PutAudioConvertTemplateOutput putAudioConvertTemplate(PutAudioConvertTemplateInput input) throws TosException {
+        ParamsChecker.ensureNotNull(input, "PutAudioConvertTemplateInput");
+        ParamsChecker.ensureNotNull(input.getName(), "name");
+        ensureValidBucketName(input.getBucket());
+
+        PutTemplateInput putTemplateInput = new PutTemplateInput();
+        putTemplateInput.setName(input.getName());
+        putTemplateInput.setAudioConvertConfig(input.getAudioConvertConfig());
+        putTemplateInput.setTag("AudioConvert");
+
+        TosMarshalResult marshalResult = PayloadConverter.serializePayloadAndComputeMD5(putTemplateInput);
+        RequestBuilder builder = this.factory.init(input.getBucket(), "", null)
+                .withQuery("process_template", "")
+                .withQuery("tag", "AudioConvert");
+        builder = this.handleGenericInput(builder, input);
+        
+        TosRequest req = this.factory.build(builder, HttpMethod.PUT,
+                new ByteArrayInputStream(marshalResult.getData()))
+                .setContentLength(marshalResult.getData().length);
+        
+        return bucketHandler.doRequest(req, HttpStatus.OK, res -> 
+                new PutAudioConvertTemplateOutput().setRequestInfo(res.RequestInfo()).setId(StringUtils.toString(res.getInputStream(), "template id")));
+    }
+
+    public PutVideoConvertTemplateOutput putVideoConvertTemplate(PutVideoConvertTemplateInput input) throws TosException {
+        ParamsChecker.ensureNotNull(input, "PutVideoConvertTemplateInput");
+        ParamsChecker.ensureNotNull(input.getName(), "name");
+        ensureValidBucketName(input.getBucket());
+
+        PutTemplateInput putTemplateInput = new PutTemplateInput();
+        putTemplateInput.setName(input.getName());
+        putTemplateInput.setTranscodeConfig(input.getTranscodeConfig());
+        putTemplateInput.setTag("Transcode");
+
+        TosMarshalResult marshalResult = PayloadConverter.serializePayloadAndComputeMD5(putTemplateInput);
+        RequestBuilder builder = this.factory.init(input.getBucket(), "", null)
+                .withQuery("process_template", "")
+                .withQuery("tag", "Transcode");
+        builder = this.handleGenericInput(builder, input);
+        
+        TosRequest req = this.factory.build(builder, HttpMethod.PUT,
+                new ByteArrayInputStream(marshalResult.getData()))
+                .setContentLength(marshalResult.getData().length);
+        
+        return bucketHandler.doRequest(req, HttpStatus.OK, res -> 
+                new PutVideoConvertTemplateOutput().setRequestInfo(res.RequestInfo()).setId(StringUtils.toString(res.getInputStream(), "template id")));
+    }
+
+    public PutConvertWorkflowOutput putConvertWorkflow(PutConvertWorkflowInput input) throws TosException {
+        ParamsChecker.ensureNotNull(input, "PutConvertWorkflowInput");
+        ParamsChecker.ensureNotNull(input.getRules(), "rules");
+        ensureValidBucketName(input.getBucket());
+
+        TosMarshalResult marshalResult = PayloadConverter.serializePayloadAndComputeMD5(input);
+        RequestBuilder builder = this.factory.init(input.getBucket(), "", null)
+                .withQuery("workflow", "");
+        builder = this.handleGenericInput(builder, input);
+        
+        TosRequest req = this.factory.build(builder, HttpMethod.PUT,
+                new ByteArrayInputStream(marshalResult.getData()))
+                .setContentLength(marshalResult.getData().length);
+        
+        return bucketHandler.doRequest(req, HttpStatus.OK, res -> 
+                new PutConvertWorkflowOutput().setRequestInfo(res.RequestInfo()));
+    }
+
+    public GetConvertWorkflowOutput getConvertWorkflow(GetConvertWorkflowInput input) throws TosException {
+        ParamsChecker.ensureNotNull(input, "GetConvertWorkflowInput");
+        ensureValidBucketName(input.getBucket());
+        
+        RequestBuilder builder = this.factory.init(input.getBucket(), "", null)
+                .withQuery("workflow", "");
+        builder = this.handleGenericInput(builder, input);
+        
+        TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
+        return bucketHandler.doRequest(req, HttpStatus.OK, res -> 
+                PayloadConverter.parsePayload(res.getInputStream(), new TypeReference<GetConvertWorkflowOutput>() {
+                }).setRequestInfo(res.RequestInfo()));
+    }
+
+    public DeleteConvertWorkflowOutput deleteConvertWorkflow(DeleteConvertWorkflowInput input) throws TosException {
+        ParamsChecker.ensureNotNull(input, "DeleteConvertWorkflowInput");
+        ensureValidBucketName(input.getBucket());
+        
+        RequestBuilder builder = this.factory.init(input.getBucket(), "", null)
+                .withQuery("workflow", "");
+        
+        builder = this.handleGenericInput(builder, input);
+        
+        TosRequest req = this.factory.build(builder, HttpMethod.DELETE, null);
+        return bucketHandler.doRequest(req, HttpStatus.NO_CONTENT, res -> 
+                new DeleteConvertWorkflowOutput().setRequestInfo(res.RequestInfo()));
+    }
+
+    public GetVideoConvertTemplateOutput getVideoConvertTemplate(GetVideoConvertTemplateInput input) throws TosException {
+        ParamsChecker.ensureNotNull(input, "GetVideoConvertTemplateInput");
+        ParamsChecker.ensureNotNull(input.getId(), "id");
+        ensureValidBucketName(input.getBucket());
+        
+        RequestBuilder builder = this.factory.init(input.getBucket(), "", null)
+                .withQuery("process_template", "")
+                .withQuery("tag", "Transcode")
+                .withQuery("id", input.getId());
+        builder = this.handleGenericInput(builder, input);
+        
+        TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
+        return bucketHandler.doRequest(req, HttpStatus.OK, res -> PayloadConverter.parsePayload(res.getInputStream(),
+                new TypeReference<GetVideoConvertTemplateOutput>() {
+                }).setRequestInfo(res.RequestInfo()));
+    }
+
+    public GetVideoConvertJobOutput getVideoConvertJob(GetVideoConvertJobInput input) throws TosException {
+        ParamsChecker.ensureNotNull(input, "GetVideoConvertJobInput");
+        ParamsChecker.ensureNotNull(input.getJobId(), "jobId");
+        ensureValidBucketName(input.getBucket());
+        
+        RequestBuilder builder = this.factory.init(input.getBucket(), "", null)
+                .withQuery("job_type", "Transcode")
+                .withQuery("job_id", input.getJobId())
+                .withQuery("media_jobs", "");
+        builder = this.handleGenericInput(builder, input);
+        
+        TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
+        return bucketHandler.doRequest(req, HttpStatus.OK, res -> PayloadConverter.parsePayload(res.getInputStream(),
+                new TypeReference<GetVideoConvertJobOutput>() {
+                }).setRequestInfo(res.RequestInfo()));
+    }
+
+    public GetAudioConvertJobOutput getAudioConvertJob(GetAudioConvertJobInput input) throws TosException {
+        ParamsChecker.ensureNotNull(input, "GetAudioConvertJobInput");
+        ParamsChecker.ensureNotNull(input.getJobId(), "jobId");
+        ensureValidBucketName(input.getBucket());
+        
+        RequestBuilder builder = this.factory.init(input.getBucket(), "", null)
+                .withQuery("job_type", "AudioConvert")
+                .withQuery("job_id", input.getJobId())
+                .withQuery("media_jobs", "");
+        builder = this.handleGenericInput(builder, input);
+        
+        TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
+        return bucketHandler.doRequest(req, HttpStatus.OK, res -> PayloadConverter.parsePayload(res.getInputStream(),
+                new TypeReference<GetAudioConvertJobOutput>() {
+                }).setRequestInfo(res.RequestInfo()));
+    }
+
+    public GetAudioConvertTemplateOutput getAudioConvertTemplate(GetAudioConvertTemplateInput input) throws TosException {
+        ParamsChecker.ensureNotNull(input, "GetAudioConvertTemplateInput");
+        ParamsChecker.ensureNotNull(input.getId(), "id");
+        ensureValidBucketName(input.getBucket());
+        
+        RequestBuilder builder = this.factory.init(input.getBucket(), "", null)
+                .withQuery("process_template", "")
+                .withQuery("tag", "AudioConvert")
+                .withQuery("id", input.getId());
+        builder = this.handleGenericInput(builder, input);
+        
+        TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
+        return bucketHandler.doRequest(req, HttpStatus.OK, res -> PayloadConverter.parsePayload(res.getInputStream(),
+                new TypeReference<GetAudioConvertTemplateOutput>() {
+                }).setRequestInfo(res.RequestInfo()));
+
+    }
+
+    public DeleteAudioConvertTemplateOutput deleteAudioConvertTemplate(DeleteAudioConvertTemplateInput input) throws TosException {
+        ParamsChecker.ensureNotNull(input, "DeleteAudioConvertTemplateInput");
+        ParamsChecker.ensureNotNull(input.getId(), "id");
+        ensureValidBucketName(input.getBucket());
+        
+        RequestBuilder builder = this.factory.init(input.getBucket(), "", null)
+                .withQuery("process_template", "")
+                .withQuery("id", input.getId());
+        builder = this.handleGenericInput(builder, input);
+        
+        TosRequest req = this.factory.build(builder, HttpMethod.DELETE, null);
+        return bucketHandler.doRequest(req, HttpStatus.NO_CONTENT, res -> 
+                new DeleteAudioConvertTemplateOutput().setRequestInfo(res.RequestInfo()));
+    }
+
+    public DeleteVideoConvertTemplateOutput deleteVideoConvertTemplate(DeleteVideoConvertTemplateInput input) throws TosException {
+        ParamsChecker.ensureNotNull(input, "DeleteVideoConvertTemplateInput");
+        ParamsChecker.ensureNotNull(input.getId(), "id");
+        ensureValidBucketName(input.getBucket());
+        
+        RequestBuilder builder = this.factory.init(input.getBucket(), "", null)
+                .withQuery("process_template", "")
+                .withQuery("id", input.getId());
+        builder = this.handleGenericInput(builder, input);
+        
+        TosRequest req = this.factory.build(builder, HttpMethod.DELETE, null);
+        return bucketHandler.doRequest(req, HttpStatus.NO_CONTENT, res -> 
+                new DeleteVideoConvertTemplateOutput().setRequestInfo(res.RequestInfo()));
+    }
+
+    public ListAudioConvertTemplatesOutput listAudioConvertTemplates(ListAudioConvertTemplatesInput input) throws TosException {
+        ParamsChecker.ensureNotNull(input, "ListAudioConvertTemplatesInput");
+        ensureValidBucketName(input.getBucket());
+        
+        RequestBuilder builder = this.factory.init(input.getBucket(), "", null)
+                .withQuery("process_template", "")
+                .withQuery("tag", "AudioConvert");
+        
+        builder = this.handleGenericInput(builder, input);
+        
+        TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
+        return bucketHandler.doRequest(req, HttpStatus.OK, res -> {
+            ListAudioConvertTemplatesOutput output = new ListAudioConvertTemplatesOutput();
+            List<AudioConvertTemplate> audioConvertTemplates = PayloadConverter.parsePayload(res.getInputStream(),
+                    new TypeReference<List<AudioConvertTemplate>>() {
+                    });
+            if (audioConvertTemplates == null) {
+                audioConvertTemplates = new ArrayList<>();
+            }
+            output.setAudioConvertTemplates(audioConvertTemplates);
+            return output.setRequestInfo(res.RequestInfo());
+        });
+    }
+
+    public ListVideoConvertTemplatesOutput listVideoConvertTemplates(ListVideoConvertTemplatesInput input) throws TosException {
+        ParamsChecker.ensureNotNull(input, "ListVideoConvertTemplatesInput");
+        ensureValidBucketName(input.getBucket());
+        
+        RequestBuilder builder = this.factory.init(input.getBucket(), "", null)
+                .withQuery("process_template", "")
+                .withQuery("tag", "Transcode");
+        
+        builder = this.handleGenericInput(builder, input);
+        
+        TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
+        return bucketHandler.doRequest(req, HttpStatus.OK, res -> {
+            ListVideoConvertTemplatesOutput output = new ListVideoConvertTemplatesOutput();
+            List<VideoConvertTemplate> videoConvertTemplates = PayloadConverter.parsePayload(res.getInputStream(),
+                    new TypeReference<List<VideoConvertTemplate>>() {
+                    });
+            if (videoConvertTemplates == null) {
+                videoConvertTemplates = new ArrayList<>();
+            }
+            output.setVideoConvertTemplates(videoConvertTemplates);
+            return output.setRequestInfo(res.RequestInfo());
+        });
+    }
+
+    public FileCompressOutput fileCompress(FileCompressInput input) throws TosException {
+        ParamsChecker.ensureNotNull(input, "FileCompressInput");
+        ParamsChecker.ensureNotNull(input.getBucket(), "bucket");
+        ensureValidBucketName(input.getBucket());
+        ParamsChecker.ensureNotNull(input.getInput(), "Input");
+        ParamsChecker.ensureNotNull(input.getFileCompressConfig(), "FileCompressConfig");
+        ParamsChecker.ensureNotNull(input.getOutput(), "Output");
+
+        TosMarshalResult marshalResult = PayloadConverter.serializePayloadAndComputeMD5(input);
+        RequestBuilder builder = this.factory.init(input.getBucket(), "", null)
+                .withQuery("file_jobs", "")
+                .withQuery("job_type", "FileCompress")
+                .withHeader(TosHeader.HEADER_CONTENT_MD5, marshalResult.getContentMD5());
+        builder = this.handleGenericInput(builder, input);
+
+        TosRequest req = this.factory.build(builder, HttpMethod.POST,
+                new ByteArrayInputStream(marshalResult.getData()))
+                .setContentLength(marshalResult.getData().length);
+
+        return bucketHandler.doRequest(req, HttpStatus.OK, res ->
+                PayloadConverter.parsePayload(res.getInputStream(),
+                        new TypeReference<FileCompressOutput>() {
+                        }).setRequestInfo(res.RequestInfo()));
+    }
+
+    public FileUncompressOutput fileUncompress(FileUncompressInput input) throws TosException {
+        ParamsChecker.ensureNotNull(input, "FileUncompressInput");
+        ParamsChecker.ensureNotNull(input.getBucket(), "bucket");
+        ensureValidBucketName(input.getBucket());
+        ParamsChecker.ensureNotNull(input.getInput(), "Input");
+        ParamsChecker.ensureNotNull(input.getFileUncompressConfig(), "FileUncompressConfig");
+        ParamsChecker.ensureNotNull(input.getOutput(), "Output");
+
+        TosMarshalResult marshalResult = PayloadConverter.serializePayloadAndComputeMD5(input);
+        RequestBuilder builder = this.factory.init(input.getBucket(), "", null)
+                .withQuery("file_jobs", "")
+                .withQuery("job_type", "FileUncompress")
+                .withHeader(TosHeader.HEADER_CONTENT_MD5, marshalResult.getContentMD5());
+        builder = this.handleGenericInput(builder, input);
+
+        TosRequest req = this.factory.build(builder, HttpMethod.POST,
+                new ByteArrayInputStream(marshalResult.getData()))
+                .setContentLength(marshalResult.getData().length);
+
+        return bucketHandler.doRequest(req, HttpStatus.OK, res ->
+                PayloadConverter.parsePayload(res.getInputStream(),
+                        new TypeReference<FileUncompressOutput>() {
+                        }).setRequestInfo(res.RequestInfo()));
+    }
+
+    public PointCloudCompressOutput pointCloudCompress(PointCloudCompressInput input) throws TosException {
+        ParamsChecker.ensureNotNull(input, "PointCloudCompressInput");
+        ParamsChecker.ensureNotNull(input.getBucket(), "bucket");
+        ParamsChecker.ensureNotNull(input.getKey(), "key");
+        ensureValidBucketName(input.getBucket());
+        ParamsChecker.isValidKey(input.getKey());
+
+        RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), null)
+                .withQuery("x-tos-process", "pointcloud/compress");
+        if (StringUtils.isNotEmpty(input.getFormat())) {
+            builder = builder.withQuery("format", input.getFormat());
+        }
+        if (StringUtils.isNotEmpty(input.getMethod())) {
+            builder = builder.withQuery("method", input.getMethod());
+        }
+        if (StringUtils.isNotEmpty(input.getFields())) {
+            builder = builder.withQuery("fields", input.getFields());
+        }
+        if (StringUtils.isNotEmpty(input.getLib())) {
+            builder = builder.withQuery("lib", input.getLib());
+        }
+        if (input.getPointResolution() != null) {
+            builder = builder.withQuery("point-resolution", String.valueOf(input.getPointResolution()));
+        }
+        if (input.getOctreeResolution() != null) {
+            builder = builder.withQuery("octree-resolution", String.valueOf(input.getOctreeResolution()));
+        }
+        if (input.getDownSampling() != null) {
+            builder = builder.withQuery("down-sampling", String.valueOf(input.getDownSampling()));
+        }
+        builder = this.handleGenericInput(builder, input);
+
+        TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
+        java.util.List<Integer> expectedCodes = new java.util.ArrayList<>(1);
+        expectedCodes.add(HttpStatus.OK);
+        TosResponse response = bucketHandler.doRequest(req, expectedCodes);
+        PointCloudCompressOutput output = new PointCloudCompressOutput()
+                .setRequestInfo(response.RequestInfo())
+                .setContent(response.getInputStream());
+        return output;
+    }
+
+    public CreateVideoConvertJobOutput createVideoConvertJob(CreateVideoConvertJobInput input) throws TosException {
+        ParamsChecker.ensureNotNull(input, "CreateVideoConvertJobInput");
+        ParamsChecker.ensureNotNull(input.getInput(), "input");
+        ParamsChecker.ensureNotNull(input.getTranscodeConfig(), "transcodeConfig");
+        ParamsChecker.ensureNotNull(input.getOutput(), "output");
+        ensureValidBucketName(input.getBucket());
+
+        // 构建请求体
+        VideoConvertJobRequest jobRequest = new VideoConvertJobRequest();
+        jobRequest.setTag("Transcode");
+        jobRequest.setInput(input.getInput());
+        jobRequest.setTranscodeConfig(input.getTranscodeConfig());
+        jobRequest.setOutput(input.getOutput());
+        jobRequest.setCallback(input.getCallback());
+
+        TosMarshalResult marshalResult = PayloadConverter.serializePayloadAndComputeMD5(jobRequest);
+        RequestBuilder builder = this.factory.init(input.getBucket(), "", null)
+                .withQuery("job_type", "Transcode")
+                .withQuery("media_jobs", "");
+        builder = this.handleGenericInput(builder, input);
+        
+        TosRequest req = this.factory.build(builder, HttpMethod.POST,
+                new ByteArrayInputStream(marshalResult.getData()))
+                .setContentLength(marshalResult.getData().length);
+
+        return bucketHandler.doRequest(req, HttpStatus.OK, res -> PayloadConverter.parsePayload(res.getInputStream(),
+                new TypeReference<CreateVideoConvertJobOutput>() {
+                }).setRequestInfo(res.RequestInfo()));
+    }
+
+    public CreateAudioConvertJobOutput createAudioConvertJob(CreateAudioConvertJobInput input) throws TosException {
+        ParamsChecker.ensureNotNull(input, "CreateAudioConvertJobInput");
+        ParamsChecker.ensureNotNull(input.getInput(), "input");
+        ParamsChecker.ensureNotNull(input.getAudioConvertConfig(), "audioConvertConfig");
+        ParamsChecker.ensureNotNull(input.getOutput(), "output");
+        ensureValidBucketName(input.getBucket());
+
+        // 构建请求体
+        AudioConvertJobRequest jobRequest = new AudioConvertJobRequest();
+        jobRequest.setTag("AudioConvert");
+        jobRequest.setInput(input.getInput());
+        jobRequest.setAudioConvertConfig(input.getAudioConvertConfig());
+        jobRequest.setOutput(input.getOutput());
+
+        TosMarshalResult marshalResult = PayloadConverter.serializePayloadAndComputeMD5(jobRequest);
+        RequestBuilder builder = this.factory.init(input.getBucket(), "", null)
+                .withQuery("job_type", "AudioConvert")
+                .withQuery("media_jobs", "");
+        builder = this.handleGenericInput(builder, input);
+        
+        TosRequest req = this.factory.build(builder, HttpMethod.POST,
+                new ByteArrayInputStream(marshalResult.getData()))
+                .setContentLength(marshalResult.getData().length);
+
+        return bucketHandler.doRequest(req, HttpStatus.OK, res -> PayloadConverter.parsePayload(res.getInputStream(),
+                new TypeReference<CreateAudioConvertJobOutput>() {
+                }).setRequestInfo(res.RequestInfo()));
     }
 }
