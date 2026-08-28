@@ -1,5 +1,6 @@
 package com.volcengine.tos.model.bucket;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class BucketEncryptionRule {
@@ -23,9 +24,10 @@ public class BucketEncryptionRule {
                 '}';
     }
 
-    public static class ApplyServerSideEncryptionByDefault{
+    public static class ApplyServerSideEncryptionByDefault {
         @JsonProperty("SSEAlgorithm")
         private String sseAlgorithm;
+
         @JsonProperty("KMSMasterKeyID")
         private String kmsMasterKeyID;
 

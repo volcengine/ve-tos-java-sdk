@@ -22,9 +22,12 @@ public class PutObjectBasicInput extends GenericInput {
     private String ifMatch;
     private String tagging;
     private long objectExpires = -1;
+    private String notificationCustomParameters;
 
 
-    /** 客户端限速，单位 Byte/s **/
+    /**
+     * 客户端限速，单位 Byte/s
+     **/
     private RateLimiter rateLimiter;
 
     public String getBucket() {
@@ -148,6 +151,15 @@ public class PutObjectBasicInput extends GenericInput {
         return this;
     }
 
+    public String getNotificationCustomParameters() {
+        return notificationCustomParameters;
+    }
+
+    public PutObjectBasicInput setNotificationCustomParameters(String notificationCustomParameters) {
+        this.notificationCustomParameters = notificationCustomParameters;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "PutObjectBasicInput{" +
@@ -162,7 +174,8 @@ public class PutObjectBasicInput extends GenericInput {
                 ", forbidOverwrite=" + forbidOverwrite +
                 ", ifMatch='" + ifMatch + '\'' +
                 ", tagging='" + tagging + '\'' +
-                ", objectExpires='" + objectExpires + '\'' +
+                ", objectExpires=" + objectExpires +
+                ", notificationCustomParameters='" + notificationCustomParameters + '\'' +
                 ", rateLimiter=" + rateLimiter +
                 '}';
     }
@@ -184,6 +197,7 @@ public class PutObjectBasicInput extends GenericInput {
         private String ifMatch;
         private String tagging;
         private long objectExpires = -1;
+        private String notificationCustomParameters;
 
         private PutObjectBasicInputBuilder() {
         }
@@ -248,6 +262,10 @@ public class PutObjectBasicInput extends GenericInput {
             return this;
         }
 
+        public PutObjectBasicInputBuilder notificationCustomParameters(String notificationCustomParameters) {
+            this.notificationCustomParameters = notificationCustomParameters;
+            return this;
+        }
 
         public PutObjectBasicInput build() {
             PutObjectBasicInput putObjectBasicInput = new PutObjectBasicInput();
@@ -263,6 +281,7 @@ public class PutObjectBasicInput extends GenericInput {
             putObjectBasicInput.ifMatch = this.ifMatch;
             putObjectBasicInput.tagging = this.tagging;
             putObjectBasicInput.objectExpires = this.objectExpires;
+            putObjectBasicInput.notificationCustomParameters = this.notificationCustomParameters;
             return putObjectBasicInput;
         }
     }
