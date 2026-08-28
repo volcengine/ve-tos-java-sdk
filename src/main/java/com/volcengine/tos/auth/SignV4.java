@@ -94,7 +94,7 @@ public class SignV4 implements Signer {
         Map<String, String> signed = new HashMap<>(4);
         String contentSha256 = req.getHeaders().get(SigningUtils.v4ContentSHA256);
         Map<String, String> header = req.getHeaders();
-        List<Map.Entry<String, String>> signedHeader = this.signedHeader(header, false, null);
+        List<Map.Entry<String, String>> signedHeader = this.signedHeader(header, false, null, req.isSignedAllHeaders());
         OffsetDateTime now;
         String date;
         if (req.getHeaders().containsKey(SigningUtils.v4Date)) {
@@ -180,7 +180,7 @@ public class SignV4 implements Signer {
             }
 //        extra.put(v4SignedHeaders, "host"); // 目前只有host
             List<String> contentSha256Container = new ArrayList<>(1);
-            List<Map.Entry<String, String>> signedHeader = this.signedHeader(req.getHeaders(), true, contentSha256Container);
+            List<Map.Entry<String, String>> signedHeader = this.signedHeader(req.getHeaders(), true, contentSha256Container, req.isSignedAllHeaders());
 
             String host = req.getHost();
             if (StringUtils.isEmpty(host)) {
@@ -240,7 +240,7 @@ public class SignV4 implements Signer {
     /**
      * 返回的数据没有排序
      */
-    private List<Map.Entry<String, String>> signedHeader(Map<String, String> header, boolean isSignedQuery, List<String> contentSha256) {
+    private List<Map.Entry<String, String>> signedHeader(Map<String, String> header, boolean isSignedQuery, List<String> contentSha256,boolean isSignedAllHeaders) {
         ArrayList<Map.Entry<String, String>> signed = new ArrayList<>(10);
         if (header == null || header.isEmpty()) {
             return signed;
@@ -253,7 +253,7 @@ public class SignV4 implements Signer {
                 if (contentSha256 != null && kk.equalsIgnoreCase(SigningUtils.v4ContentSHA256) && StringUtils.isNotEmpty(value)) {
                     contentSha256.add(value);
                 }
-                if (this.signingHeader.isSigningHeader(kk, isSignedQuery)) {
+                if (this.signingHeader.isSigningHeader(kk, isSignedQuery)|| isSignedAllHeaders) {
                     value = value == null ? "" : value;
                     signed.add(new SimpleEntry<>(kk, value));
                 }

@@ -8,6 +8,7 @@ public class DownloadFileInput {
     private HeadObjectV2Input headObjectV2Input = new HeadObjectV2Input();
     private String filePath;
     private String tempFilePath;
+    private boolean forceOverwrite = true;
     private long partSize;
     private int taskNum;
     private boolean enableCheckpoint;
@@ -17,7 +18,9 @@ public class DownloadFileInput {
 
     private CancelHook cancelHook;
 
-    /** 客户端限速，单位 Byte/s **/
+    /**
+     * 客户端限速，单位 Byte/s
+     **/
     private RateLimiter rateLimiter;
 
     private long trafficLimit;
@@ -73,6 +76,15 @@ public class DownloadFileInput {
 
     public DownloadFileInput setTempFilePath(String tempFilePath) {
         this.tempFilePath = tempFilePath;
+        return this;
+    }
+
+    public boolean isForceOverwrite() {
+        return forceOverwrite;
+    }
+
+    public DownloadFileInput setForceOverwrite(boolean forceOverwrite) {
+        this.forceOverwrite = forceOverwrite;
         return this;
     }
 
@@ -198,6 +210,7 @@ public class DownloadFileInput {
         private HeadObjectV2Input headObjectV2Input = new HeadObjectV2Input();
         private String filePath;
         private String tempFilePath;
+        private boolean forceOverwrite = true;
         private long partSize;
         private int taskNum;
         private boolean enableCheckpoint;
@@ -244,6 +257,11 @@ public class DownloadFileInput {
 
         public DownloadFileInputBuilder tempFilePath(String tempFilePath) {
             this.tempFilePath = tempFilePath;
+            return this;
+        }
+
+        public DownloadFileInputBuilder forceOverwrite(boolean forceOverwrite) {
+            this.forceOverwrite = forceOverwrite;
             return this;
         }
 
@@ -310,6 +328,7 @@ public class DownloadFileInput {
             downloadFileInput.cancelHook = cancelHook;
             downloadFileInput.setRateLimiter(rateLimiter);
             downloadFileInput.setTrafficLimit(trafficLimit);
+            downloadFileInput.setForceOverwrite(forceOverwrite);
             return downloadFileInput;
         }
     }

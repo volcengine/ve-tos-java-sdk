@@ -11,6 +11,8 @@ public class Deleted {
     private boolean deleteMarker;
     @JsonProperty("DeleteMarkerVersionId")
     private String deleteMarkerVersionID;
+    @JsonProperty("TrashPath")
+    private String trashPath;
 
     public String getKey() {
         return key;
@@ -18,6 +20,15 @@ public class Deleted {
 
     public Deleted setKey(String key) {
         this.key = key;
+        return this;
+    }
+
+    public String getTrashPath(){
+        return trashPath;
+    }
+
+    public Deleted setTrashPath(String trashPath){
+        this.trashPath = trashPath;
         return this;
     }
 
@@ -55,6 +66,7 @@ public class Deleted {
                 ", versionID='" + versionID + '\'' +
                 ", deleteMarker=" + deleteMarker +
                 ", deleteMarkerVersionID='" + deleteMarkerVersionID + '\'' +
+                ", trashPath='" + trashPath + '\'' +
                 '}';
     }
 }

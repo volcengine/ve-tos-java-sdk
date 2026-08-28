@@ -54,14 +54,19 @@ public class TransportConfig {
     private int dnsCacheTimeMills;
 
     /**
-     * DNS 缓存的有效期，单位：分钟，小与等于 0 时代表关闭 DNS 缓存，默认为 0
+     * DNS 缓存的有效期，单位：分钟，小与等于 0 时代表关闭 DNS 缓存，默认为 15 分钟
      */
-    private int dnsCacheTimeMinutes;
+    private int dnsCacheTimeMinutes = Consts.DEFAULT_DNS_CACHE_TIME_MINUTES;
 
     /**
      * 最大重试次数，默认为 3 次
      */
     private int maxRetryCount = Consts.DEFAULT_MAX_RETRY_COUNT;
+
+    /**
+     * 重定向次数，支持在 Get/Head 请求发生 3xx 时，跟随请求重定向
+     */
+    private int followRedirectTimes;
 
     private int except100ContinueThreshold = Consts.DEFAULT_EXPECT_100_CONTINUE_THRESHOLD;
 
@@ -215,6 +220,15 @@ public class TransportConfig {
         return this;
     }
 
+    public int getFollowRedirectTimes(){
+        return followRedirectTimes;
+    }
+
+    public TransportConfig setFollowRedirectTimes(int followRedirectTimes){
+        this.followRedirectTimes = followRedirectTimes;
+        return this;
+    }
+
     public static TransportConfigBuilder builder() {
         return new TransportConfigBuilder();
     }
@@ -238,6 +252,7 @@ public class TransportConfig {
         private int except100ContinueThreshold = Consts.DEFAULT_EXPECT_100_CONTINUE_THRESHOLD;
 
         private int highLatencyLogThreshold = Consts.DEFAULT_HIGH_LATENCY_LOG_THRESHOLD;
+        private int followRedirectTimes;
 
         private TransportConfigBuilder() {
         }
@@ -318,6 +333,11 @@ public class TransportConfig {
             return this;
         }
 
+        public TransportConfigBuilder followRedirectTimes(int followRedirectTimes) {
+            this.followRedirectTimes = followRedirectTimes;
+            return this;
+        }
+
         public TransportConfig build() {
             TransportConfig transportConfig = new TransportConfig();
             transportConfig.setMaxConnections(maxConnections);
@@ -334,6 +354,7 @@ public class TransportConfig {
             transportConfig.setMaxRetryCount(maxRetryCount);
             transportConfig.setExcept100ContinueThreshold(except100ContinueThreshold);
             transportConfig.setHighLatencyLogThreshold(highLatencyLogThreshold);
+            transportConfig.setFollowRedirectTimes(followRedirectTimes);
             return transportConfig;
         }
     }

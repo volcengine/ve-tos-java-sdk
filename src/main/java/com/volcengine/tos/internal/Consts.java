@@ -11,7 +11,7 @@ public interface Consts {
     String SCHEME_HTTP = "http";
     String SCHEME_HTTPS = "https";
     String SDK_NAME = "ve-tos-java-sdk";
-    String SDK_VERSION = "v2.8.8";
+    String SDK_VERSION = "v2.9.6";
     String OS_NAME = System.getProperty("os.name");
     String OS_ARCH = System.getProperty("os.arch");
     String JAVA_VERSION = System.getProperty("java.version", "0");
@@ -58,6 +58,8 @@ public interface Consts {
      */
     int URL_MODE_CUSTOM_DOMAIN = 2;
 
+    int URL_MODE_CONTROL_DOMAIN = 3;
+
     int DEFAULT_HTTPS_PORT = 443;
 
     Set<String> CUSTOM_SERVER_SIDE_ENCRYPTION_ALGORITHM_LIST = new HashSet<>(Collections.singletonList("AES256"));
@@ -77,6 +79,9 @@ public interface Consts {
     int DEFAULT_MAX_RETRY_COUNT = 3;
     int DEFAULT_EXPECT_100_CONTINUE_THRESHOLD = 65536;
     int DEFAULT_HIGH_LATENCY_LOG_THRESHOLD = 100;
+    int DEFAULT_DNS_CACHE_MILLS = 15000;
+    int DEFAULT_DNS_CACHE_TIME_MINUTES = 15;
+    int DEFAULT_FOLLOW_REDIRECT_TIMES = 0;
 
     String DEFAULT_USER_AGENT_ITEM = "undefined";
     String SYMLINK = "Symlink";
@@ -84,4 +89,8 @@ public interface Consts {
     // EC Code
     String EcObjForbidOverwriteErr = "0017-00000004"; // 目标对象已经存在，不允许覆盖
     String EcNoSuchObjectErr = "0017-00000003"; // 对象不存在
+    String EcNotFoundErr = "0006-00000001";
+    String EcEncryptionMismatchErr = "0015-00000008";
+    String EcNotSupportRecursiveDeleteErr = "0026-00000024"; // 服务端不支持递归删除目录
+    String EcDirNotEmptyWithSkipTrashErr = "0030-00000003"; // 携带skip trash删除非空目录
 }

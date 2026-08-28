@@ -4,6 +4,7 @@ import org.testng.Assert;
 import org.testng.annotations.Test;
 
 import java.util.Random;
+import java.util.concurrent.BrokenBarrierException;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.TimeUnit;
@@ -115,6 +116,60 @@ public class AsyncTimeoutTest {
                 Assert.assertEquals(timeout.isTimedOut(), false);
                 Assert.assertFalse(timeout.exit());
             }
+        }
+    }
+
+    @Test
+    void testDaemonThreadGc() throws InterruptedException {
+        final CyclicBarrier barrier = new CyclicBarrier(10);
+        Thread[] threads = new Thread[10];
+        Random random = new Random(System.currentTimeMillis());
+        AsyncTimeout.Slot slot = new AsyncTimeout.Slot(true);
+        for (int i = 0; i < threads.length; i++) {
+            threads[i] = new Thread(() -> {
+                try {
+                    barrier.await();
+                    final AsyncTimeout asyncTimeout = new AsyncTimeout(slot);
+                    asyncTimeout.timeout(random.nextInt(3),TimeUnit.SECONDS);
+                    asyncTimeout.enter();
+                }catch (InterruptedException | BrokenBarrierException e){
+                    e.printStackTrace();
+                }
+            });
+        }
+        for (Thread thread : threads) {
+            thread.start();
+        }
+
+        for (Thread thread : threads) {
+            thread.join();
+        }
+
+        ThreadGroup rootGroup = Thread.currentThread().getThreadGroup();
+        while (rootGroup.getParent() != null) {
+            rootGroup = rootGroup.getParent();
+        }
+        threads = new Thread[rootGroup.activeCount()];
+        rootGroup.enumerate(threads);
+        for (Thread thread : threads) {
+            if (thread != null && thread.isDaemon() && "Watchdog".equals(thread.getName())) {
+                Assert.assertTrue(
+                        thread.getState() == Thread.State.TIMED_WAITING ||
+                                thread.getState() == Thread.State.RUNNABLE
+                );
+            }
+        }
+        // 等待超时
+        try {
+            Thread.sleep(71000);
+            for (Thread thread : threads) {
+                if (thread != null && thread.isDaemon() && "Watchdog".equals(thread.getName())) {
+                    // todo zdh fix
+//                    Assert.assertSame(thread.getState(), Thread.State.TERMINATED);
+                }
+            }
+        }catch (InterruptedException e){
+            e.printStackTrace();
         }
     }
 
