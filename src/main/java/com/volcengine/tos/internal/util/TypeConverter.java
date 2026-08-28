@@ -25,6 +25,8 @@ public class TypeConverter {
             return ACLType.ACL_LOG_DELIVERY_WRITE;
         } else if (StringUtils.equals(type, ACL_BUCKET_OWNER_ENTRUSTED)) {
             return ACLType.ACL_BUCKET_OWNER_ENTRUSTED;
+        } else if (StringUtils.equals(type, ACL_DEFAULT)) {
+            return ACLType.ACL_DEFAULT;
         } else {
             return ACLType.ACL_UNKNOWN;
         }
@@ -46,8 +48,7 @@ public class TypeConverter {
             return StorageClassType.STORAGE_CLASS_COLD_ARCHIVE;
         } else if (StringUtils.equals(storageClass, STORAGE_CLASS_DEEP_COLD_ARCHIVE)) {
             return StorageClassType.STORAGE_CLASS_DEEP_COLD_ARCHIVE;
-        }
-        else if (StringUtils.equals(storageClass, STORAGE_CLASS_ARCHIVE)) {
+        } else if (StringUtils.equals(storageClass, STORAGE_CLASS_ARCHIVE)) {
             return StorageClassType.STORAGE_CLASS_ARCHIVE;
         } else {
             return StorageClassType.STORAGE_CLASS_UNKNOWN;

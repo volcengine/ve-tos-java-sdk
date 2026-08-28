@@ -16,6 +16,7 @@ public class ModifyObjectInput extends GenericInput {
     private DataTransferListener dataTransferListener;
     private RateLimiter rateLimiter;
     private long trafficLimit;
+    private String notificationCustomParameters;
 
     public String getBucket() {
         return bucket;
@@ -89,6 +90,15 @@ public class ModifyObjectInput extends GenericInput {
         return this;
     }
 
+    public String getNotificationCustomParameters() {
+        return notificationCustomParameters;
+    }
+
+    public ModifyObjectInput setNotificationCustomParameters(String notificationCustomParameters) {
+        this.notificationCustomParameters = notificationCustomParameters;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "ModifyObjectInput{" +
@@ -100,6 +110,7 @@ public class ModifyObjectInput extends GenericInput {
                 ", dataTransferListener=" + dataTransferListener +
                 ", rateLimiter=" + rateLimiter +
                 ", trafficLimit=" + trafficLimit +
+                ", notificationCustomParameters='" + notificationCustomParameters + '\'' +
                 '}';
     }
 }

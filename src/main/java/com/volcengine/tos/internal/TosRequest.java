@@ -15,6 +15,7 @@ public class TosRequest {
     private String method;
     private String host;
     private String path;
+    private boolean isSignedAllHeaders;
     private int port;
     private long contentLength;
     private boolean retryableOnClientException;
@@ -40,6 +41,11 @@ public class TosRequest {
      * only used in ClientV1, deprecated in ClientV2
      */
     private byte[] data = new byte[0];
+
+    /**
+     * FollowRedirectTimes
+     */
+    private int followRedirectTimes = Consts.DEFAULT_FOLLOW_REDIRECT_TIMES;
 
     public TosRequest() {
 
@@ -90,7 +96,7 @@ public class TosRequest {
             }
         }
 
-        return builder.scheme(scheme).host(host).encodedPath(path).build();
+        return builder.scheme(scheme).host(host).encodedPath(TosUtils.uriEncode(path, false)).build();
     }
 
     public String getScheme() {
@@ -167,6 +173,15 @@ public class TosRequest {
 
     public byte[] getData() {
         return data;
+    }
+
+    public boolean isSignedAllHeaders() {
+        return isSignedAllHeaders;
+    }
+
+    public TosRequest setSignedAllHeaders(boolean isSignedAllHeaders) {
+        this.isSignedAllHeaders = isSignedAllHeaders;
+        return this;
     }
 
     @Deprecated
@@ -253,6 +268,15 @@ public class TosRequest {
 
     public TosRequest setReadLimit(int readLimit) {
         this.readLimit = readLimit;
+        return this;
+    }
+
+    public int geFollowRedirectTimes() {
+        return followRedirectTimes;
+    }
+
+    public TosRequest setFollowRedirectTimes(int followRedirectTimes) {
+        this.followRedirectTimes = followRedirectTimes;
         return this;
     }
 }

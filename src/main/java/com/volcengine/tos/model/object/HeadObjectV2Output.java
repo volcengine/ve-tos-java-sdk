@@ -58,6 +58,10 @@ public class HeadObjectV2Output {
         return headObjectBasicOutput.getLastModifiedInDate();
     }
 
+    public Date getLastModifyTimestamp() {
+        return headObjectBasicOutput.getLastModifyTimestamp();
+    }
+
     public boolean isDeleteMarker() {
         return headObjectBasicOutput.isDeleteMarker();
     }
@@ -155,6 +159,14 @@ public class HeadObjectV2Output {
         return headObjectBasicOutput.getTaggingCount();
     }
 
+    public String getExpiration() {
+        return headObjectBasicOutput.getExpiration();
+    }
+
+    public String getStorageTier() {
+        return headObjectBasicOutput.getStorageTier();
+    }
+
     @Override
     public String toString() {
         return "HeadObjectOutputV2{" +
@@ -180,6 +192,8 @@ public class HeadObjectV2Output {
                 ", symlinkTargetSize=" + symlinkTargetSize +
                 ", isDirectory=" + isDirectory() + '\'' +
                 ", taggingCount=" + getTaggingCount() + '\'' +
+                ", expiration=" + getExpiration() + '\'' +
+                ", storageTier=" + getStorageTier() + '\'' +
                 '}';
     }
 }

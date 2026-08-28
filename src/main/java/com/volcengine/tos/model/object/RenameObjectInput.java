@@ -8,6 +8,7 @@ public class RenameObjectInput extends GenericInput {
     private String newKey;
     private boolean recursiveMkdir;
     private boolean forbidOverwrite;
+    private String notificationCustomParameters;
 
     public String getBucket() {
         return bucket;
@@ -54,6 +55,15 @@ public class RenameObjectInput extends GenericInput {
         return this;
     }
 
+    public String getNotificationCustomParameters() {
+        return notificationCustomParameters;
+    }
+
+    public RenameObjectInput setNotificationCustomParameters(String notificationCustomParameters) {
+        this.notificationCustomParameters = notificationCustomParameters;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "RenameObjectInput{" +
@@ -62,6 +72,7 @@ public class RenameObjectInput extends GenericInput {
                 ", newKey='" + newKey + '\'' +
                 ", recursiveMkdir=" + recursiveMkdir +
                 ", forbidOverwrite=" + forbidOverwrite +
+                ", notificationCustomParameters='" + notificationCustomParameters + '\'' +
                 '}';
     }
 
@@ -75,6 +86,7 @@ public class RenameObjectInput extends GenericInput {
         private String newKey;
         private boolean recursiveMkdir;
         private boolean forbidOverwrite;
+        private String notificationCustomParameters;
 
         private RenameObjectInputBuilder() {
         }
@@ -104,6 +116,11 @@ public class RenameObjectInput extends GenericInput {
             return this;
         }
 
+        public RenameObjectInputBuilder notificationCustomParameters(String notificationCustomParameters) {
+            this.notificationCustomParameters = notificationCustomParameters;
+            return this;
+        }
+
         public RenameObjectInput build() {
             RenameObjectInput renameObjectInput = new RenameObjectInput();
             renameObjectInput.setBucket(bucket);
@@ -111,6 +128,7 @@ public class RenameObjectInput extends GenericInput {
             renameObjectInput.setNewKey(newKey);
             renameObjectInput.setRecursiveMkdir(recursiveMkdir);
             renameObjectInput.setForbidOverwrite(forbidOverwrite);
+            renameObjectInput.setNotificationCustomParameters(notificationCustomParameters);
             return renameObjectInput;
         }
     }

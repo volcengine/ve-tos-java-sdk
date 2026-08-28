@@ -6,6 +6,7 @@ import com.volcengine.tos.model.GenericInput;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 public class DeleteMultiObjectsV2Input extends GenericInput {
     @JsonIgnore
@@ -14,6 +15,13 @@ public class DeleteMultiObjectsV2Input extends GenericInput {
     private List<ObjectTobeDeleted> objects;
     @JsonProperty("Quiet")
     private boolean quiet;
+    @JsonIgnore
+    private boolean recursive;
+    @JsonIgnore
+    private boolean skipTrash;
+    @JsonIgnore
+    private String notificationCustomParameters;
+
 
     public DeleteMultiObjectsV2Input() {
     }
@@ -28,6 +36,14 @@ public class DeleteMultiObjectsV2Input extends GenericInput {
 
     public List<ObjectTobeDeleted> getObjects() {
         return objects;
+    }
+
+    public boolean isRecursive() {
+        return recursive;
+    }
+
+    public boolean isSkipTrash() {
+        return skipTrash;
     }
 
     public DeleteMultiObjectsV2Input setBucket(String bucket) {
@@ -45,16 +61,38 @@ public class DeleteMultiObjectsV2Input extends GenericInput {
         return this;
     }
 
+    public DeleteMultiObjectsV2Input setRecursive(boolean recursive) {
+        this.recursive = recursive;
+        return this;
+    }
+
+    public DeleteMultiObjectsV2Input setSkipTrash(boolean skipTrash) {
+        this.skipTrash = skipTrash;
+        return this;
+    }
+
+    public String getNotificationCustomParameters() {
+        return notificationCustomParameters;
+    }
+
+    public DeleteMultiObjectsV2Input setNotificationCustomParameters(String notificationCustomParameters) {
+        this.notificationCustomParameters = notificationCustomParameters;
+        return this;
+    }
+
     public static DeleteMultiObjectsInputBuilder builder() {
         return new DeleteMultiObjectsInputBuilder();
     }
 
     @Override
     public String toString() {
-        return "DeleteMultiObjectsInput{" +
+        return "DeleteMultiObjectsV2Input{" +
                 "bucket='" + bucket + '\'' +
-                ", objects=" + Arrays.toString(objects.toArray()) +
+                ", objects=" + objects +
                 ", quiet=" + quiet +
+                ", recursive=" + recursive +
+                ", skipTrash=" + skipTrash +
+                ", notificationCustomParameters='" + notificationCustomParameters + '\'' +
                 '}';
     }
 
@@ -62,6 +100,9 @@ public class DeleteMultiObjectsV2Input extends GenericInput {
         private String bucket;
         private List<ObjectTobeDeleted> objects;
         private boolean quiet;
+        private boolean recursive;
+        private boolean skipTrash;
+        private String notificationCustomParameters;
 
         private DeleteMultiObjectsInputBuilder() {
         }
@@ -81,11 +122,29 @@ public class DeleteMultiObjectsV2Input extends GenericInput {
             return this;
         }
 
+        public DeleteMultiObjectsInputBuilder recursive(boolean recursive) {
+            this.recursive = recursive;
+            return this;
+        }
+
+        public DeleteMultiObjectsInputBuilder skipTrash(boolean skipTrash) {
+            this.skipTrash = skipTrash;
+            return this;
+        }
+
+        public DeleteMultiObjectsInputBuilder notificationCustomParameters(String notificationCustomParameters) {
+            this.notificationCustomParameters = notificationCustomParameters;
+            return this;
+        }
+
         public DeleteMultiObjectsV2Input build() {
             DeleteMultiObjectsV2Input deleteMultiObjectsInput = new DeleteMultiObjectsV2Input();
             deleteMultiObjectsInput.quiet = this.quiet;
             deleteMultiObjectsInput.objects = this.objects;
             deleteMultiObjectsInput.bucket = this.bucket;
+            deleteMultiObjectsInput.recursive = this.recursive;
+            deleteMultiObjectsInput.skipTrash = this.skipTrash;
+            deleteMultiObjectsInput.setNotificationCustomParameters(this.notificationCustomParameters);
             return deleteMultiObjectsInput;
         }
     }

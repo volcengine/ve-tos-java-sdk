@@ -16,6 +16,8 @@ import com.volcengine.tos.internal.util.*;
 import com.volcengine.tos.internal.util.aborthook.DefaultAbortTosObjectInputStreamHook;
 import com.volcengine.tos.internal.util.ratelimit.RateLimitedInputStream;
 import com.volcengine.tos.model.GenericInput;
+import com.volcengine.tos.model.bucket.GetBucketTypeInput;
+import com.volcengine.tos.model.bucket.GetBucketTypeOutput;
 import com.volcengine.tos.model.bucket.HeadBucketV2Input;
 import com.volcengine.tos.model.bucket.HeadBucketV2Output;
 import com.volcengine.tos.model.object.*;
@@ -26,12 +28,11 @@ import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.channels.FileChannel;
 import java.time.ZoneOffset;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+
+import static com.volcengine.tos.comm.common.Consts.*;
 
 public class TosObjectRequestHandler {
     private TosBucketRequestHandler bucketRequestHandler;
@@ -44,7 +45,7 @@ public class TosObjectRequestHandler {
     private final BucketCacheLock[] bucketCacheLocks;
 
     private static class BucketCache {
-        BucketType bucketType;
+        GetBucketTypeOutput getBucketTypeOutput;
         long lastUpdateTimeNanos;
         double timeout;
     }
@@ -131,13 +132,33 @@ public class TosObjectRequestHandler {
         if (input.getRequestDate() != null) {
             builder = builder.withHeader(SigningUtils.v4Date, SigningUtils.iso8601Layout.format(input.getRequestDate().toInstant().atOffset(ZoneOffset.UTC)));
         }
+
+        if (input.getRequestHeaders() != null && !input.getRequestHeaders().isEmpty()) {
+            Map<String, String> headers = builder.getHeaders();
+            for (Map.Entry<String, String> entry : input.getRequestHeaders().entrySet()) {
+                if (!containsKeyIgnoreCase(headers, entry.getKey())) {
+                    builder = builder.withHeader(entry.getKey(), entry.getValue());
+                }
+            }
+        }
+
+        if (input.getRequestQuery() != null && !input.getRequestQuery().isEmpty()) {
+            for (Map.Entry<String, String> entry : input.getRequestQuery().entrySet()) {
+                builder = builder.withQuery(entry.getKey(), entry.getValue());
+            }
+        }
         return builder;
     }
 
-    private BucketType getBucketType(String bucket) {
+    public static boolean containsKeyIgnoreCase(Map<String, String> map, String key) {
+        return TosBucketRequestHandler.containsKeyIgnoreCase(map, key);
+    }
+
+    public GetBucketTypeOutput getBucketType(GetBucketTypeInput input) throws TosException {
         if (this.bucketRequestHandler == null) {
             return null;
         }
+        String bucket = input.getBucket();
         BucketCacheLock bcl = this.bucketCacheLocks[Math.abs(bucket.hashCode()) % this.bucketCacheLocks.length];
 
         bcl.lock.readLock().lock();
@@ -145,22 +166,32 @@ public class TosObjectRequestHandler {
         bcl.lock.readLock().unlock();
 
         if (bc != null && (System.nanoTime() - bc.lastUpdateTimeNanos < bc.timeout)) {
-            return bc.bucketType;
+            return bc.getBucketTypeOutput;
         }
 
         bcl.lock.writeLock().lock();
         try {
             bc = bcl.bucketTypes.get(bucket);
             if (bc != null && (System.nanoTime() - bc.lastUpdateTimeNanos < bc.timeout)) {
-                return bc.bucketType;
+                return bc.getBucketTypeOutput;
             }
             HeadBucketV2Output output = this.bucketRequestHandler.headBucket(new HeadBucketV2Input().setBucket(bucket));
+            GetBucketTypeOutput getBucketTypeOutput = new GetBucketTypeOutput();
+            getBucketTypeOutput.setRequestInfo(output.getRequestInfo());
+            getBucketTypeOutput.setBucketType(output.getBucketType());
+            getBucketTypeOutput.setStorageClassType(output.getStorageClass());
+            getBucketTypeOutput.setAzRedundancyType(output.getAzRedundancy());
+            getBucketTypeOutput.setProjectName(output.getProjectName());
+            Random random = new Random();
+            long randomNano = BUCKET_TYPE_CACHE_MIN_TIME + (long) (random.nextDouble() * (BUCKET_TYPE_CACHE_MAX_TIME - BUCKET_TYPE_CACHE_MIN_TIME));
+
             bc = new BucketCache();
-            bc.bucketType = output.getBucketType();
+            bc.getBucketTypeOutput = getBucketTypeOutput;
             bc.lastUpdateTimeNanos = System.nanoTime();
-            bc.timeout = 15 * 60 * 1e9;
+            getBucketTypeOutput.setExpireAt(bc.lastUpdateTimeNanos + randomNano);
+            bc.timeout = randomNano;
             bcl.bucketTypes.put(bucket, bc);
-            return bc.bucketType;
+            return bc.getBucketTypeOutput;
         } catch (TosServerException ex) {
             if (bc != null) {
                 bcl.bucketTypes.remove(bucket);
@@ -176,8 +207,9 @@ public class TosObjectRequestHandler {
         ParamsChecker.ensureNotNull(input, "GetFileStatusInput");
         ensureValidBucketName(input.getBucket());
         ensureValidKey(input.getKey());
-        BucketType bucketType = this.getBucketType(input.getBucket());
-        if (bucketType != null && bucketType.getType().equals(BucketType.BUCKET_TYPE_HNS.getType())) {
+        GetBucketTypeOutput bucketTypeOutput = this.getBucketType(new GetBucketTypeInput(input.getBucket()));
+        if (bucketTypeOutput != null && bucketTypeOutput.getBucketType() != null &&
+                bucketTypeOutput.getBucketType().getType().equals(BucketType.BUCKET_TYPE_HNS.getType())) {
             HeadObjectV2Input hinput = new HeadObjectV2Input().setBucket(input.getBucket())
                     .setKey(input.getKey());
             hinput.setRequestDate(input.getRequestDate());
@@ -188,6 +220,7 @@ public class TosObjectRequestHandler {
             goutput.setKey(input.getKey());
             goutput.setLastModified(output.getLastModified());
             goutput.setCrc64(output.getHashCrc64ecma());
+            goutput.setEtag(output.getEtag());
             if (output.getRequestInfo().getHeader() != null) {
                 goutput.setCrc32(output.getRequestInfo().getHeader().get(TosHeader.HEADER_CRC32.toLowerCase()));
             }
@@ -307,6 +340,8 @@ public class TosObjectRequestHandler {
                 .withQuery("versionId", input.getVersionID());
         builder = this.handleGenericInput(builder, input);
         TosRequest req = this.factory.build(builder, HttpMethod.HEAD, null);
+        if (input.isOnlyInTOS())
+            req.setFollowRedirectTimes(0);
         return objectHandler.doRequest(req, getExpectedCodes(input.getAllSettedHeaders()),
                 response -> {
                     HeadObjectV2Output output = new HeadObjectV2Output(new GetObjectBasicOutput()
@@ -320,42 +355,48 @@ public class TosObjectRequestHandler {
         ParamsChecker.ensureNotNull(input, "DeleteObjectInput");
         ensureValidBucketName(input.getBucket());
         ensureValidKey(input.getKey());
+
+        // 未指定recursive参数,直接走服务端删除逻辑
         if (!input.isRecursive()) {
-            RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), null)
-                    .withQuery("versionId", input.getVersionID());
-            builder = this.handleGenericInput(builder, input);
-            TosRequest req = this.factory.build(builder, HttpMethod.DELETE, null);
-            return objectHandler.doRequest(req, HttpStatus.NO_CONTENT,
-                    response -> new DeleteObjectOutput().setRequestInfo(response.RequestInfo())
-                            .setDeleteMarker(Boolean.parseBoolean(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_DELETE_MARKER)))
-                            .setVersionID(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_VERSIONID))
-            );
+            return directlyDeleteObject(input);
         }
 
-        BucketType bucketType = this.getBucketType(input.getBucket());
+        // 指定了recursive参数,判断是否为hns桶,如果是hns桶,优先走服务端删除逻辑,否则走SDK递归删除逻辑
+        BucketType bucketType = this.getBucketType(new GetBucketTypeInput(input.getBucket())).getBucketType();
         boolean hns = bucketType != null && bucketType.getType().equals(BucketType.BUCKET_TYPE_HNS.getType());
-        if (hns && this.isRecursiveByServer(input)) {
-            RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), null)
-                    .withQuery("versionId", input.getVersionID())
-                    .withQuery("recursive", "true");
-            builder = this.handleGenericInput(builder, input);
-            TosRequest req = this.factory.build(builder, HttpMethod.DELETE, null);
-            return objectHandler.doRequest(req, HttpStatus.NO_CONTENT,
-                    response -> new DeleteObjectOutput().setRequestInfo(response.RequestInfo())
-            );
-        }
+        if (hns) {
+            try {
+                return directlyDeleteObject(input);
+            } catch (TosServerException e) {
+                // 服务端不支持递归删除目录 or 同时携带了 Recursive 和 SkipTrash 参数场景下,需要降级由SDK进行递归删除
+                if (Consts.EcNotSupportRecursiveDeleteErr.equals(e.getEc()) || Consts.EcDirNotEmptyWithSkipTrashErr.equals(e.getEc())) {
+                    return new RecursiveDeleter(input, hns, this).deleteRecursive();
+                }
 
-        return new RecursiveDeleter(input, hns, this).deleteRecursive();
+                throw e;
+            }
+        } else {
+            return new RecursiveDeleter(input, hns, this).deleteRecursive();
+        }
     }
 
-    private boolean isRecursiveByServer(DeleteObjectInput input) {
-        try {
-            Field f = input.getClass().getDeclaredField("recursiveByServer");
-            f.setAccessible(true);
-            return f.getBoolean(input);
-        } catch (Exception e) {
-            return false;
+    private DeleteObjectOutput directlyDeleteObject(DeleteObjectInput input) {
+        RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), input.getAllSettedHeaders())
+                .withQuery("versionId", input.getVersionID());
+        if (input.isRecursive()) {
+            builder = builder.withQuery("recursive", "true");
         }
+        if (input.isSkipTrash()) {
+            builder = builder.withQuery("skipTrash", "true");
+        }
+        builder = this.handleGenericInput(builder, input);
+        TosRequest req = this.factory.build(builder, HttpMethod.DELETE, null);
+        return objectHandler.doRequest(req, HttpStatus.NO_CONTENT,
+                response -> new DeleteObjectOutput().setRequestInfo(response.RequestInfo())
+                        .setDeleteMarker(Boolean.parseBoolean(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_DELETE_MARKER)))
+                        .setVersionID(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_VERSIONID))
+                        .setTrashPath(response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_TRASH_PATH))
+        );
     }
 
     public DeleteMultiObjectsV2Output deleteMultiObjects(DeleteMultiObjectsV2Input input) throws TosException {
@@ -368,6 +409,15 @@ public class TosObjectRequestHandler {
         TosMarshalResult marshalResult = PayloadConverter.serializePayloadAndComputeMD5(input);
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null)
                 .withHeader(TosHeader.HEADER_CONTENT_MD5, marshalResult.getContentMD5()).withQuery("delete", "");
+        if (input.isRecursive()) {
+            builder = builder.withQuery("recursive", "true");
+        }
+        if (input.isSkipTrash()) {
+            builder = builder.withQuery("skipTrash", "true");
+        }
+        if (StringUtils.isNotEmpty(input.getNotificationCustomParameters())) {
+            builder = builder.withHeader(TosHeader.HEADER_NOTIFICATION_CUSTOM_PARAMETERS, input.getNotificationCustomParameters());
+        }
         builder = this.handleGenericInput(builder, input);
         TosRequest req = this.factory.build(builder, HttpMethod.POST, new ByteArrayInputStream(marshalResult.getData()))
                 .setContentLength(marshalResult.getData().length);
@@ -386,7 +436,8 @@ public class TosObjectRequestHandler {
                 .withHeader(TosHeader.HEADER_CALLBACK, input.getCallback())
                 .withHeader(TosHeader.HEADER_CALLBACK_VAR, input.getCallbackVar())
                 .withHeader(TosHeader.HEADER_X_IF_MATCH, input.getIfMatch())
-                .withHeader(TosHeader.HEADER_TAGGING, input.getTagging());
+                .withHeader(TosHeader.HEADER_TAGGING, input.getTagging())
+                .withHeader(TosHeader.HEADER_NOTIFICATION_CUSTOM_PARAMETERS, input.getNotificationCustomParameters());
         if (input.isForbidOverwrite()) {
             builder = builder.withHeader(TosHeader.HEADER_FORBID_OVERWRITE, "true");
         }
@@ -515,7 +566,7 @@ public class TosObjectRequestHandler {
         ensureValidBucketName(input.getBucket());
         ensureValidKey(input.getKey());
 
-        BucketType bucketType = this.getBucketType(input.getBucket());
+        BucketType bucketType = this.getBucketType(new GetBucketTypeInput(input.getBucket())).getBucketType();
         if (bucketType != null && bucketType.getType().equals(BucketType.BUCKET_TYPE_HNS.getType())) {
             if (input.getOffset() == 0 && input.getContentLength() >= 0) {
                 HeadObjectV2Output headOutput;
@@ -627,6 +678,41 @@ public class TosObjectRequestHandler {
         );
     }
 
+    public SetObjectTimeOutput setObjectTime(SetObjectTimeInput input) throws TosException {
+        ParamsChecker.ensureNotNull(input, "SetObjectTimeInput");
+        ParamsChecker.ensureNotNull(input.getModifyTimestamp(), "modifyTimestamp");
+        ensureValidBucketName(input.getBucket());
+        ensureValidKey(input.getKey());
+
+        long secondTimeStamp = input.getModifyTimestamp().getTime() / 1000;
+        long nanosecondExtTimeStamp = (input.getModifyTimestamp().getTime() - secondTimeStamp * 1000) * 1000 * 1000;
+        RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), null)
+                .withQuery("time", "").withHeader(TosHeader.HEADER_MODIFY_TIMESTAMP, String.valueOf(secondTimeStamp))
+                .withHeader(TosHeader.HEADER_MODIFY_TIMESTAMP_NS, String.valueOf(nanosecondExtTimeStamp));
+        addContentType(builder, input.getKey());
+        builder = this.handleGenericInput(builder, input);
+        TosRequest req = this.factory.build(builder, HttpMethod.POST, null);
+        return objectHandler.doRequest(req, HttpStatus.OK,
+                response -> new SetObjectTimeOutput().setRequestInfo(response.RequestInfo())
+        );
+    }
+
+    public SetObjectExpiresOutput setObjectExpires(SetObjectExpiresInput input) throws TosException {
+        ParamsChecker.ensureNotNull(input, "SetObjectExpiresInput");
+        ensureValidBucketName(input.getBucket());
+        ensureValidKey(input.getKey());
+
+        TosMarshalResult marshalResult = PayloadConverter.serializePayloadAndComputeMD5(input);
+        RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), null)
+                .withQuery("objectExpires", "").withHeader(TosHeader.HEADER_CONTENT_MD5, marshalResult.getContentMD5());
+        builder = this.handleGenericInput(builder, input);
+        TosRequest req = this.factory.build(builder, HttpMethod.POST, new ByteArrayInputStream(marshalResult.getData()))
+                .setContentLength(marshalResult.getData().length);
+        return objectHandler.doRequest(req, HttpStatus.OK,
+                response -> new SetObjectExpiresOutput().setRequestInfo(response.RequestInfo())
+        );
+    }
+
     public ListObjectsV2Output listObjects(ListObjectsV2Input input) throws TosException {
         ParamsChecker.ensureNotNull(input, "ListObjectsV2Input");
         ensureValidBucketName(input.getBucket());
@@ -680,21 +766,22 @@ public class TosObjectRequestHandler {
 
     public ListObjectsType2Output listObjectsType2UntilFinished(ListObjectsType2Input input) {
         ParamsChecker.ensureNotNull(input, "ListObjectsType2Input");
-        if (input.isListOnlyOnce()) {
-            return listObjectsType2(input);
+        ListObjectsType2Input tmpInput = ListObjectsType2Input.builder().copyFrom(input).build();
+
+        if (tmpInput.isListOnlyOnce()) {
+            return listObjectsType2(tmpInput);
         }
 
-        int mk = input.getMaxKeys() > 0 ? input.getMaxKeys() : 1000;
-
+        int mk = tmpInput.getMaxKeys() > 0 ? tmpInput.getMaxKeys() : 1000;
         int totalRecords = 0;
         List<ListedCommonPrefix> commonPrefixes = null;
         List<ListedObjectV2> contents = null;
 
         ListObjectsType2Output tmp = null;
-        String continuationToken = input.getContinuationToken();
+        String continuationToken = tmpInput.getContinuationToken();
         boolean listFinished = false;
         while (!listFinished) {
-            tmp = listObjectsType2(input.setContinuationToken(continuationToken));
+            tmp = listObjectsType2(tmpInput.setContinuationToken(continuationToken));
 
             if (tmp.getCommonPrefixes() != null) {
                 if (commonPrefixes == null) {
@@ -910,7 +997,8 @@ public class TosObjectRequestHandler {
         ParamsChecker.ensureNotNull(input.getUrl(), "URL");
         TosMarshalResult marshalResult = PayloadConverter.serializePayloadAndComputeMD5(input);
         RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), input.getAllSettedHeaders())
-                .withQuery("fetch", "").withHeader(TosHeader.HEADER_CONTENT_MD5, marshalResult.getContentMD5());
+                .withQuery("fetch", "").withHeader(TosHeader.HEADER_CONTENT_MD5, marshalResult.getContentMD5())
+                .withHeader(TosHeader.HEADER_NOTIFICATION_CUSTOM_PARAMETERS, input.getNotificationCustomParameters());
         builder = this.handleGenericInput(builder, input);
         TosRequest req = this.factory.build(builder, HttpMethod.POST, new ByteArrayInputStream(marshalResult.getData()))
                 .setContentLength(marshalResult.getData().length);
@@ -1044,7 +1132,8 @@ public class TosObjectRequestHandler {
         RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), null)
                 .withQuery("uploadId", input.getUploadID())
                 .withHeader(TosHeader.HEADER_CALLBACK, input.getCallback())
-                .withHeader(TosHeader.HEADER_CALLBACK_VAR, input.getCallbackVar());
+                .withHeader(TosHeader.HEADER_CALLBACK_VAR, input.getCallbackVar())
+                .withHeader(TosHeader.HEADER_NOTIFICATION_CUSTOM_PARAMETERS, input.getNotificationCustomParameters());
         if (input.isForbidOverwrite()) {
             builder = builder.withHeader(TosHeader.HEADER_FORBID_OVERWRITE, "true");
         }
@@ -1167,7 +1256,8 @@ public class TosObjectRequestHandler {
         ensureValidKey(input.getKey());
         ensureValidKey(input.getNewKey());
         RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), null)
-                .withQuery("name", input.getNewKey()).withQuery("rename", "");
+                .withQuery("name", input.getNewKey()).withQuery("rename", "")
+                .withHeader(TosHeader.HEADER_NOTIFICATION_CUSTOM_PARAMETERS, input.getNotificationCustomParameters());
 
         if (input.isForbidOverwrite()) {
             builder = builder.withHeader(TosHeader.HEADER_FORBID_OVERWRITE, "true");
@@ -1190,6 +1280,7 @@ public class TosObjectRequestHandler {
         TosMarshalResult marshalResult = PayloadConverter.serializePayloadAndComputeMD5(input);
         RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), null)
                 .withHeader(TosHeader.HEADER_CONTENT_MD5, marshalResult.getContentMD5())
+                .withHeader(TosHeader.HEADER_NOTIFICATION_CUSTOM_PARAMETERS, input.getNotificationCustomParameters())
                 .withQuery("restore", "")
                 .withQuery("versionId", input.getVersionID());
         builder = this.handleGenericInput(builder, input);
@@ -1280,6 +1371,7 @@ public class TosObjectRequestHandler {
         RequestBuilder builder = this.factory.init(input.getBucket(), input.getKey(), null)
                 .withQuery("modify", "")
                 .withQuery("offset", String.valueOf(input.getOffset()))
+                .withHeader(TosHeader.HEADER_NOTIFICATION_CUSTOM_PARAMETERS, input.getNotificationCustomParameters())
                 .withContentLength(input.getContentLength());
 
         if (input.getTrafficLimit() > 0) {
@@ -1307,6 +1399,32 @@ public class TosObjectRequestHandler {
             }
         });
     }
+
+    public boolean doesObjectExist(DoesObjectExistInput input) throws TosException {
+        ParamsChecker.ensureNotNull(input, "DoesObjectExistInput");
+        ensureValidBucketName(input.getBucket());
+        HeadObjectV2Input headObjectV2Input = new HeadObjectV2Input();
+        headObjectV2Input.setBucket(input.getBucket());
+        headObjectV2Input.setKey(input.getKey());
+        headObjectV2Input.setVersionID(input.getVersionID());
+        headObjectV2Input.setOnlyInTOS(input.isOnlyInTOS());
+        HeadObjectV2Output headObjectV2Output = null;
+        try {
+            headObjectV2Output = headObject(headObjectV2Input);
+            if (headObjectV2Output.getRequestInfo().getStatusCode() == HttpStatus.OK) {
+                return true;
+            }
+        } catch (TosServerException e) {
+            if (Objects.equals(e.getEc(), Consts.EcEncryptionMismatchErr)) {
+                return true;
+            } else if (Objects.equals(e.getEc(), Consts.EcNoSuchObjectErr)) {
+                return false;
+            }
+            throw e;
+        }
+        return false;
+    }
+
 
     private List<Integer> restoreObjectExceptedCodes() {
         List<Integer> expectedCodes = new ArrayList<>();
