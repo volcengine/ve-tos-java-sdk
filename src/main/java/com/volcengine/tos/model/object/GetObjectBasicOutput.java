@@ -22,6 +22,7 @@ public class GetObjectBasicOutput {
     private String contentRange;
     private String etag;
     private String lastModified;
+    private String lastModifiedNs;
     private boolean deleteMarker;
 
     private String ssecAlgorithm;
@@ -71,6 +72,19 @@ public class GetObjectBasicOutput {
 
     public Date getLastModifiedInDate() {
         return DateConverter.rfc1123StringToDate(lastModified);
+    }
+
+    public Date getLastModifyTimestamp() {
+        Date date = DateConverter.rfc1123StringToDate(lastModified);
+        if (date == null || lastModifiedNs == null) {
+            return date;
+        }
+
+        long modifyTimestamp = date.getTime();
+        long nsModifyTimeStamp = Integer.parseInt(lastModifiedNs);
+        modifyTimestamp = modifyTimestamp + nsModifyTimeStamp / 1000 / 1000;
+
+        return new Date(modifyTimestamp);
     }
 
     public boolean isDeleteMarker() {
@@ -194,6 +208,7 @@ public class GetObjectBasicOutput {
             }
             this.contentDisposition = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_CONTENT_DISPOSITION);
             this.lastModified = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_LAST_MODIFIED);
+            this.lastModifiedNs = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_LAST_MODIFIED_NS);
             this.cacheControl = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_CACHE_CONTROL);
             this.expires = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_EXPIRES);
             this.etag = response.getHeaderWithKeyIgnoreCase(TosHeader.HEADER_ETAG);
@@ -279,6 +294,7 @@ public class GetObjectBasicOutput {
                 ", contentRange='" + contentRange + '\'' +
                 ", etag='" + etag + '\'' +
                 ", lastModified=" + lastModified +
+                ", lastModifiedNs=" + lastModifiedNs +
                 ", deleteMarker=" + deleteMarker +
                 ", ssecAlgorithm='" + ssecAlgorithm + '\'' +
                 ", ssecKeyMD5='" + ssecKeyMD5 + '\'' +

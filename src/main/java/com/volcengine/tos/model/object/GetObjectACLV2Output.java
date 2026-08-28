@@ -19,6 +19,8 @@ public class GetObjectACLV2Output {
     private List<GrantV2> grants;
     @JsonProperty("BucketOwnerEntrusted")
     private boolean bucketOwnerEntrusted;
+    @JsonProperty("IsDefault")
+    private boolean isDefault;
 
     public RequestInfo getRequestInfo() {
         return requestInfo;
@@ -65,6 +67,15 @@ public class GetObjectACLV2Output {
         return this;
     }
 
+    public boolean isDefault() {
+        return isDefault;
+    }
+
+    public GetObjectACLV2Output setDefault(boolean aDefault) {
+        isDefault = aDefault;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "GetObjectACLV2Output{" +
@@ -73,6 +84,7 @@ public class GetObjectACLV2Output {
                 ", owner=" + owner +
                 ", grants=" + grants +
                 ", bucketOwnerEntrusted=" + bucketOwnerEntrusted +
+                ", isDefault=" + isDefault +
                 '}';
     }
 }

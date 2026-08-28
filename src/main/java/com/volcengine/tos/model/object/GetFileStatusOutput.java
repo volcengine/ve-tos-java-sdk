@@ -20,6 +20,8 @@ public class GetFileStatusOutput {
     private String crc32;
     @JsonProperty("CRC64")
     private String crc64;
+    @JsonProperty("ETag")
+    private String etag;
 
     public RequestInfo getRequestInfo() {
         return requestInfo;
@@ -79,6 +81,15 @@ public class GetFileStatusOutput {
         return this;
     }
 
+    public String getEtag() {
+        return etag;
+    }
+
+    public GetFileStatusOutput setEtag(String etag) {
+        this.etag = etag;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "GetFileStatusOutput{" +
@@ -88,6 +99,7 @@ public class GetFileStatusOutput {
                 ", lastModified='" + lastModified + '\'' +
                 ", crc32='" + crc32 + '\'' +
                 ", crc64='" + crc64 + '\'' +
+                ", etag='" + etag + '\'' +
                 '}';
     }
 }
