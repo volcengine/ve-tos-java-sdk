@@ -44,6 +44,24 @@ public interface TOSV2 extends TOS, Closeable {
     HeadBucketV2Output headBucket(HeadBucketV2Input input) throws TosException;
 
     /**
+     * check bucket exist
+     *
+     * @param input bucket name
+     * @return {@link Boolean}
+     * @throws TosException
+     */
+    boolean doesBucketExist(DoesBucketExistInput input) throws TosException;
+
+    /**
+     * check object exist
+     *
+     * @param input object name
+     * @return {@link Boolean}
+     * @throws TosException
+     */
+    boolean doesObjectExist(DoesObjectExistInput input) throws TosException;
+
+    /**
      * delete an existed bucket
      *
      * @param input bucket name
@@ -447,6 +465,8 @@ public interface TOSV2 extends TOS, Closeable {
 
     DeleteBucketInventoryOutput deleteBucketInventory(DeleteBucketInventoryInput input) throws TosException;
 
+    GetBucketInfoOutput getBucketInfo(GetBucketInfoInput input) throws TosException;
+
     /**
      * get data and metadata of an object
      *
@@ -543,6 +563,24 @@ public interface TOSV2 extends TOS, Closeable {
      * @throws TosException
      */
     SetObjectMetaOutput setObjectMeta(SetObjectMetaInput input) throws TosException;
+
+    /**
+     * set object last modify time
+     *
+     * @param input setObjectTime option
+     * @return {@link SetObjectTimeOutput}
+     * @throws TosException
+     */
+    SetObjectTimeOutput setObjectTime(SetObjectTimeInput input) throws TosException;
+
+    /**
+     * set object expires time
+     *
+     * @param input setObjectExpires option
+     * @return {@link SetObjectExpiresOutput}
+     * @throws TosException
+     */
+    SetObjectExpiresOutput setObjectExpires(SetObjectExpiresInput input) throws TosException;
 
     /**
      * list objects of a bucket
@@ -779,6 +817,51 @@ public interface TOSV2 extends TOS, Closeable {
      */
     PreSignedPolicyURLOutput preSignedPolicyURL(PreSignedPolicyURLInput input) throws TosException;
 
+    /**
+     * get the type of bucket
+     *
+     * @param input GetBucketTypeInput
+     * @return {@link GetBucketTypeOutput}
+     * @throws TosException
+     */
+    GetBucketTypeOutput getBucketType(GetBucketTypeInput input) throws TosException;
+
+    /**
+     * put the bucket access monitor
+     *
+     * @param input PutBucketAccessMonitorInput
+     * @return {@link PutBucketAccessMonitorOutput}
+     * @throws TosException
+     */
+    PutBucketAccessMonitorOutput putBucketAccessMonitor(PutBucketAccessMonitorInput input) throws TosException;
+
+    /**
+     * get the bucket access monitor
+     *
+     * @param input GetBucketAccessMonitorInput
+     * @return {@link GetBucketAccessMonitorOutput}
+     * @throws TosException
+     */
+    GetBucketAccessMonitorOutput getBucketAccessMonitor(GetBucketAccessMonitorInput input) throws TosException;
+
+    PutQosPolicyOutput putQosPolicy(PutQosPolicyInput input) throws TosException;
+
+    GetQosPolicyOutput getQosPolicy(GetQosPolicyInput input) throws TosException;
+
+    DeleteQosPolicyOutput deleteQosPolicy(DeleteQosPolicyInput input) throws TosException;
+
+    CreateAccessPointOutput createAccessPoint(CreateAccessPointInput input) throws TosException;
+
+    GetAccessPointOutput getAccessPoint(GetAccessPointInput input) throws TosException;
+
+    ListAccessPointsOutput listAccessPoints(ListAccessPointsInput input) throws TosException;
+
+    DeleteAccessPointOutput deleteAccessPoint(DeleteAccessPointInput input) throws TosException;
+
+    ListBindAcceleratorForAccessPointOutput listBindAcceleratorForAccessPoint(ListBindAcceleratorForAccessPointInput input) throws TosException;
+
+    ListBindAccessPointForAcceleratorOutput listBindAccessPointForAccelerator(ListBindAccessPointForAcceleratorInput input) throws TosException;
+
     @Deprecated
     void changeCredentials(Credentials credentials);
 
@@ -790,4 +873,328 @@ public interface TOSV2 extends TOS, Closeable {
     boolean refreshEndpointRegion(String endpoint, String region);
 
     boolean refreshCredentials(String accessKey, String secretKey, String securityToken);
+
+    /**
+     * put audio convert template
+     *
+     * @param input PutAudioConvertTemplateInput
+     * @return {@link PutAudioConvertTemplateOutput}
+     * @throws TosException
+     */
+    PutAudioConvertTemplateOutput putAudioConvertTemplate(PutAudioConvertTemplateInput input) throws TosException;
+
+    /**
+     * put video convert template
+     *
+     * @param input PutVideoConvertTemplateInput
+     * @return {@link PutVideoConvertTemplateOutput}
+     * @throws TosException
+     */
+    PutVideoConvertTemplateOutput putVideoConvertTemplate(PutVideoConvertTemplateInput input) throws TosException;
+
+    /**
+     * get video convert template
+     *
+     * @param input GetVideoConvertTemplateInput
+     * @return {@link GetVideoConvertTemplateOutput}
+     * @throws TosException
+     */
+    GetVideoConvertTemplateOutput getVideoConvertTemplate(GetVideoConvertTemplateInput input) throws TosException;
+
+    /**
+     * get audio convert template
+     *
+     * @param input GetAudioConvertTemplateInput
+     * @return {@link GetAudioConvertTemplateOutput}
+     * @throws TosException
+     */
+    GetAudioConvertTemplateOutput getAudioConvertTemplate(GetAudioConvertTemplateInput input) throws TosException;
+
+    /**
+     * delete audio convert template
+     *
+     * @param input DeleteAudioConvertTemplateInput
+     * @return {@link DeleteAudioConvertTemplateOutput}
+     * @throws TosException
+     */
+    DeleteAudioConvertTemplateOutput deleteAudioConvertTemplate(DeleteAudioConvertTemplateInput input) throws TosException;
+
+    /**
+     * delete video convert template
+     *
+     * @param input DeleteVideoConvertTemplateInput
+     * @return {@link DeleteVideoConvertTemplateOutput}
+     * @throws TosException
+     */
+    DeleteVideoConvertTemplateOutput deleteVideoConvertTemplate(DeleteVideoConvertTemplateInput input) throws TosException;
+
+    /**
+     * list audio convert templates
+     *
+     * @param input ListAudioConvertTemplatesInput
+     * @return {@link ListAudioConvertTemplatesOutput}
+     * @throws TosException
+     */
+    ListAudioConvertTemplatesOutput listAudioConvertTemplates(ListAudioConvertTemplatesInput input) throws TosException;
+
+    /**
+     * list video convert templates
+     *
+     * @param input ListVideoConvertTemplatesInput
+     * @return {@link ListVideoConvertTemplatesOutput}
+     * @throws TosException
+     */
+    ListVideoConvertTemplatesOutput listVideoConvertTemplates(ListVideoConvertTemplatesInput input) throws TosException;
+
+    /**
+     * put watermark template
+     *
+     * @param input PutWatermarkTemplateInput
+     * @return {@link PutWatermarkTemplateOutput}
+     * @throws TosException
+     */
+    PutWatermarkTemplateOutput putWatermarkTemplate(PutWatermarkTemplateInput input) throws TosException;
+
+    /**
+     * get watermark template
+     *
+     * @param input GetWatermarkTemplateInput
+     * @return {@link GetWatermarkTemplateOutput}
+     * @throws TosException
+     */
+    GetWatermarkTemplateOutput getWatermarkTemplate(GetWatermarkTemplateInput input) throws TosException;
+
+    /**
+     * list watermark templates
+     *
+     * @param input ListWatermarkTemplatesInput
+     * @return {@link ListWatermarkTemplatesOutput}
+     * @throws TosException
+     */
+    ListWatermarkTemplatesOutput listWatermarkTemplates(ListWatermarkTemplatesInput input) throws TosException;
+
+    /**
+     * delete watermark template
+     *
+     * @param input DeleteWatermarkTemplateInput
+     * @return {@link DeleteWatermarkTemplateOutput}
+     * @throws TosException
+     */
+    DeleteWatermarkTemplateOutput deleteWatermarkTemplate(DeleteWatermarkTemplateInput input) throws TosException;
+
+    /**
+     * put convert workflow
+     *
+     * @param input PutConvertWorkflowInput
+     * @return {@link PutConvertWorkflowOutput}
+     * @throws TosException
+     */
+    PutConvertWorkflowOutput putConvertWorkflow(PutConvertWorkflowInput input) throws TosException;
+
+    /**
+     * get convert workflow
+     *
+     * @param input GetConvertWorkflowInput
+     * @return {@link GetConvertWorkflowOutput}
+     * @throws TosException
+     */
+    GetConvertWorkflowOutput getConvertWorkflow(GetConvertWorkflowInput input) throws TosException;
+
+    /**
+     * delete convert workflow
+     *
+     * @param input DeleteConvertWorkflowInput
+     * @return {@link DeleteConvertWorkflowOutput}
+     * @throws TosException
+     */
+    DeleteConvertWorkflowOutput deleteConvertWorkflow(DeleteConvertWorkflowInput input) throws TosException;
+
+    /**
+     * create video convert job
+     *
+     * @param input CreateVideoConvertJobInput
+     * @return {@link CreateVideoConvertJobOutput}
+     * @throws TosException
+     */
+    CreateVideoConvertJobOutput createVideoConvertJob(CreateVideoConvertJobInput input) throws TosException;
+
+    /**
+     * create async process task
+     *
+     * @param input CreateAsyncProcessTaskInput
+     * @return {@link CreateAsyncProcessTaskOutput}
+     * @throws TosException
+     */
+    CreateAsyncProcessTaskOutput createAsyncProcessTask(CreateAsyncProcessTaskInput input) throws TosException;
+
+    /** 
+     * get video convert job
+     *
+     * @param input GetVideoConvertJobInput
+     * @return {@link GetVideoConvertJobOutput}
+     * @throws TosException
+     */
+    GetVideoConvertJobOutput getVideoConvertJob(GetVideoConvertJobInput input) throws TosException;
+
+    /**
+     * get animation job
+     *
+     * @param input GetAnimationJobInput
+     * @return {@link GetAnimationJobOutput}
+     * @throws TosException
+     */
+    GetAnimationJobOutput getAnimationJob(GetAnimationJobInput input) throws TosException;
+
+    /**
+     * get audio convert job
+     *
+     * @param input GetAudioConvertJobInput
+     * @return {@link GetAudioConvertJobOutput}
+     * @throws TosException
+     */
+    GetAudioConvertJobOutput getAudioConvertJob(GetAudioConvertJobInput input) throws TosException;
+    /** 
+     * create audio convert job
+     *
+     * @param input CreateAudioConvertJobInput
+     * @return {@link CreateAudioConvertJobOutput}
+     * @throws TosException
+     */
+    CreateAudioConvertJobOutput createAudioConvertJob(CreateAudioConvertJobInput input) throws TosException;
+
+    /**
+     * submit multi-file compress job
+     *
+     * @param input FileCompressInput
+     * @return {@link FileCompressOutput}
+     * @throws TosException
+     */
+    FileCompressOutput fileCompress(FileCompressInput input) throws TosException;
+
+    /**
+     * submit file uncompress job
+     *
+     * @param input FileUncompressInput
+     * @return {@link FileUncompressOutput}
+     * @throws TosException
+     */
+    FileUncompressOutput fileUncompress(FileUncompressInput input) throws TosException;
+
+    /**
+     * point cloud file compress
+     *
+     * @param input PointCloudCompressInput
+     * @return {@link PointCloudCompressOutput}
+     * @throws TosException
+     */
+    PointCloudCompressOutput pointCloudCompress(PointCloudCompressInput input) throws TosException;
+
+    /**
+     * get object set endpoint
+     *
+     * @param input GetObjectSetEndpointInput
+     * @return {@link GetObjectSetEndpointOutput}
+     * @throws TosException
+     */
+    GetObjectSetEndpointOutput getObjectSetEndpoint(GetObjectSetEndpointInput input) throws TosException;
+
+    /**
+     * set or update object set lifecycle rules
+     */
+    PutObjectSetLifecycleOutput putObjectSetLifecycle(PutObjectSetLifecycleInput input) throws TosException;
+
+    /**
+     * get object set lifecycle rules
+     */
+    GetObjectSetLifecycleOutput getObjectSetLifecycle(GetObjectSetLifecycleInput input) throws TosException;
+
+    /**
+     * delete object set lifecycle rules
+     */
+    DeleteObjectSetLifecycleOutput deleteObjectSetLifecycle(DeleteObjectSetLifecycleInput input) throws TosException;
+
+    /**
+     * set or update object set lifecycle rules by tag
+     */
+    PutObjectSetLifecycleByTagOutput putObjectSetLifecycleByTag(PutObjectSetLifecycleByTagInput input) throws TosException;
+
+    /**
+     * get object set lifecycle rules by tag
+     */
+    GetObjectSetLifecycleByTagOutput getObjectSetLifecycleByTag(GetObjectSetLifecycleByTagInput input) throws TosException;
+
+    /**
+     * delete object set lifecycle rules by tag
+     */
+    DeleteObjectSetLifecycleByTagOutput deleteObjectSetLifecycleByTag(DeleteObjectSetLifecycleByTagInput input) throws TosException;
+
+    /**
+     * put bucket object set configuration
+     */
+    PutBucketObjectSetConfigurationOutput putBucketObjectSetConfiguration(PutBucketObjectSetConfigurationInput input) throws TosException;
+
+    /**
+     * get bucket object set configuration
+     */
+    GetBucketObjectSetConfigurationOutput getBucketObjectSetConfiguration(GetBucketObjectSetConfigurationInput input) throws TosException;
+
+    /**
+     * create object set
+     */
+    PutObjectSetOutput putObjectSet(PutObjectSetInput input) throws TosException;
+
+    /**
+     * delete object set
+     */
+    DeleteObjectSetOutput deleteObjectSet(DeleteObjectSetInput input) throws TosException;
+
+    /**
+     * list object sets
+     */
+    ListObjectSetsOutput listObjectSets(ListObjectSetsInput input) throws TosException;
+
+    /**
+     * get object set
+     */
+    GetObjectSetOutput getObjectSet(GetObjectSetInput input) throws TosException;
+
+    /**
+     * put object set tagging
+     */
+    PutObjectSetTaggingOutput putObjectSetTagging(PutObjectSetTaggingInput input) throws TosException;
+
+    /**
+     * get object set tagging
+     */
+    GetObjectSetTaggingOutput getObjectSetTagging(GetObjectSetTaggingInput input) throws TosException;
+
+    /**
+     * put object set quota by tag
+     */
+    PutObjectSetQuotaByTagOutput putObjectSetQuotaByTag(PutObjectSetQuotaByTagInput input) throws TosException;
+
+    /**
+     * get object set quota by tag
+     */
+    GetObjectSetQuotaByTagOutput getObjectSetQuotaByTag(GetObjectSetQuotaByTagInput input) throws TosException;
+
+    /**
+     * delete object set quota by tag
+     */
+    DeleteObjectSetQuotaByTagOutput deleteObjectSetQuotaByTag(DeleteObjectSetQuotaByTagInput input) throws TosException;
+
+    /**
+     * put object set quota
+     */
+    PutObjectSetQuotaOutput putObjectSetQuota(PutObjectSetQuotaInput input) throws TosException;
+
+    /**
+     * get object set quota
+     */
+    GetObjectSetQuotaOutput getObjectSetQuota(GetObjectSetQuotaInput input) throws TosException;
+
+    /**
+     * get object set storage
+     */
+    GetObjectSetStorageOutput getObjectSetStorage(GetObjectSetStorageInput input) throws TosException;
 }

@@ -23,7 +23,7 @@ public class HttpRange {
     }
 
     @Override
-    public String toString(){
+    public String toString() {
         if (start < 0 && end < 0) {
             return "bytes=0-";
         } else if (start > 0 && end > 0 && start > end) {

@@ -6,6 +6,7 @@ import com.volcengine.tos.comm.common.DocPreviewSrcType;
 import com.volcengine.tos.comm.event.DataTransferListener;
 import com.volcengine.tos.comm.ratelimit.RateLimiter;
 import com.volcengine.tos.internal.util.StringUtils;
+import com.volcengine.tos.internal.util.TosUtils;
 import com.volcengine.tos.model.GenericInput;
 
 import java.util.Collections;
@@ -55,6 +56,8 @@ public class GetObjectV2Input extends GenericInput {
      * 图片另存为参数
      */
     private String saveObject;
+
+    private String notificationCustomParameters;
 
 
     public String getBucket() {
@@ -228,12 +231,23 @@ public class GetObjectV2Input extends GenericInput {
         return this;
     }
 
+    public String getNotificationCustomParameters() {
+        return notificationCustomParameters;
+    }
+
+    public GetObjectV2Input setNotificationCustomParameters(String notificationCustomParameters) {
+        this.notificationCustomParameters = notificationCustomParameters;
+        return this;
+    }
+
     public Map<String, String> getAllSettedHeaders() {
         Map<String, String> allHeaders = new HashMap<>(options == null ? Collections.emptyMap() : options.headers());
         if (StringUtils.isNotEmpty(range)) {
             // will overwrite the Range header set in options.
             allHeaders.put(TosHeader.HEADER_RANGE, range);
         }
+        TosUtils.withHeader(allHeaders, TosHeader.HEADER_NOTIFICATION_CUSTOM_PARAMETERS, notificationCustomParameters);
+
         return allHeaders;
     }
 
@@ -283,6 +297,7 @@ public class GetObjectV2Input extends GenericInput {
         private DocPreviewDstType dstType;
         private String saveBucket;
         private String saveObject;
+        private String notificationCustomParameters;
 
         private GetObjectV2InputBuilder() {
         }
@@ -382,6 +397,11 @@ public class GetObjectV2Input extends GenericInput {
             return this;
         }
 
+        public GetObjectV2InputBuilder notificationCustomParameters(String notificationCustomParameters) {
+            this.notificationCustomParameters = notificationCustomParameters;
+            return this;
+        }
+
         public GetObjectV2Input build() {
             GetObjectV2Input getObjectV2Input = new GetObjectV2Input();
             getObjectV2Input.bucket = this.bucket;
@@ -403,6 +423,7 @@ public class GetObjectV2Input extends GenericInput {
             getObjectV2Input.dstType = this.dstType;
             getObjectV2Input.saveBucket = this.saveBucket;
             getObjectV2Input.saveObject = this.saveObject;
+            getObjectV2Input.setNotificationCustomParameters(this.notificationCustomParameters);
             return getObjectV2Input;
         }
     }

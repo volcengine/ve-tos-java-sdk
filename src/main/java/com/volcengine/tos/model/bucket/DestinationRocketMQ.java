@@ -11,6 +11,8 @@ public class DestinationRocketMQ {
     String topic;
     @JsonProperty("AccessKeyId")
     String accessKeyId;
+    @JsonProperty("Region")
+    String region;
 
     public String getRole() {
         return role;
@@ -48,6 +50,15 @@ public class DestinationRocketMQ {
         return this;
     }
 
+    public String getRegion() {
+        return region;
+    }
+
+    public DestinationRocketMQ setRegion(String region) {
+        this.region = region;
+        return this;
+    }
+
     public static DestinationRocketMQBuilder builder() {
         return new DestinationRocketMQBuilder();
     }
@@ -57,6 +68,7 @@ public class DestinationRocketMQ {
         private String instanceId;
         private String topic;
         private String accessKeyId;
+        private String region;
 
         private DestinationRocketMQBuilder() {
         }
@@ -81,12 +93,18 @@ public class DestinationRocketMQ {
             return this;
         }
 
+        public DestinationRocketMQBuilder region(String region) {
+            this.region = region;
+            return this;
+        }
+
         public DestinationRocketMQ build() {
             DestinationRocketMQ destinationRocketMQ = new DestinationRocketMQ();
             destinationRocketMQ.setRole(role);
             destinationRocketMQ.setInstanceId(instanceId);
             destinationRocketMQ.setTopic(topic);
             destinationRocketMQ.setAccessKeyId(accessKeyId);
+            destinationRocketMQ.setRegion(region);
             return destinationRocketMQ;
         }
     }

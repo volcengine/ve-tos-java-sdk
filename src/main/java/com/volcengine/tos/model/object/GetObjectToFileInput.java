@@ -11,6 +11,7 @@ public class GetObjectToFileInput extends GenericInput {
     private GetObjectV2Input getObjectInputV2 = new GetObjectV2Input();
     private String filePath;
     private File file;
+    private boolean forceOverwrite = true;
 
     public GetObjectToFileInput() {
     }
@@ -131,6 +132,10 @@ public class GetObjectToFileInput extends GenericInput {
         return file;
     }
 
+    public boolean isForceOverwrite() {
+        return forceOverwrite;
+    }
+
     public GetObjectToFileInput setFilePath(String filePath) {
         this.filePath = filePath;
         return this;
@@ -138,6 +143,11 @@ public class GetObjectToFileInput extends GenericInput {
 
     public GetObjectToFileInput setFile(File file) {
         this.file = file;
+        return this;
+    }
+
+    public GetObjectToFileInput setForceOverwrite(boolean forceOverwrite) {
+        this.forceOverwrite = forceOverwrite;
         return this;
     }
 
@@ -169,6 +179,7 @@ public class GetObjectToFileInput extends GenericInput {
         private GetObjectV2Input getObjectInputV2 = new GetObjectV2Input();
         private String filePath;
         private File file;
+        private boolean forceOverwrite = true;
 
         private GetObjectToFileInputBuilder() {
         }
@@ -249,9 +260,15 @@ public class GetObjectToFileInput extends GenericInput {
             return this;
         }
 
+        public GetObjectToFileInputBuilder forceOverwrite(boolean forceOverwrite) {
+            this.forceOverwrite = forceOverwrite;
+            return this;
+        }
+
         public GetObjectToFileInput build() {
             GetObjectToFileInput getObjectToFileInput = new GetObjectToFileInput(getObjectInputV2, filePath);
             getObjectToFileInput.setFile(file);
+            getObjectToFileInput.setForceOverwrite(forceOverwrite);
             return getObjectToFileInput;
         }
     }

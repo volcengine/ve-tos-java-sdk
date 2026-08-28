@@ -1,4 +1,83 @@
 ## Release Note
+### 2026.05.06 Version 2.9.15
+
+- Feat 新增 音视频水印 相关接口
+
+### 2026.05.06 Version 2.9.14
+
+- Feat 新增 ObjectSet 相关接口
+
+### 2026.03.18 Version 2.9.13
+
+- Fix DownloadFile 修复并发调用getObjectToFile下载文件到本地时，文件路径不存在，并发创建失败问题
+
+### 2026.03.18 Version 2.9.12
+
+- ContainerFormatType 支持 hls 格式
+
+### 2026.03.02 Version 2.9.11
+
+- ContainerFormatType 支持更多类型
+
+### 2026.02.05 Version 2.9.10
+
+- 新增 AccessPoint 相关接口
+- 数据处理新增 fileCompress、fileUncompress、pointCloudCompress 接口
+
+### 2026.01.29 Version 2.9.9
+
+- createVideoConvertJob 支持 callback 参数
+
+### 2025.12.18 Version 2.9.8
+
+- 支持 x-tos-notification-custom-parameters 参数
+- 事件通知支持 httpServer
+
+### 2025.12.11 Version 2.9.7
+- 新增 TOSVectorsClient 及相关接口
+- 增加音视频转码和转码工作流相关接口
+
+### 2025.11.24 Version 2.9.6
+
+- GetObjectToFile/DownloadFile 新增forceOverwrite参数，支持用户选择是否覆盖本地文件
+- GetObjectBasicOutput新增响应参数Expiration、StorageTier
+
+### 2025.06.04 Version 2.9.5
+
+- 修复listObjectsType2UntilFinished改变ListObjectsType2Input字段
+
+### 2025.06.04 Version 2.9.4
+
+- 新增SetObjectExpires接口
+
+### 2025.06.04 Version 2.9.3
+
+- 修复各个TaskHandler不支持0字节、整PartSize等问题
+
+### 2025.05.12 Version 2.9.2
+
+- 提供shaded包，解决依赖冲突问题
+- HeadObject/GetObject 新增LastModifyTimestamp
+
+### 2025.05.12 Version 2.9.1
+
+- 修复2.9.0版本若干bug
+
+### 2025.05.07 Version 2.9.0 （Deprecated）
+
+- 新增2.9.0版本特性
+
+### 2025.04.09 Version 2.8.10
+
+- 修复 AsyncTimeout 与自定义classLoader交互时，守护线程无法退出的问题
+- Feat 支持doesBucketExist接口
+- Feat 支持doesObjectExist接口
+
+### 2025.02.13 Version 2.8.9
+
+- Feat 支持 SetObjectTime 接口
+- Feat 断点续传接口支持上传回调
+- 修复BucketPolicy不支持中文
 
 ### 2024.12.25 Version 2.8.8
 
