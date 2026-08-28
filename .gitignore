@@ -12,6 +12,7 @@ classes/
 .settings
 .springBeans
 local.properties
+dependency-reduced-pom.xml
 
 ### IntelliJ IDEA ###
 .idea

@@ -23,6 +23,8 @@ public class CompleteMultipartUploadV2Input extends GenericInput {
     private String callbackVar;
     @JsonIgnore
     private boolean forbidOverwrite;
+    @JsonIgnore
+    private String notificationCustomParameters;
 
     public CompleteMultipartUploadV2Input setBucket(String bucket) {
         this.bucket = bucket;
@@ -100,6 +102,15 @@ public class CompleteMultipartUploadV2Input extends GenericInput {
         return this;
     }
 
+    public String getNotificationCustomParameters() {
+        return notificationCustomParameters;
+    }
+
+    public CompleteMultipartUploadV2Input setNotificationCustomParameters(String notificationCustomParameters) {
+        this.notificationCustomParameters = notificationCustomParameters;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "CompleteMultipartUploadV2Input{" +
@@ -111,6 +122,7 @@ public class CompleteMultipartUploadV2Input extends GenericInput {
                 ", callback='" + callback + '\'' +
                 ", callbackVar='" + callbackVar + '\'' +
                 ", forbidOverwrite=" + forbidOverwrite +
+                ", notificationCustomParameters='" + notificationCustomParameters + '\'' +
                 '}';
     }
 
@@ -123,6 +135,7 @@ public class CompleteMultipartUploadV2Input extends GenericInput {
         private String callback;
         private String callbackVar;
         private boolean forbidOverwrite;
+        private String notificationCustomParameters;
 
         private CompleteMultipartUploadV2InputBuilder() {
         }
@@ -167,6 +180,11 @@ public class CompleteMultipartUploadV2Input extends GenericInput {
             return this;
         }
 
+        public CompleteMultipartUploadV2InputBuilder notificationCustomParameters(String notificationCustomParameters) {
+            this.notificationCustomParameters = notificationCustomParameters;
+            return this;
+        }
+
         public CompleteMultipartUploadV2Input build() {
             CompleteMultipartUploadV2Input completeMultipartUploadV2Input = new CompleteMultipartUploadV2Input();
             completeMultipartUploadV2Input.setBucket(bucket);
@@ -177,6 +195,7 @@ public class CompleteMultipartUploadV2Input extends GenericInput {
             completeMultipartUploadV2Input.setCallback(callback);
             completeMultipartUploadV2Input.setCallbackVar(callbackVar);
             completeMultipartUploadV2Input.setForbidOverwrite(forbidOverwrite);
+            completeMultipartUploadV2Input.setNotificationCustomParameters(notificationCustomParameters);
             return completeMultipartUploadV2Input;
         }
     }

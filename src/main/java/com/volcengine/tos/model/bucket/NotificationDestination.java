@@ -9,6 +9,10 @@ public class NotificationDestination {
     private List<DestinationRocketMQ> rocketMQ;
     @JsonProperty("VeFaaS")
     private List<DestinationVeFaaS> veFaaS;
+    @JsonProperty("Kafka")
+    private List<DestinationKafka> kafka;
+    @JsonProperty("HttpServer")
+    private List<DestinationHttpServer> httpServer;
 
     public List<DestinationRocketMQ> getRocketMQ() {
         return rocketMQ;
@@ -28,11 +32,31 @@ public class NotificationDestination {
         return this;
     }
 
+    public List<DestinationKafka> getKafka() {
+        return kafka;
+    }
+
+    public NotificationDestination setKafka(List<DestinationKafka> kafka) {
+        this.kafka = kafka;
+        return this;
+    }
+
+    public List<DestinationHttpServer> getHttpServer() {
+        return httpServer;
+    }
+
+    public NotificationDestination setHttpServer(List<DestinationHttpServer> HttpServer) {
+        this.httpServer = HttpServer;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "NotificationDestination{" +
                 "rocketMQ=" + rocketMQ +
                 ", veFaaS=" + veFaaS +
+                ", kafka=" + kafka +
+                ", HttpServer=" + httpServer +
                 '}';
     }
 
@@ -43,6 +67,8 @@ public class NotificationDestination {
     public static final class NotificationDestinationBuilder {
         private List<DestinationRocketMQ> rocketMQ;
         private List<DestinationVeFaaS> veFaaS;
+        private List<DestinationKafka> kafka;
+        private List<DestinationHttpServer> httpServer;
 
         private NotificationDestinationBuilder() {
         }
@@ -57,10 +83,22 @@ public class NotificationDestination {
             return this;
         }
 
+        public NotificationDestinationBuilder kafka(List<DestinationKafka> kafka) {
+            this.kafka = kafka;
+            return this;
+        }
+
+        public NotificationDestinationBuilder httpServer(List<DestinationHttpServer> httpServer) {
+            this.httpServer = httpServer;
+            return this;
+        }
+
         public NotificationDestination build() {
             NotificationDestination notificationDestination = new NotificationDestination();
             notificationDestination.setRocketMQ(rocketMQ);
             notificationDestination.setVeFaaS(veFaaS);
+            notificationDestination.setKafka(kafka);
+            notificationDestination.setHttpServer(httpServer);
             return notificationDestination;
         }
     }

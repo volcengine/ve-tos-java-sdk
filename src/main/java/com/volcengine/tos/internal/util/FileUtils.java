@@ -8,6 +8,9 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
+
 
 public class FileUtils {
     public static InputStream getFileContent(FileInputStream fileInputStream, File file, String filePath) {
@@ -115,5 +118,32 @@ public class FileUtils {
             return "";
         }
         return newPath;
+    }
+
+    public static boolean renameTo(File src, File dest, boolean overwrite) {
+        if (src == null || dest == null) {
+            return false;
+        }
+        if (!src.exists()) {
+            return false;
+        }
+
+        try {
+            if (overwrite) {
+                try {
+                    Files.move(src.toPath(), dest.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+                } catch (IOException e) {
+                    Files.move(src.toPath(), dest.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                }
+            } else {
+                if (dest.exists()) {
+                    return false;
+                }
+                Files.move(src.toPath(), dest.toPath());
+            }
+            return true;
+        } catch (IOException e) {
+            return false;
+        }
     }
 }

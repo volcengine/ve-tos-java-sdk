@@ -12,6 +12,7 @@ import com.volcengine.tos.internal.model.CRC64Checksum;
 import com.volcengine.tos.internal.model.ConcurrentDataTransferListenInputStream;
 import com.volcengine.tos.model.object.*;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.RandomAccessFile;
@@ -51,7 +52,7 @@ class DownloadFileTask extends TosTask implements TaskOutput<DownloadPartInfo> {
                     .setCheckpointFile(checkpointFile);
             DataTransferStatus status = new DataTransferStatus()
                     .setTotalBytes(checkpoint.getDownloadObjectInfo().getObjectSize());
-            try(RandomAccessFile output = new RandomAccessFile(
+            try (RandomAccessFile output = new RandomAccessFile(
                     checkpoint.getDownloadFileInfo().getTempFilePath(), "rw")) {
                 output.seek(partInfo.getRangeStart());
 
@@ -59,7 +60,9 @@ class DownloadFileTask extends TosTask implements TaskOutput<DownloadPartInfo> {
                 if (options == null) {
                     options = new ObjectMetaRequestOptions();
                 }
-                options.setRange(partInfo.getRangeStart(), partInfo.getRangeEnd());
+                if (partInfo.getRangeStart() != 0 || partInfo.getRangeEnd() != 0) {
+                    options.setRange(partInfo.getRangeStart(), partInfo.getRangeEnd());
+                }
                 if (trafficLimit != 0) {
                     options.setTrafficLimit(trafficLimit);
                 }

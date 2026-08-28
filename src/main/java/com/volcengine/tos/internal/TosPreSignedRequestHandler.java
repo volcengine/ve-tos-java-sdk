@@ -5,6 +5,8 @@ import com.volcengine.tos.TosException;
 import com.volcengine.tos.auth.Credential;
 import com.volcengine.tos.auth.SignKeyInfo;
 import com.volcengine.tos.auth.Signer;
+import com.volcengine.tos.comm.TosHeader;
+import com.volcengine.tos.credential.Credentials;
 import com.volcengine.tos.internal.model.PostPolicyJson;
 import com.volcengine.tos.internal.model.PreSignedPolicyJson;
 import com.volcengine.tos.internal.util.*;
@@ -65,20 +67,28 @@ public class TosPreSignedRequestHandler {
         if (StringUtils.isEmpty(objectKey)) {
             objectKey = "";
         }
+
         RequestBuilder builder = this.factory.init(input.getBucket(), objectKey, input.getHeader());
+        builder.getHeaders().remove(TosHeader.HEADER_USER_AGENT); // request init 会默认添加UserAgent
 
         // 直接走 custom domain 模式，此设置针对单次请求，不会修改 factory 中的 urlMode
         builder.setUrlMode(useCustomDomain ? Consts.URL_MODE_CUSTOM_DOMAIN : Consts.URL_MODE_DEFAULT);
         if (StringUtils.isNotEmpty(input.getAlternativeEndpoint())) {
-            String newHost= ParamsChecker.parseFromEndpoint(input.getAlternativeEndpoint()).get(1);
+            String newHost = ParamsChecker.parseFromEndpoint(input.getAlternativeEndpoint()).get(1);
             builder.setHost(newHost);
         }
 
         if (input.getQuery() != null) {
             input.getQuery().forEach(builder::withQuery);
         }
-        TosRequest request = this.factory.build(builder, input.getHttpMethod(), ttl);
-        return new PreSignedURLOutput(request.toURL().toString(), request.getHeaders());
+        TosRequest request = this.factory.build(builder, input.getHttpMethod(), input.isSignedAllHeaders(), ttl);
+        String lastRequest = "";
+        if (input.isEncodingSlash()) {
+            lastRequest = request.toURL().toString();
+        } else {
+            lastRequest = request.toEscapeURL().toString();
+        }
+        return new PreSignedURLOutput(lastRequest, request.getHeaders());
     }
 
     public PreSignedPostSignatureOutput preSignedPostSignature(PreSignedPostSignatureInput input) throws TosException {
@@ -95,7 +105,7 @@ public class TosPreSignedRequestHandler {
         String securityToken = null;
         if (this.signer != null) {
             if (this.signer.getCredentialsProvider() != null) {
-                com.volcengine.tos.credential.Credentials cred = this.signer.getCredentialsProvider().getCredentials((int) ttl);
+                Credentials cred = this.signer.getCredentialsProvider().getCredentials((int) ttl);
                 ak = cred.getAk();
                 sk = cred.getSk();
                 securityToken = cred.getSecurityToken();
@@ -143,7 +153,7 @@ public class TosPreSignedRequestHandler {
             conditions.add(new PostSignatureCondition(key, value, SigningUtils.signConditionRange));
         }
 
-        if(input.getMultiValuesConditions() != null){
+        if (input.getMultiValuesConditions() != null) {
             conditions.addAll(input.getMultiValuesConditions());
         }
 
