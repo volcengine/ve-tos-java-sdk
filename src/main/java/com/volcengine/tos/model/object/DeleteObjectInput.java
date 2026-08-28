@@ -1,7 +1,12 @@
 package com.volcengine.tos.model.object;
 
 import com.volcengine.tos.TosException;
+import com.volcengine.tos.comm.TosHeader;
+import com.volcengine.tos.internal.util.TosUtils;
 import com.volcengine.tos.model.GenericInput;
+
+import java.util.HashMap;
+import java.util.Map;
 
 public class DeleteObjectInput extends GenericInput {
     private String bucket;
@@ -9,7 +14,10 @@ public class DeleteObjectInput extends GenericInput {
     private String versionID;
     private boolean recursive;
     private boolean recursiveByServer;
+    private boolean skipTrash;
     private DeleteObjectRecursiveOption recursiveOption;
+    private String notificationCustomParameters;
+    private String ifMatch;
 
     public String getBucket() {
         return bucket;
@@ -47,6 +55,15 @@ public class DeleteObjectInput extends GenericInput {
         return this;
     }
 
+    public boolean isSkipTrash() {
+        return skipTrash;
+    }
+
+    public DeleteObjectInput setSkipTrash(boolean skipTrash) {
+        this.skipTrash = skipTrash;
+        return this;
+    }
+
     public DeleteObjectRecursiveOption getRecursiveOption() {
         return recursiveOption;
     }
@@ -56,6 +73,31 @@ public class DeleteObjectInput extends GenericInput {
         return this;
     }
 
+    public String getNotificationCustomParameters() {
+        return notificationCustomParameters;
+    }
+
+    public DeleteObjectInput setNotificationCustomParameters(String notificationCustomParameters) {
+        this.notificationCustomParameters = notificationCustomParameters;
+        return this;
+    }
+
+    public String getIfMatch() {
+        return ifMatch;
+    }
+
+    public DeleteObjectInput setIfMatch(String ifMatch) {
+        this.ifMatch = ifMatch;
+        return this;
+    }
+
+    public Map<String, String> getAllSettedHeaders() {
+        Map<String, String> headers = new HashMap<>();
+        TosUtils.withHeader(headers, TosHeader.HEADER_NOTIFICATION_CUSTOM_PARAMETERS, notificationCustomParameters);
+        TosUtils.withHeader(headers, TosHeader.HEADER_IF_MATCH, ifMatch);
+        return headers;
+    }
+
     @Override
     public String toString() {
         return "DeleteObjectInput{" +
@@ -63,7 +105,11 @@ public class DeleteObjectInput extends GenericInput {
                 ", key='" + key + '\'' +
                 ", versionID='" + versionID + '\'' +
                 ", recursive=" + recursive +
+                ", recursiveByServer=" + recursiveByServer +
+                ", skipTrash=" + skipTrash +
                 ", recursiveOption=" + recursiveOption +
+                ", ifMatch=" + ifMatch +
+                ", notificationCustomParameters='" + notificationCustomParameters + '\'' +
                 '}';
     }
 
@@ -76,7 +122,10 @@ public class DeleteObjectInput extends GenericInput {
         private String key;
         private String versionID;
         private boolean recursive;
+        private boolean skipTrash;
         private DeleteObjectRecursiveOption recursiveOption;
+        private String notificationCustomParameters;
+        private String ifMatch;
 
         private Builder() {
         }
@@ -101,11 +150,25 @@ public class DeleteObjectInput extends GenericInput {
             return this;
         }
 
+        public Builder skipTrash(boolean skipTrash) {
+            this.skipTrash = skipTrash;
+            return this;
+        }
+
         public Builder RecursiveOption(DeleteObjectRecursiveOption recursiveOption) {
             this.recursiveOption = recursiveOption;
             return this;
         }
 
+        public Builder notificationCustomParameters(String notificationCustomParameters) {
+            this.notificationCustomParameters = notificationCustomParameters;
+            return this;
+        }
+
+        public Builder ifMatch(String ifMatch) {
+            this.ifMatch = ifMatch;
+            return this;
+        }
 
         public DeleteObjectInput build() {
             DeleteObjectInput deleteObjectInput = new DeleteObjectInput();
@@ -113,7 +176,10 @@ public class DeleteObjectInput extends GenericInput {
             deleteObjectInput.versionID = this.versionID;
             deleteObjectInput.key = this.key;
             deleteObjectInput.recursive = this.recursive;
+            deleteObjectInput.skipTrash = this.skipTrash;
             deleteObjectInput.recursiveOption = this.recursiveOption;
+            deleteObjectInput.setNotificationCustomParameters(notificationCustomParameters);
+            deleteObjectInput.setIfMatch(ifMatch);
             return deleteObjectInput;
         }
     }

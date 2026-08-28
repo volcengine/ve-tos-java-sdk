@@ -32,15 +32,24 @@ public enum ACLType {
      */
     ACL_LOG_DELIVERY_WRITE("log-delivery-write"),
     /**
+     * set bucket acl to read-non-list
+     */
+    ACL_READ_NON_LIST("read-non-list"),
+    /**
      * set object acl to bucket-owner-entrusted
      */
     ACL_BUCKET_OWNER_ENTRUSTED("bucket-owner-entrusted"),
+    /**
+     * set object acl to default
+     */
+    ACL_DEFAULT("default"),
     /**
      * acl default type
      */
     ACL_UNKNOWN("unknown");
 
     private String type;
+
     private ACLType(String type) {
         this.type = type;
     }

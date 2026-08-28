@@ -19,6 +19,8 @@ public class FetchObjectInput extends GenericInput {
     private boolean ignoreSameKey;
     @JsonProperty("ContentMD5")
     private String contentMD5;
+    @JsonIgnore
+    private String notificationCustomParameters;
 
     public String getBucket() {
         return bucket;
@@ -88,6 +90,15 @@ public class FetchObjectInput extends GenericInput {
         return this;
     }
 
+    public String getNotificationCustomParameters() {
+        return notificationCustomParameters;
+    }
+
+    public FetchObjectInput setNotificationCustomParameters(String notificationCustomParameters) {
+        this.notificationCustomParameters = notificationCustomParameters;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "FetchObjectInput{" +
@@ -96,7 +107,8 @@ public class FetchObjectInput extends GenericInput {
                 ", options=" + options +
                 ", url='" + url + '\'' +
                 ", ignoreSameKey=" + ignoreSameKey +
-                ", contentMd5='" + contentMD5 + '\'' +
+                ", contentMD5='" + contentMD5 + '\'' +
+                ", notificationCustomParameters='" + notificationCustomParameters + '\'' +
                 '}';
     }
 
@@ -111,6 +123,7 @@ public class FetchObjectInput extends GenericInput {
         private String url;
         private boolean ignoreSameKey;
         private String contentMD5;
+        private String notificationCustomParameters;
 
         private FetchObjectInputBuilder() {
         }
@@ -150,6 +163,11 @@ public class FetchObjectInput extends GenericInput {
             return this;
         }
 
+        public FetchObjectInputBuilder notificationCustomParameters(String notificationCustomParameters) {
+            this.notificationCustomParameters = notificationCustomParameters;
+            return this;
+        }
+
         public FetchObjectInput build() {
             FetchObjectInput fetchObjectInput = new FetchObjectInput();
             fetchObjectInput.setBucket(bucket);
@@ -158,6 +176,7 @@ public class FetchObjectInput extends GenericInput {
             fetchObjectInput.setUrl(url);
             fetchObjectInput.setIgnoreSameKey(ignoreSameKey);
             fetchObjectInput.setContentMD5(contentMD5);
+            fetchObjectInput.setNotificationCustomParameters(notificationCustomParameters);
             return fetchObjectInput;
         }
     }

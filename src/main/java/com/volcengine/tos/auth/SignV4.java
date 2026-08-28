@@ -35,6 +35,8 @@ public class SignV4 implements Signer {
     private Predicate<String> signingQuery;
     private Supplier<Instant> now;
     private signKey signKey;
+    private String serviceName = "tos";
+
 
     @Deprecated
     public SignV4(Credentials credentials, String region) {
@@ -57,6 +59,18 @@ public class SignV4 implements Signer {
         this.signingQuery = SignV4::defaultSigningQueryV4;
         this.now = SignV4::defaultUTCNow;
         this.signKey = SigningUtils::signKey;
+    }
+
+    public SignV4(CredentialsProvider credentialsProvider, String region, String serviceName) {
+        ParamsChecker.ensureNotNull(credentialsProvider, "CredentialsProvider");
+        ParamsChecker.ensureNotNull(region, "Region");
+        this.credentialsProvider = credentialsProvider;
+        this.region = region;
+        this.signingHeader = SignV4::defaultSigningHeaderV4;
+        this.signingQuery = SignV4::defaultSigningQueryV4;
+        this.now = SignV4::defaultUTCNow;
+        this.signKey = SigningUtils::signKey;
+        this.serviceName = serviceName;
     }
 
     public Supplier<Instant> getNow() {
@@ -94,7 +108,7 @@ public class SignV4 implements Signer {
         Map<String, String> signed = new HashMap<>(4);
         String contentSha256 = req.getHeaders().get(SigningUtils.v4ContentSHA256);
         Map<String, String> header = req.getHeaders();
-        List<Map.Entry<String, String>> signedHeader = this.signedHeader(header, false, null);
+        List<Map.Entry<String, String>> signedHeader = this.signedHeader(header, false, null, req.isSignedAllHeaders());
         OffsetDateTime now;
         String date;
         if (req.getHeaders().containsKey(SigningUtils.v4Date)) {
@@ -136,7 +150,7 @@ public class SignV4 implements Signer {
             });
             List<Map.Entry<String, String>> signedQuery = this.signedQuery(req.getQuery(), null);
             String sign = this.doSign(req.getMethod(), req.getPath(), contentSha256, signedHeader, signedQuery, now, sk);
-            String credential = String.format("%s/%s/%s/tos/request", ak, now.format(SigningUtils.yyyyMMdd), this.region);
+            String credential = String.format("%s/%s/%s/%s/request", ak, now.format(SigningUtils.yyyyMMdd), this.region, this.serviceName);
             String keys = signedHeader.stream().map(Map.Entry::getKey).sorted().collect(Collectors.joining(";"));
             String auth = String.format("TOS4-HMAC-SHA256 Credential=%s,SignedHeaders=%s,Signature=%s", credential, keys, sign);
 
@@ -180,7 +194,7 @@ public class SignV4 implements Signer {
             }
 //        extra.put(v4SignedHeaders, "host"); // 目前只有host
             List<String> contentSha256Container = new ArrayList<>(1);
-            List<Map.Entry<String, String>> signedHeader = this.signedHeader(req.getHeaders(), true, contentSha256Container);
+            List<Map.Entry<String, String>> signedHeader = this.signedHeader(req.getHeaders(), true, contentSha256Container, req.isSignedAllHeaders());
 
             String host = req.getHost();
             if (StringUtils.isEmpty(host)) {
@@ -240,7 +254,7 @@ public class SignV4 implements Signer {
     /**
      * 返回的数据没有排序
      */
-    private List<Map.Entry<String, String>> signedHeader(Map<String, String> header, boolean isSignedQuery, List<String> contentSha256) {
+    private List<Map.Entry<String, String>> signedHeader(Map<String, String> header, boolean isSignedQuery, List<String> contentSha256,boolean isSignedAllHeaders) {
         ArrayList<Map.Entry<String, String>> signed = new ArrayList<>(10);
         if (header == null || header.isEmpty()) {
             return signed;
@@ -253,7 +267,7 @@ public class SignV4 implements Signer {
                 if (contentSha256 != null && kk.equalsIgnoreCase(SigningUtils.v4ContentSHA256) && StringUtils.isNotEmpty(value)) {
                     contentSha256.add(value);
                 }
-                if (this.signingHeader.isSigningHeader(kk, isSignedQuery)) {
+                if (this.signingHeader.isSigningHeader(kk, isSignedQuery)|| isSignedAllHeaders) {
                     value = value == null ? "" : value;
                     signed.add(new SimpleEntry<>(kk, value));
                 }
@@ -355,13 +369,13 @@ public class SignV4 implements Signer {
 
         String date = now.format(SigningUtils.yyyyMMdd);
         buf.append(date).append('/')
-                .append(this.region).append("/tos/request");
+                .append(this.region).append("/" + this.serviceName + "/request");
         buf.append(split);
 
         byte[] sum = SigningUtils.sha256(req);
         buf.append(SigningUtils.toHex(sum));
         TosUtils.getLogger().debug("string to sign:\n {}", buf.toString());
-        byte[] signK = SigningUtils.signKey(new SignKeyInfo(date, this.region, sk));
+        byte[] signK = SigningUtils.signKey(new SignKeyInfo(date, this.region, sk), this.serviceName);
         byte[] sign = SigningUtils.hmacSha256(signK, buf.toString().getBytes(StandardCharsets.UTF_8));
         return String.valueOf(SigningUtils.toHex(sign));
     }

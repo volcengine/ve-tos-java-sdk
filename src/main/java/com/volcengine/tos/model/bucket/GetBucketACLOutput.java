@@ -15,6 +15,8 @@ public class GetBucketACLOutput {
     private Owner owner;
     @JsonProperty("Grants")
     private List<GrantV2> grants;
+    @JsonProperty("BucketAclDelivered")
+    private boolean bucketAclDelivered;
 
     public RequestInfo getRequestInfo() {
         return requestInfo;
@@ -43,12 +45,22 @@ public class GetBucketACLOutput {
         return this;
     }
 
+    public boolean isBucketAclDelivered() {
+        return bucketAclDelivered;
+    }
+
+    public GetBucketACLOutput setBucketAclDelivered(boolean bucketAclDelivered) {
+        this.bucketAclDelivered = bucketAclDelivered;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "GetBucketACLOutput{" +
                 "requestInfo=" + requestInfo +
                 ", owner=" + owner +
                 ", grants=" + grants +
+                ", bucketAclDelivered=" + bucketAclDelivered +
                 '}';
     }
 }
