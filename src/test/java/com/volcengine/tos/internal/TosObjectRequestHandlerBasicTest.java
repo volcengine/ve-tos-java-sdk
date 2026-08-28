@@ -1097,7 +1097,7 @@ public class TosObjectRequestHandlerBasicTest {
             int versionsCount = 0, deleteMarkersCount = 0;
             while (isTruncated) {
                 ListObjectVersionsV2Input input = ListObjectVersionsV2Input.builder()
-                        .bucket(Consts.bucket)
+                        .bucket(Consts.bucketForVersioning)
                         .maxKeys(5)
                         .prefix(uniqueKey)
                         .keyMarker(keyMarker)
@@ -1142,7 +1142,7 @@ public class TosObjectRequestHandlerBasicTest {
             int versionsCount = 0, deleteMarkersCount = 0;
             while (isTruncated) {
                 ListObjectVersionsV2Input input = ListObjectVersionsV2Input.builder()
-                        .bucket(Consts.bucket)
+                        .bucket(Consts.bucketForVersioning)
                         .maxKeys(5)
                         .prefix(uniquePrefix + secondPath + thirdPath + forthPath)
                         .keyMarker(keyMarker)
@@ -1171,7 +1171,7 @@ public class TosObjectRequestHandlerBasicTest {
             isTruncated = true;
             while (isTruncated) {
                 ListObjectVersionsV2Input input = ListObjectVersionsV2Input.builder()
-                        .bucket(Consts.bucket)
+                        .bucket(Consts.bucketForVersioning)
                         .maxKeys(5)
                         .prefix(uniquePrefix + secondPath + thirdPath)
                         .keyMarker(keyMarker)
@@ -1200,7 +1200,7 @@ public class TosObjectRequestHandlerBasicTest {
             isTruncated = true;
             while (isTruncated) {
                 ListObjectVersionsV2Input input = ListObjectVersionsV2Input.builder()
-                        .bucket(Consts.bucket)
+                        .bucket(Consts.bucketForVersioning)
                         .maxKeys(5)
                         .prefix(uniquePrefix + secondPath)
                         .keyMarker(keyMarker)
@@ -1228,7 +1228,7 @@ public class TosObjectRequestHandlerBasicTest {
             isTruncated = true;
             while (isTruncated) {
                 ListObjectVersionsV2Input input = ListObjectVersionsV2Input.builder()
-                        .bucket(Consts.bucket)
+                        .bucket(Consts.bucketForVersioning)
                         .maxKeys(5)
                         .prefix(uniquePrefix)
                         .keyMarker(keyMarker)
@@ -1275,7 +1275,7 @@ public class TosObjectRequestHandlerBasicTest {
             int versionsCount = 0, deleteMarkersCount = 0;
             while (isTruncated) {
                 ListObjectVersionsV2Input input = ListObjectVersionsV2Input.builder()
-                        .bucket(Consts.bucket)
+                        .bucket(Consts.bucketForVersioning)
                         .maxKeys(5)
                         .prefix(uniquePrefix + secondPath + thirdPath + forthPath)
                         .keyMarker(keyMarker)
@@ -1303,7 +1303,7 @@ public class TosObjectRequestHandlerBasicTest {
             isTruncated = true;
             while (isTruncated) {
                 ListObjectVersionsV2Input input = ListObjectVersionsV2Input.builder()
-                        .bucket(Consts.bucket)
+                        .bucket(Consts.bucketForVersioning)
                         .maxKeys(5)
                         .prefix(uniquePrefix + secondPath + thirdPath)
                         .keyMarker(keyMarker)
@@ -1331,7 +1331,7 @@ public class TosObjectRequestHandlerBasicTest {
             isTruncated = true;
             while (isTruncated) {
                 ListObjectVersionsV2Input input = ListObjectVersionsV2Input.builder()
-                        .bucket(Consts.bucket)
+                        .bucket(Consts.bucketForVersioning)
                         .maxKeys(5)
                         .prefix(uniquePrefix + secondPath)
                         .keyMarker(keyMarker)
@@ -1358,7 +1358,7 @@ public class TosObjectRequestHandlerBasicTest {
             isTruncated = true;
             while (isTruncated) {
                 ListObjectVersionsV2Input input = ListObjectVersionsV2Input.builder()
-                        .bucket(Consts.bucket)
+                        .bucket(Consts.bucketForVersioning)
                         .maxKeys(5)
                         .prefix(uniquePrefix)
                         .keyMarker(keyMarker)
@@ -1515,6 +1515,18 @@ public class TosObjectRequestHandlerBasicTest {
                     Assert.assertEquals(g.getGrantee().getCanned(), CannedType.CANNED_ALL_USERS);
                 }
             }
+
+            PutObjectACLInput input1 = PutObjectACLInput.builder()
+                    .bucket(Consts.bucket)
+                    .key(key)
+                    .owner(Owner.builder().id("volc-test").build())
+                    .bucketOwnerEntrusted(false)
+                    .isDefault(true)
+                    .build();
+            getHandler().putObjectAcl(input1);
+
+            GetObjectACLV2Output out1 = getHandler().getObjectAcl(get);
+            Assert.assertTrue(out1.isDefault());
         } catch (Exception e) {
             testFailed(e);
         } finally {
@@ -2051,18 +2063,18 @@ public class TosObjectRequestHandlerBasicTest {
         List<String> versions = new ArrayList<>(3 * num);
         for (int i = 0; i < num; i++) {
             PutObjectOutput output = getHandler().putObject(PutObjectInput.builder()
-                    .bucket(Consts.bucket)
+                    .bucket(bucketForVersioning)
                     .key(key)
                     .content(new ByteArrayInputStream(sampleData.getBytes()))
                     .build());
             versions.add(output.getVersionID());
             output = getHandler().putObject(PutObjectInput.builder()
-                    .bucket(Consts.bucket)
+                    .bucket(Consts.bucketForVersioning)
                     .key(key)
                     .content(new ByteArrayInputStream(sampleData.getBytes()))
                     .build());
             versions.add(output.getVersionID());
-            DeleteObjectOutput del = getHandler().deleteObject(new DeleteObjectInput().setBucket(bucket).setKey(key));
+            DeleteObjectOutput del = getHandler().deleteObject(new DeleteObjectInput().setBucket(bucketForVersioning).setKey(key));
             versions.add(del.getVersionID());
         }
         return versions;

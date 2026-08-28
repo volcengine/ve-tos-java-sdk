@@ -17,6 +17,7 @@ public class PutObjectACLInput extends GenericInput {
     private String grantRead;
     private String grantReadAcp;
     private String grantWriteAcp;
+    private boolean isDefault;
 
     private ObjectAclRulesV2 objectAclRules;
 
@@ -62,6 +63,10 @@ public class PutObjectACLInput extends GenericInput {
 
     public boolean isBucketOwnerEntrusted() {
         return this.objectAclRules != null && this.objectAclRules.isBucketOwnerEntrusted();
+    }
+
+    public boolean isDefault() {
+        return isDefault;
     }
 
     public ObjectAclRulesV2 getObjectAclRules() {
@@ -137,6 +142,11 @@ public class PutObjectACLInput extends GenericInput {
         return this;
     }
 
+    public PutObjectACLInput setDefault(boolean defaultValue) {
+        this.isDefault = defaultValue;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "PutObjectACLInput{" +
@@ -149,6 +159,7 @@ public class PutObjectACLInput extends GenericInput {
                 ", grantReadAcp='" + grantReadAcp + '\'' +
                 ", grantWriteAcp='" + grantWriteAcp + '\'' +
                 ", objectAclRules=" + objectAclRules +
+                ", isDefault=" + isDefault + '\'' +
                 '}';
     }
 
@@ -168,6 +179,7 @@ public class PutObjectACLInput extends GenericInput {
         private Owner owner;
         private List<GrantV2> grants;
         private boolean bucketOwnerEntrusted;
+        private boolean isDefault;
 
         private PutObjectACLInputBuilder() {
         }
@@ -227,6 +239,11 @@ public class PutObjectACLInput extends GenericInput {
             return this;
         }
 
+        public PutObjectACLInputBuilder isDefault(boolean isDefault) {
+            this.isDefault = isDefault;
+            return this;
+        }
+
         public PutObjectACLInput build() {
             PutObjectACLInput putObjectACLInput = new PutObjectACLInput();
             putObjectACLInput.key = this.key;
@@ -239,7 +256,8 @@ public class PutObjectACLInput extends GenericInput {
             putObjectACLInput.versionID = this.versionID;
             putObjectACLInput.objectAclRules = new ObjectAclRulesV2()
                     .setOwner(this.owner).setGrants(this.grants)
-                    .setBucketOwnerEntrusted(bucketOwnerEntrusted);
+                    .setBucketOwnerEntrusted(bucketOwnerEntrusted).setIsdefault(isDefault);
+            putObjectACLInput.isDefault = this.isDefault;
             return putObjectACLInput;
         }
     }

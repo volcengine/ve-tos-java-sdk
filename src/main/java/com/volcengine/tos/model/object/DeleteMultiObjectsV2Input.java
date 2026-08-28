@@ -14,6 +14,10 @@ public class DeleteMultiObjectsV2Input extends GenericInput {
     private List<ObjectTobeDeleted> objects;
     @JsonProperty("Quiet")
     private boolean quiet;
+    @JsonIgnore
+    private boolean recursive;
+    @JsonIgnore
+    private boolean skipTrash;
 
     public DeleteMultiObjectsV2Input() {
     }
@@ -28,6 +32,14 @@ public class DeleteMultiObjectsV2Input extends GenericInput {
 
     public List<ObjectTobeDeleted> getObjects() {
         return objects;
+    }
+
+    public boolean isRecursive() {
+        return recursive;
+    }
+
+    public boolean isSkipTrash() {
+        return skipTrash;
     }
 
     public DeleteMultiObjectsV2Input setBucket(String bucket) {
@@ -45,6 +57,16 @@ public class DeleteMultiObjectsV2Input extends GenericInput {
         return this;
     }
 
+    public DeleteMultiObjectsV2Input setRecursive(boolean recursive) {
+        this.recursive = recursive;
+        return this;
+    }
+
+    public DeleteMultiObjectsV2Input setSkipTrash(boolean skipTrash) {
+        this.skipTrash = skipTrash;
+        return this;
+    }
+
     public static DeleteMultiObjectsInputBuilder builder() {
         return new DeleteMultiObjectsInputBuilder();
     }
@@ -55,6 +77,8 @@ public class DeleteMultiObjectsV2Input extends GenericInput {
                 "bucket='" + bucket + '\'' +
                 ", objects=" + Arrays.toString(objects.toArray()) +
                 ", quiet=" + quiet +
+                ", recursive=" + recursive +
+                ", skipTrash=" + skipTrash +
                 '}';
     }
 
@@ -62,6 +86,8 @@ public class DeleteMultiObjectsV2Input extends GenericInput {
         private String bucket;
         private List<ObjectTobeDeleted> objects;
         private boolean quiet;
+        private boolean recursive;
+        private boolean skipTrash;
 
         private DeleteMultiObjectsInputBuilder() {
         }
@@ -81,11 +107,23 @@ public class DeleteMultiObjectsV2Input extends GenericInput {
             return this;
         }
 
+        public DeleteMultiObjectsInputBuilder recursive(boolean recursive) {
+            this.recursive = recursive;
+            return this;
+        }
+
+        public DeleteMultiObjectsInputBuilder skipTrash(boolean skipTrash) {
+            this.skipTrash = skipTrash;
+            return this;
+        }
+
         public DeleteMultiObjectsV2Input build() {
             DeleteMultiObjectsV2Input deleteMultiObjectsInput = new DeleteMultiObjectsV2Input();
             deleteMultiObjectsInput.quiet = this.quiet;
             deleteMultiObjectsInput.objects = this.objects;
             deleteMultiObjectsInput.bucket = this.bucket;
+            deleteMultiObjectsInput.recursive = this.recursive;
+            deleteMultiObjectsInput.skipTrash = this.skipTrash;
             return deleteMultiObjectsInput;
         }
     }

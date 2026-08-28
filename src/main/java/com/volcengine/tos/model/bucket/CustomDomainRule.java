@@ -2,6 +2,7 @@ package com.volcengine.tos.model.bucket;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.volcengine.tos.comm.common.CertStatusType;
+import com.volcengine.tos.comm.common.ProtocolType;
 
 public class CustomDomainRule {
     @JsonProperty("CertId")
@@ -16,6 +17,8 @@ public class CustomDomainRule {
     private boolean forbidden;
     @JsonProperty("ForbiddenReason")
     private String forbiddenReason;
+    @JsonProperty("protocolType")
+    private ProtocolType protocolType;
 
     public String getCertID() {
         return certID;
@@ -71,6 +74,15 @@ public class CustomDomainRule {
         return this;
     }
 
+    public ProtocolType getProtocolType() {
+        return protocolType;
+    }
+
+    public CustomDomainRule setProtocolType(ProtocolType protocolType) {
+        this.protocolType = protocolType;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "CustomDomainRule{" +
@@ -80,6 +92,7 @@ public class CustomDomainRule {
                 ", domain='" + domain + '\'' +
                 ", forbidden=" + forbidden +
                 ", forbiddenReason='" + forbiddenReason + '\'' +
+                ", protocolType=" + protocolType +
                 '}';
     }
 
@@ -94,6 +107,7 @@ public class CustomDomainRule {
         private String domain;
         private boolean forbidden;
         private String forbiddenReason;
+        private ProtocolType protocolType;
 
         private CustomDomainRuleBuilder() {
         }
@@ -123,6 +137,11 @@ public class CustomDomainRule {
             return this;
         }
 
+        public CustomDomainRuleBuilder protocolType(ProtocolType protocolType) {
+            this.protocolType = protocolType;
+            return this;
+        }
+
         public CustomDomainRuleBuilder cname(String cname) {
             this.cname = cname;
             return this;
@@ -136,6 +155,7 @@ public class CustomDomainRule {
             customDomainRule.setDomain(domain);
             customDomainRule.setForbidden(forbidden);
             customDomainRule.setForbiddenReason(forbiddenReason);
+            customDomainRule.setProtocolType(protocolType);
             return customDomainRule;
         }
     }

@@ -14,6 +14,7 @@ public class UploadFileV2Output {
     private String ssecAlgorithm;
     private String ssecKeyMD5;
     private String encodingType;
+    private String callbackResult;
 
     public RequestInfo getRequestInfo() {
         return requestInfo;
@@ -114,6 +115,15 @@ public class UploadFileV2Output {
         return this;
     }
 
+    public String getCallbackResult() {
+        return callbackResult;
+    }
+
+    public UploadFileV2Output setCallbackResult(String callbackResult) {
+        this.callbackResult = callbackResult;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "UploadFileV2Output{" +
@@ -128,6 +138,8 @@ public class UploadFileV2Output {
                 ", ssecAlgorithm='" + ssecAlgorithm + '\'' +
                 ", ssecKeyMD5='" + ssecKeyMD5 + '\'' +
                 ", encodingType='" + encodingType + '\'' +
+                ", callbackResult='" + callbackResult + '\'' +
                 '}';
     }
+
 }

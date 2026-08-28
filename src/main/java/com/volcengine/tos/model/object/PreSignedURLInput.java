@@ -6,6 +6,8 @@ public class PreSignedURLInput {
     private String httpMethod;
     private String bucket;
     private String key;
+    private boolean isSignedAllHeaders;
+    private boolean isEncodingSlash = true;
     /**
      * 过期时间，单位：秒，默认 3600 秒，最大 7 天，取值范围 [1, 604800]
      */
@@ -46,6 +48,14 @@ public class PreSignedURLInput {
 
     public String getAlternativeEndpoint() {
         return alternativeEndpoint;
+    }
+
+    public boolean isSignedAllHeaders() {
+        return isSignedAllHeaders;
+    }
+
+    public Boolean isEncodingSlash() {
+        return isEncodingSlash;
     }
 
     public PreSignedURLInput setHttpMethod(String httpMethod) {
@@ -92,6 +102,16 @@ public class PreSignedURLInput {
         return this;
     }
 
+    public PreSignedURLInput setSignedAllHeaders(boolean signedAllHeaders) {
+        isSignedAllHeaders = signedAllHeaders;
+        return this;
+    }
+
+    public PreSignedURLInput setEncodingSlash(boolean isEncodingSlash) {
+        this.isEncodingSlash = isEncodingSlash;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "PreSignedURLInput{" +
@@ -103,6 +123,8 @@ public class PreSignedURLInput {
                 ", query=" + query +
                 ", alternativeEndpoint='" + alternativeEndpoint + '\'' +
                 ", isCustomDomain=" + isCustomDomain +
+                ", isSignedAllHeaders=" + isSignedAllHeaders +
+                ", isEncodingSlash=" + isEncodingSlash +
                 '}';
     }
 
@@ -119,6 +141,7 @@ public class PreSignedURLInput {
         private Map<String, String> query;
         private String alternativeEndpoint;
         private boolean isCustomDomain;
+        private boolean isSignedAllHeaders;
 
         private PreSignedURLInputBuilder() {
         }
@@ -163,6 +186,11 @@ public class PreSignedURLInput {
             return this;
         }
 
+        public PreSignedURLInputBuilder isSignedAllHeaders(boolean isSignedAllHeaders) {
+            this.isSignedAllHeaders = isSignedAllHeaders;
+            return this;
+        }
+
         public PreSignedURLInput build() {
             PreSignedURLInput preSignedURLInput = new PreSignedURLInput();
             preSignedURLInput.expires = this.expires;
@@ -173,6 +201,7 @@ public class PreSignedURLInput {
             preSignedURLInput.httpMethod = this.httpMethod;
             preSignedURLInput.key = this.key;
             preSignedURLInput.isCustomDomain = this.isCustomDomain;
+            preSignedURLInput.isSignedAllHeaders = this.isSignedAllHeaders;
             return preSignedURLInput;
         }
     }

@@ -44,6 +44,24 @@ public interface TOSV2 extends TOS, Closeable {
     HeadBucketV2Output headBucket(HeadBucketV2Input input) throws TosException;
 
     /**
+     * check bucket exist
+     *
+     * @param input bucket name
+     * @return {@link Boolean}
+     * @throws TosException
+     */
+    boolean doesBucketExist(DoesBucketExistInput input) throws TosException;
+
+    /**
+     * check object exist
+     *
+     * @param input object name
+     * @return {@link Boolean}
+     * @throws TosException
+     */
+    boolean doesObjectExist(DoesObjectExistInput input) throws TosException;
+
+    /**
      * delete an existed bucket
      *
      * @param input bucket name
@@ -545,6 +563,15 @@ public interface TOSV2 extends TOS, Closeable {
     SetObjectMetaOutput setObjectMeta(SetObjectMetaInput input) throws TosException;
 
     /**
+     * set object last modify time
+     *
+     * @param input setObjectTime option
+     * @return {@link SetObjectTimeOutput}
+     * @throws TosException
+     */
+    SetObjectTimeOutput setObjectTime(SetObjectTimeInput input) throws TosException;
+
+    /**
      * list objects of a bucket
      * deprecated since v2.4.0, use listObjectsType2 instead
      *
@@ -778,6 +805,39 @@ public interface TOSV2 extends TOS, Closeable {
      * @throws TosException
      */
     PreSignedPolicyURLOutput preSignedPolicyURL(PreSignedPolicyURLInput input) throws TosException;
+
+    /**
+     * get the type of bucket
+     *
+     * @param input GetBucketTypeInput
+     * @return {@link GetBucketTypeOutput}
+     * @throws TosException
+     */
+    GetBucketTypeOutput getBucketType(GetBucketTypeInput input) throws TosException;
+
+    /**
+     * put the bucket access monitor
+     *
+     * @param input PutBucketAccessMonitorInput
+     * @return {@link PutBucketAccessMonitorOutput}
+     * @throws TosException
+     */
+    PutBucketAccessMonitorOutput putBucketAccessMonitor(PutBucketAccessMonitorInput input) throws TosException;
+
+    /**
+     * get the bucket access monitor
+     *
+     * @param input GetBucketAccessMonitorInput
+     * @return {@link GetBucketAccessMonitorOutput}
+     * @throws TosException
+     */
+    GetBucketAccessMonitorOutput getBucketAccessMonitor(GetBucketAccessMonitorInput input) throws TosException;
+
+    PutQosPolicyOutput putQosPolicy(PutQosPolicyInput input) throws TosException;
+
+    GetQosPolicyOutput getQosPolicy(GetQosPolicyInput input) throws TosException;
+
+    DeleteQosPolicyOutput deleteQosPolicy(DeleteQosPolicyInput input) throws TosException;
 
     @Deprecated
     void changeCredentials(Credentials credentials);

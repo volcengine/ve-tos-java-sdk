@@ -19,6 +19,7 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.Objects;
 
+
 import static com.volcengine.tos.internal.Consts.*;
 
 public class RequestBuilder {
@@ -28,6 +29,7 @@ public class RequestBuilder {
     private int port;
     private String bucket;
     private String object;
+    private String controlAction;
     private int urlMode = URL_MODE_DEFAULT;
     private long contentLength = -1;
     private HttpRange range;
@@ -38,11 +40,12 @@ public class RequestBuilder {
     private boolean disableEncodingMeta;
     private boolean skipTryResolveContentLength;
 
-    public RequestBuilder(){}
+    public RequestBuilder() {
+    }
 
     @Deprecated
     public RequestBuilder(Signer signer, String scheme, String host, String bucket, String object,
-                   int urlMode, Map<String, String> headers, Map<String, String> query){
+                          int urlMode, Map<String, String> headers, Map<String, String> query) {
         Objects.requireNonNull(bucket, "bucket is null");
         Objects.requireNonNull(object, "object is null");
         this.signer = signer;
@@ -55,7 +58,7 @@ public class RequestBuilder {
         this.query = query;
     }
 
-    public RequestBuilder(String bucket, String object, String scheme, String host, Signer signer){
+    public RequestBuilder(String bucket, String object, String scheme, String host, Signer signer) {
         Objects.requireNonNull(scheme, "scheme is null");
         Objects.requireNonNull(host, "host is null");
         // bucket can be null
@@ -71,6 +74,16 @@ public class RequestBuilder {
         this.headers = headers;
         return this;
     }
+
+    public RequestBuilder setControlAction(String controlAction) {
+        this.controlAction = controlAction;
+        return this;
+    }
+
+    public String getControlAction() {
+        return controlAction;
+    }
+
 
     public Map<String, String> getQuery() {
         return query;
@@ -89,7 +102,7 @@ public class RequestBuilder {
         this.range = range;
     }
 
-    public RequestBuilder withQuery(String key, String value){
+    public RequestBuilder withQuery(String key, String value) {
         if (StringUtils.isEmpty(key) || value == null) {
             return this;
         }
@@ -100,8 +113,8 @@ public class RequestBuilder {
         return this;
     }
 
-    public RequestBuilder withHeader(String key, String value){
-        if(value != null && value.length() != 0){
+    public RequestBuilder withHeader(String key, String value) {
+        if (value != null && value.length() != 0) {
             this.headers.put(key, value);
         }
         return this;
@@ -123,7 +136,7 @@ public class RequestBuilder {
         return this.contentLength;
     }
 
-    public RequestBuilder withContentLength(long length){
+    public RequestBuilder withContentLength(long length) {
         this.contentLength = length;
         return this;
     }
@@ -192,7 +205,7 @@ public class RequestBuilder {
         if (this.contentLength >= 0) {
             request.setContentLength(contentLength);
         } else if (StringUtils.isNotEmpty(headers.get(TosHeader.HEADER_CONTENT_LENGTH))) {
-            try{
+            try {
                 long cl = Long.parseLong(headers.get(TosHeader.HEADER_CONTENT_LENGTH));
                 request.setContentLength(cl >= 0 ? cl : -1L);
             } catch (NumberFormatException e) {
@@ -252,7 +265,7 @@ public class RequestBuilder {
         return request;
     }
 
-    private String[] hostPath(){
+    private String[] hostPath() {
         String[] hostAndPath = new String[]{"", ""};
         if (urlMode == URL_MODE_CUSTOM_DOMAIN) {
             hostAndPath[0] = this.host;
@@ -260,40 +273,44 @@ public class RequestBuilder {
         } else if (urlMode == URL_MODE_PATH) {
             hostAndPath[0] = this.host;
             hostAndPath[1] = "/" + this.bucket + "/" + this.object;
-        } else if (StringUtils.isEmpty(this.bucket)){
+        } else if (urlMode == URL_MODE_CONTROLL_DOMAIN) {
+            hostAndPath[0] = this.host;
+            hostAndPath[1] = "/" + this.controlAction;
+        } else if (StringUtils.isEmpty(this.bucket)) {
             hostAndPath[0] = this.host;
             hostAndPath[1] = "/";
         } else {
-            hostAndPath[0] = this.bucket+"."+this.host;
-            hostAndPath[1] = "/"+this.object;
+            hostAndPath[0] = this.bucket + "." + this.host;
+            hostAndPath[1] = "/" + this.object;
         }
         return hostAndPath;
     }
 
     public TosRequest buildRequest(String method, InputStream stream) throws TosClientException {
         TosRequest request;
-        try{
+        try {
             request = build(method, stream);
         } catch (IOException e) {
             throw new TosClientException("build tos request failed", e);
         }
-        if(signer != null){
+        if (signer != null) {
             Map<String, String> signed = this.signer.signHeader(request);
-            for (String key : signed.keySet()){
+            for (String key : signed.keySet()) {
                 request.getHeaders().put(key, signed.get(key));
             }
         }
         return request;
     }
 
-    public TosRequest buildPreSignedUrlRequest(String method, long ttl) throws TosClientException {
+    public TosRequest buildPreSignedUrlRequest(String method, boolean isSignedAllHeaders,long ttl) throws TosClientException {
         TosRequest request = genTosRequest(method, null);
-        if (this.signer != null){
+        request.setSignedAllHeaders(isSignedAllHeaders);
+        if (this.signer != null) {
             Map<String, String> query = this.signer.signQuery(request, Duration.ofSeconds(ttl));
             if (request.getQuery() == null) {
                 request.setQuery(new HashMap<>());
             }
-            for (String key : query.keySet()){
+            for (String key : query.keySet()) {
                 request.getQuery().put(key, query.get(key));
             }
         }
@@ -302,9 +319,9 @@ public class RequestBuilder {
 
     public TosRequest buildRequestWithCopySource(String method, String srcBucket, String srcObject) throws TosClientException {
         TosRequest request;
-        try{
+        try {
             request = build(method, null);
-        } catch (IOException e){
+        } catch (IOException e) {
             throw new TosClientException("build tos request failed", e);
         }
         String versionID = null;
@@ -314,15 +331,15 @@ public class RequestBuilder {
         }
 
         String cpSrcHeader = "";
-        try{
+        try {
             cpSrcHeader = copySource(srcBucket, srcObject, versionID);
         } catch (UnsupportedEncodingException e) {
             throw new TosClientException("object key encode exception", e);
         }
         request.getHeaders().put(TosHeader.HEADER_COPY_SOURCE, cpSrcHeader);
-        if(signer != null){
+        if (signer != null) {
             Map<String, String> signed = this.signer.signHeader(request);
-            for (String key : signed.keySet()){
+            for (String key : signed.keySet()) {
                 request.getHeaders().put(key, signed.get(key));
             }
         }
@@ -339,15 +356,15 @@ public class RequestBuilder {
     @Deprecated
     public String preSignedURL(String method, Duration ttl) throws TosClientException {
         TosRequest request;
-        try{
+        try {
             request = build(method, null);
-        } catch (IOException e){
+        } catch (IOException e) {
             throw new TosClientException("build tos request failed", e);
         }
 
-        if (this.signer != null){
+        if (this.signer != null) {
             Map<String, String> query = this.signer.signQuery(request, ttl);
-            for (String key : query.keySet()){
+            for (String key : query.keySet()) {
                 request.getQuery().put(key, query.get(key));
             }
         }

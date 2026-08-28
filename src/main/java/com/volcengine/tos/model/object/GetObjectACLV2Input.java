@@ -1,11 +1,16 @@
 package com.volcengine.tos.model.object;
 
 import com.volcengine.tos.model.GenericInput;
+import com.volcengine.tos.model.acl.GrantV2;
+import com.volcengine.tos.model.acl.Owner;
+
+import java.util.List;
 
 public class GetObjectACLV2Input extends GenericInput {
     private String bucket;
     private String key;
     private String versionID;
+    private ObjectAclRulesV2 objectAclRules;
 
     public String getBucket() {
         return bucket;
@@ -17,6 +22,10 @@ public class GetObjectACLV2Input extends GenericInput {
 
     public String getVersionID() {
         return versionID;
+    }
+
+    public ObjectAclRulesV2 getObjectAclRules() {
+        return objectAclRules;
     }
 
     public GetObjectACLV2Input setBucket(String bucket) {
@@ -34,12 +43,18 @@ public class GetObjectACLV2Input extends GenericInput {
         return this;
     }
 
+    public GetObjectACLV2Input setObject(ObjectAclRulesV2 objectAclRules) {
+        this.objectAclRules = objectAclRules;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "GetObjectACLInputV2{" +
                 "bucket='" + bucket + '\'' +
                 ", key='" + key + '\'' +
                 ", versionID='" + versionID + '\'' +
+                ", objectAclRules=" + objectAclRules +
                 '}';
     }
 
@@ -51,6 +66,9 @@ public class GetObjectACLV2Input extends GenericInput {
         private String bucket;
         private String key;
         private String versionID;
+        private Owner owner;
+        private List<GrantV2> grants;
+        private boolean bucketOwnerEntrusted;
 
         private GetObjectACLInputV2Builder() {
         }
@@ -70,11 +88,29 @@ public class GetObjectACLV2Input extends GenericInput {
             return this;
         }
 
+        public GetObjectACLInputV2Builder owner(Owner owner) {
+            this.owner = owner;
+            return this;
+        }
+
+        public GetObjectACLInputV2Builder grants(List<GrantV2> grants) {
+            this.grants = grants;
+            return this;
+        }
+
+        public GetObjectACLInputV2Builder bucketOwnerEntrusted(boolean bucketOwnerEntrusted) {
+            this.bucketOwnerEntrusted = bucketOwnerEntrusted;
+            return this;
+        }
+
         public GetObjectACLV2Input build() {
             GetObjectACLV2Input getObjectACLInputV2 = new GetObjectACLV2Input();
             getObjectACLInputV2.versionID = this.versionID;
             getObjectACLInputV2.key = this.key;
             getObjectACLInputV2.bucket = this.bucket;
+            getObjectACLInputV2.objectAclRules = new ObjectAclRulesV2()
+                    .setOwner(this.owner).setGrants(this.grants)
+                    .setBucketOwnerEntrusted(bucketOwnerEntrusted);
             return getObjectACLInputV2;
         }
     }

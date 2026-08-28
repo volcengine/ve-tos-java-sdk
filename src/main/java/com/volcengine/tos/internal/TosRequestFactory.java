@@ -110,12 +110,16 @@ public class TosRequestFactory {
         return newBuilder(bucket, object, headers).setUrlMode(urlMode).setPort(port);
     }
 
+    public RequestBuilder init(String controlAction, Map<String, String> headers) {
+        return newBuilder(controlAction,headers).setUrlMode(urlMode).setPort(port);
+    }
+
     public TosRequest build(RequestBuilder builder, String method, InputStream content) {
         return builder.buildRequest(method, content);
     }
 
-    public TosRequest build(RequestBuilder builder, String method, long ttl) {
-        return builder.buildPreSignedUrlRequest(method, ttl);
+    public TosRequest build(RequestBuilder builder, String method, boolean isSignedAllHeaders, long ttl) {
+        return builder.buildPreSignedUrlRequest(method, isSignedAllHeaders, ttl);
     }
 
     public TosRequest buildWithCopy(RequestBuilder builder, String method, String srcBucket, String srcObject) {
@@ -138,5 +142,21 @@ public class TosRequestFactory {
             headers.forEach(rb::withHeader);
         }
         return rb;
+    }
+
+    private RequestBuilder newBuilder(String controlAction, Map<String, String> headers) {
+        RequestBuilder rb = new RequestBuilder(null, null, this.scheme, this.host, this.signer)
+                .setDisableEncodingMeta(this.disableEncodingMeta)
+                .setControlAction(controlAction);
+        if (StringUtils.isEmpty(this.userAgent)) {
+            rb.withHeader(TosHeader.HEADER_USER_AGENT, TosUtils.getUserAgent());
+        } else {
+            rb.withHeader(TosHeader.HEADER_USER_AGENT, this.userAgent);
+        }
+        if (headers != null) {
+            headers.forEach(rb::withHeader);
+        }
+        return rb;
+
     }
 }

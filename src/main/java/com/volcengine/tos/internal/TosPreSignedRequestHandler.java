@@ -5,6 +5,7 @@ import com.volcengine.tos.TosException;
 import com.volcengine.tos.auth.Credential;
 import com.volcengine.tos.auth.SignKeyInfo;
 import com.volcengine.tos.auth.Signer;
+import com.volcengine.tos.credential.Credentials;
 import com.volcengine.tos.internal.model.PostPolicyJson;
 import com.volcengine.tos.internal.model.PreSignedPolicyJson;
 import com.volcengine.tos.internal.util.*;
@@ -77,8 +78,15 @@ public class TosPreSignedRequestHandler {
         if (input.getQuery() != null) {
             input.getQuery().forEach(builder::withQuery);
         }
-        TosRequest request = this.factory.build(builder, input.getHttpMethod(), ttl);
-        return new PreSignedURLOutput(request.toURL().toString(), request.getHeaders());
+        TosRequest request = this.factory.build(builder, input.getHttpMethod(), input.isSignedAllHeaders() ,ttl);
+        String lastRequest = "";
+        if(input.isEncodingSlash()){
+            lastRequest = request.toURL().toString();
+        }
+        else{
+            lastRequest = request.toEscapeURL().toString();
+        }
+        return new PreSignedURLOutput(lastRequest, request.getHeaders());
     }
 
     public PreSignedPostSignatureOutput preSignedPostSignature(PreSignedPostSignatureInput input) throws TosException {
@@ -95,7 +103,7 @@ public class TosPreSignedRequestHandler {
         String securityToken = null;
         if (this.signer != null) {
             if (this.signer.getCredentialsProvider() != null) {
-                com.volcengine.tos.credential.Credentials cred = this.signer.getCredentialsProvider().getCredentials((int) ttl);
+                Credentials cred = this.signer.getCredentialsProvider().getCredentials((int) ttl);
                 ak = cred.getAk();
                 sk = cred.getSk();
                 securityToken = cred.getSecurityToken();

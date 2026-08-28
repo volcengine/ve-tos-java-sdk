@@ -3,6 +3,7 @@ package com.volcengine.tos.model.bucket;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.volcengine.tos.comm.common.StatusType;
 
+import java.util.Arrays;
 import java.util.List;
 
 public class LifecycleRule {
@@ -26,6 +27,11 @@ public class LifecycleRule {
     private AbortInCompleteMultipartUpload abortInCompleteMultipartUpload;
     @JsonProperty("Filter")
     private LifecycleRuleFilter filter;
+    @JsonProperty("AccessTimeTransitions")
+    private AccessTimeTransition[] accessTimeTransitions;
+    @JsonProperty("NonCurrentVersionAccessTimeTransitions")
+    private NonCurrentVersionAccessTimeTransition[] nonCurrentVersionAccessTimeTransitions;
+
 
     public String getId() {
         return id;
@@ -117,6 +123,24 @@ public class LifecycleRule {
         return this;
     }
 
+    public AccessTimeTransition[] getAccessTimeTransitions() {
+        return accessTimeTransitions;
+    }
+
+    public LifecycleRule setAccessTimeTransitions(AccessTimeTransition[] accessTimeTransitions) {
+        this.accessTimeTransitions = accessTimeTransitions;
+        return this;
+    }
+
+    public NonCurrentVersionAccessTimeTransition[] getNonCurrentVersionAccessTimeTransitions() {
+        return nonCurrentVersionAccessTimeTransitions;
+    }
+
+    public LifecycleRule setNonCurrentVersionAccessTimeTransitions(NonCurrentVersionAccessTimeTransition[] nonCurrentVersionAccessTimeTransitions){
+        this.nonCurrentVersionAccessTimeTransitions = nonCurrentVersionAccessTimeTransitions;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "LifecycleRule{" +
@@ -130,6 +154,8 @@ public class LifecycleRule {
                 ", tags=" + tags +
                 ", abortInCompleteMultipartUpload=" + abortInCompleteMultipartUpload +
                 ", filter=" + filter +
+                ", accessTimeTransitions=" + Arrays.toString(accessTimeTransitions) +
+                ", NoncurrentVersionAccessTimeTransitions=" + Arrays.toString(nonCurrentVersionAccessTimeTransitions) +
                 '}';
     }
 
@@ -148,6 +174,8 @@ public class LifecycleRule {
         private List<Tag> tags;
         private AbortInCompleteMultipartUpload abortInCompleteMultipartUpload;
         private LifecycleRuleFilter filter;
+        private AccessTimeTransition[] accessTimeTransitions;
+        private NonCurrentVersionAccessTimeTransition[] nonCurrentVersionAccessTimeTransitions;
 
         private LifecycleRuleBuilder() {
         }
@@ -202,6 +230,16 @@ public class LifecycleRule {
             return this;
         }
 
+        public LifecycleRuleBuilder accessTimeTransitions(AccessTimeTransition[] accessTimeTransitions) {
+            this.accessTimeTransitions = accessTimeTransitions;
+            return this;
+        }
+
+        public LifecycleRuleBuilder NoncurrentVersionAccessTimeTransitions(NonCurrentVersionAccessTimeTransition[] nonCurrentVersionAccessTimeTransitions){
+            this.nonCurrentVersionAccessTimeTransitions = nonCurrentVersionAccessTimeTransitions;
+            return this;
+        }
+
         public LifecycleRule build() {
             LifecycleRule lifecycleRule = new LifecycleRule();
             lifecycleRule.setId(id);
@@ -214,6 +252,8 @@ public class LifecycleRule {
             lifecycleRule.setTags(tags);
             lifecycleRule.setAbortInCompleteMultipartUpload(abortInCompleteMultipartUpload);
             lifecycleRule.setFilter(filter);
+            lifecycleRule.setAccessTimeTransitions(accessTimeTransitions);
+            lifecycleRule.setNonCurrentVersionAccessTimeTransitions(nonCurrentVersionAccessTimeTransitions);
             return lifecycleRule;
         }
     }

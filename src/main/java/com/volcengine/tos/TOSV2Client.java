@@ -36,6 +36,7 @@ public class TOSV2Client implements TOSV2 {
     private Signer signer;
     private TosRequestFactory factory;
 
+
     protected TOSV2Client(TOSClientConfiguration conf) {
         validateAndInitConfig(conf);
         initRequestHandler();
@@ -247,6 +248,11 @@ public class TOSV2Client implements TOSV2 {
     @Override
     public HeadBucketV2Output headBucket(HeadBucketV2Input input) throws TosException {
         return bucketRequestHandler.headBucket(input);
+    }
+
+    @Override
+    public boolean doesBucketExist(DoesBucketExistInput input) throws TosException {
+        return bucketRequestHandler.doesBucketExist(input);
     }
 
     @Override
@@ -515,6 +521,31 @@ public class TOSV2Client implements TOSV2 {
     }
 
     @Override
+    public PutBucketAccessMonitorOutput putBucketAccessMonitor(PutBucketAccessMonitorInput input) throws TosException {
+        return bucketRequestHandler.putBucketAccessMonitor(input);
+    }
+
+    @Override
+    public GetBucketAccessMonitorOutput getBucketAccessMonitor(GetBucketAccessMonitorInput input) throws TosException {
+        return bucketRequestHandler.getBucketAccessMonitor(input);
+    }
+
+    @Override
+    public PutQosPolicyOutput putQosPolicy(PutQosPolicyInput input) throws TosException {
+        return bucketRequestHandler.putQosPolicy(input);
+    }
+
+    @Override
+    public GetQosPolicyOutput getQosPolicy(GetQosPolicyInput input) throws TosException {
+        return bucketRequestHandler.getQosPolicy(input);
+    }
+
+    @Override
+    public DeleteQosPolicyOutput deleteQosPolicy(DeleteQosPolicyInput input) throws TosException {
+        return bucketRequestHandler.deleteQosPolicy(input);
+    }
+
+    @Override
     public GetObjectV2Output getObject(GetObjectV2Input input) throws TosException {
         return objectRequestHandler.getObject(input);
     }
@@ -549,6 +580,11 @@ public class TOSV2Client implements TOSV2 {
     }
 
     @Override
+    public boolean doesObjectExist(DoesObjectExistInput input) throws TosException {
+        return objectRequestHandler.doesObjectExist(input);
+    }
+
+    @Override
     public DeleteObjectOutput deleteObject(DeleteObjectInput input) throws TosException {
         return objectRequestHandler.deleteObject(input);
     }
@@ -576,6 +612,10 @@ public class TOSV2Client implements TOSV2 {
     @Override
     public SetObjectMetaOutput setObjectMeta(SetObjectMetaInput input) throws TosException {
         return objectRequestHandler.setObjectMeta(input);
+    }
+
+    public SetObjectTimeOutput setObjectTime(SetObjectTimeInput input) throws TosException {
+        return objectRequestHandler.setObjectTime(input);
     }
 
     @Override
@@ -733,6 +773,11 @@ public class TOSV2Client implements TOSV2 {
     }
 
     @Override
+    public GetBucketTypeOutput getBucketType(GetBucketTypeInput bucket) throws TosException {
+        return objectRequestHandler.getBucketType(bucket);
+    }
+
+    @Override
     public CreateBucketOutput createBucket(CreateBucketInput input) throws TosException {
         return clientV1Adapter.createBucket(input);
     }
@@ -861,6 +906,10 @@ public class TOSV2Client implements TOSV2 {
     public String preSignedURL(String httpMethod, String bucket, String objectKey, Duration ttl, RequestOptionsBuilder... builders) throws TosException {
         return clientV1Adapter.preSignedURL(httpMethod, bucket, objectKey, ttl, builders);
     }
+
+
+
+
 
     @Override
     public void close() throws IOException {

@@ -8,7 +8,7 @@ TOS Android SDK 为 Android 开发者提供了访问火山引擎对象存储服�
 ### Gradle 引入
 ```xml
 dependencies {
-        implementation 'com.volcengine:ve-tos-android-sdk:2.8.8'
+        implementation 'com.volcengine:ve-tos-android-sdk:2.9.0'
 }
 ```
 ### 其他配置

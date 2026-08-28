@@ -9,6 +9,8 @@ public class NotificationDestination {
     private List<DestinationRocketMQ> rocketMQ;
     @JsonProperty("VeFaaS")
     private List<DestinationVeFaaS> veFaaS;
+    @JsonProperty("Kafka")
+    private List<DestinationKafka> kafka;
 
     public List<DestinationRocketMQ> getRocketMQ() {
         return rocketMQ;

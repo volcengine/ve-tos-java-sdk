@@ -1,6 +1,10 @@
 package com.volcengine.tos;
 
+import com.volcengine.tos.model.RequestInfo;
+
 import java.io.Serializable;
+import java.util.HashMap;
+import java.util.Map;
 
 public class TosServerException extends TosException implements Serializable {
     private int statusCode;
@@ -11,6 +15,9 @@ public class TosServerException extends TosException implements Serializable {
 
     private String ec;
     private String key;
+    private String id2;
+    private Map<String, String> header;
+
 
     public TosServerException(int statusCode) {
         this.statusCode = statusCode;
@@ -55,6 +62,19 @@ public class TosServerException extends TosException implements Serializable {
         return this;
     }
 
+    public TosServerException setId2(String id2) {
+        this.id2 = id2;
+        return this;
+    }
+
+    public TosServerException setHeader(String key, String value) {
+        if (header == null) {
+            header = new HashMap<>();
+        }
+        header.put(key, value);
+        return this;
+    }
+
     public String getRequestID() {
         return requestID;
     }
@@ -92,6 +112,14 @@ public class TosServerException extends TosException implements Serializable {
         return key;
     }
 
+    public String getId2() {
+        return id2;
+    }
+
+    public Map<String, String> getHeader() {
+        return header;
+    }
+
     @Override
     public String toString() {
         return "TosServerException{" +
@@ -102,6 +130,8 @@ public class TosServerException extends TosException implements Serializable {
                 ", hostID='" + hostID + '\'' +
                 ", ec='" + ec + '\'' +
                 ", key='" + key + '\'' +
+                ", id2='" + id2 + '\'' +
+                ", header=" + header +
                 '}';
     }
 }

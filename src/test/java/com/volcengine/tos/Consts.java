@@ -22,6 +22,7 @@ public class Consts {
     public static final String accessKey = System.getenv("TEST_ACCESS_KEY");
     public static final String secretKey = System.getenv("TEST_SECRET_KEY");
     public static final String bucketCopy = System.getenv("TEST_BUCKET_COPY");
+    public static final String hnsTrashBucket = System.getenv("TEST_HNS_TRASH_BUCKET");
     public static final String region2 = System.getenv("TEST_REGION2");
     public static final String endpoint2 = System.getenv("TEST_ENDPOINT2");
     public static final String bucketInRegion2 = System.getenv("TEST_BUCKET2");

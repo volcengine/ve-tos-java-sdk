@@ -22,6 +22,8 @@ public class BucketInventoryConfiguration {
     protected InventoryIncludedObjType includedObjectVersions;
     @JsonProperty("OptionalFields")
     protected InventoryOptionalFields optionalFields;
+    @JsonProperty("IsUnCompressed")
+    protected boolean isUnCompressed = true;
 
     public String getId() {
         return id;
@@ -83,6 +85,15 @@ public class BucketInventoryConfiguration {
 
     public BucketInventoryConfiguration setOptionalFields(InventoryOptionalFields optionalFields) {
         this.optionalFields = optionalFields;
+        return this;
+    }
+
+    public boolean isUnCompressed() {
+        return isUnCompressed;
+    }
+
+    public BucketInventoryConfiguration setUnCompressed(boolean isUnCompressed) {
+        this.isUnCompressed = isUnCompressed;
         return this;
     }
 

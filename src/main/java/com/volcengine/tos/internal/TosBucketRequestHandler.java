@@ -3,6 +3,7 @@ package com.volcengine.tos.internal;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.volcengine.tos.TosClientException;
 import com.volcengine.tos.TosException;
+import com.volcengine.tos.TosServerException;
 import com.volcengine.tos.comm.HttpMethod;
 import com.volcengine.tos.comm.HttpStatus;
 import com.volcengine.tos.comm.TosHeader;
@@ -11,10 +12,16 @@ import com.volcengine.tos.comm.common.BucketType;
 import com.volcengine.tos.internal.util.*;
 import com.volcengine.tos.model.GenericInput;
 import com.volcengine.tos.model.bucket.*;
+import com.volcengine.tos.model.object.*;
 
 import java.io.ByteArrayInputStream;
 import java.nio.charset.StandardCharsets;
 import java.time.ZoneOffset;
+import java.util.Map;
+import java.util.Objects;
+
+import static com.volcengine.tos.comm.TosHeader.HEADER_ACCOUNT_ID;
+import static com.volcengine.tos.internal.Consts.URL_MODE_CONTROLL_DOMAIN;
 
 public class TosBucketRequestHandler {
     private RequestHandler bucketHandler;
@@ -32,7 +39,31 @@ public class TosBucketRequestHandler {
         if (input.getRequestDate() != null) {
             builder = builder.withHeader(SigningUtils.v4Date, SigningUtils.iso8601Layout.format(input.getRequestDate().toInstant().atOffset(ZoneOffset.UTC)));
         }
+
+        if (input.getRequestHeaders() != null && !input.getRequestHeaders().isEmpty()) {
+            Map<String, String> headers = builder.getHeaders();
+            for (Map.Entry<String, String> entry : input.getRequestHeaders().entrySet()) {
+                if (!containsKeyIgnoreCase(headers, entry.getKey())) {
+                    builder = builder.withHeader(entry.getKey(), entry.getValue());
+                }
+            }
+        }
+
+        if (input.getRequestQuery() != null && !input.getRequestQuery().isEmpty()) {
+            for (Map.Entry<String, String> entry : input.getRequestQuery().entrySet()) {
+                builder = builder.withQuery(entry.getKey(), entry.getValue());
+            }
+        }
         return builder;
+    }
+
+    public static boolean containsKeyIgnoreCase(Map<String, String> map, String key) {
+        for (String existingKey : map.keySet()) {
+            if (existingKey.equalsIgnoreCase(key)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public CreateBucketV2Output createBucket(CreateBucketV2Input input) throws TosException {
@@ -48,6 +79,7 @@ public class TosBucketRequestHandler {
                 .withHeader(TosHeader.HEADER_STORAGE_CLASS, input.getStorageClass() == null ? null : input.getStorageClass().toString())
                 .withHeader(TosHeader.HEADER_AZ_REDUNDANCY, input.getAzRedundancy() == null ? null : input.getAzRedundancy().toString())
                 .withHeader(TosHeader.HEADER_PROJECT_NAME, input.getProjectName())
+                .withHeader(TosHeader.HEADER_TAGGING, input.getTagging())
                 .withHeader(TosHeader.HEADER_BUCKET_TYPE, input.getBucketType() == null ? null : input.getBucketType().toString());
         builder = this.handleGenericInput(builder, input);
         TosRequest req = this.factory.build(builder, HttpMethod.PUT, null).setRetryableOnClientException(false);
@@ -99,8 +131,8 @@ public class TosBucketRequestHandler {
         ensureValidBucketName(input.getBucket());
         RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("policy", "");
         builder = this.handleGenericInput(builder, input);
-        TosRequest req = this.factory.build(builder, HttpMethod.PUT, new ByteArrayInputStream(input.getPolicy()
-                .getBytes(StandardCharsets.UTF_8))).setContentLength(input.getPolicy().length());
+        byte[] policyStr = input.getPolicy().getBytes(StandardCharsets.UTF_8);
+        TosRequest req = this.factory.build(builder, HttpMethod.PUT, new ByteArrayInputStream(policyStr)).setContentLength(policyStr.length);
         return bucketHandler.doRequest(req, HttpStatus.NO_CONTENT, res -> new PutBucketPolicyOutput()
                 .setRequestInfo(res.RequestInfo()));
     }
@@ -663,6 +695,50 @@ public class TosBucketRequestHandler {
                 .setRequestInfo(res.RequestInfo()));
     }
 
+    public boolean doesBucketExist(DoesBucketExistInput input) throws TosException {
+        ParamsChecker.ensureNotNull(input, "DoesBucketExistInput");
+        ensureValidBucketName(input.getBucket());
+
+        HeadBucketV2Input headBucketV2Input = new HeadBucketV2Input();
+        headBucketV2Input.setBucket(input.getBucket());
+        HeadBucketV2Output headBucketV2Output = null;
+        try {
+            headBucketV2Output = headBucket(headBucketV2Input);
+            if (headBucketV2Output.getRequestInfo().getStatusCode() == HttpStatus.OK) {
+                return true;
+            }
+        } catch (TosServerException e) {
+            if (Objects.equals(e.getEc(), Consts.EcNotFoundErr)) {
+                return false;
+            }
+            throw e;
+        }
+        return false;
+    }
+
+    public PutBucketAccessMonitorOutput putBucketAccessMonitor(PutBucketAccessMonitorInput input) {
+        ParamsChecker.ensureNotNull(input, "PutBucketAccessMonitorInput");
+        ensureValidBucketName(input.getBucket());
+        TosMarshalResult marshalResult = PayloadConverter.serializePayloadAndComputeMD5(input);
+        RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("accessmonitor", "");
+        builder = this.handleGenericInput(builder, input);
+        TosRequest req = this.factory.build(builder, HttpMethod.PUT, new ByteArrayInputStream(
+                marshalResult.getData())).setContentLength(marshalResult.getData().length);
+        return bucketHandler.doRequest(req, HttpStatus.OK, res -> new PutBucketAccessMonitorOutput(res.RequestInfo()));
+    }
+
+    public GetBucketAccessMonitorOutput getBucketAccessMonitor(GetBucketAccessMonitorInput input) {
+        ParamsChecker.ensureNotNull(input, "GetBucketAccessMonitorInput");
+        ensureValidBucketName(input.getBucket());
+        RequestBuilder builder = this.factory.init(input.getBucket(), "", null).withQuery("accessmonitor", "");
+        builder = this.handleGenericInput(builder, input);
+        TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
+
+        return bucketHandler.doRequest(req, HttpStatus.OK, res -> PayloadConverter.parsePayload(res.getInputStream(),
+                new TypeReference<GetBucketAccessMonitorOutput>() {
+                }).setRequestInfo(res.RequestInfo()));
+
+    }
 
     public TosRequestFactory getFactory() {
         return factory;
@@ -695,5 +771,36 @@ public class TosBucketRequestHandler {
             return;
         }
         ParamsChecker.isValidBucketName(bucket);
+    }
+
+    public PutQosPolicyOutput putQosPolicy(PutQosPolicyInput input) {
+        ParamsChecker.ensureNotNull(input, "PutQosPolicyInput");
+        byte[] policyStr = input.getPolicy().getBytes(StandardCharsets.UTF_8);
+        RequestBuilder builder = this.factory.init("qospolicy", null).withHeader(HEADER_ACCOUNT_ID, "2000001190").setUrlMode(URL_MODE_CONTROLL_DOMAIN);
+        builder = this.handleGenericInput(builder, input);
+        TosRequest req = this.factory.build(builder, HttpMethod.PUT, new ByteArrayInputStream(policyStr)).setContentLength(policyStr.length);
+
+        return bucketHandler.doRequest(req, HttpStatus.NO_CONTENT, res -> new PutQosPolicyOutput(res.RequestInfo()));
+    }
+
+    public DeleteQosPolicyOutput deleteQosPolicy(DeleteQosPolicyInput input) {
+
+        ParamsChecker.ensureNotNull(input, "DeleteQosPolicyInput");
+        RequestBuilder builder = this.factory.init("qospolicy", null).withHeader(HEADER_ACCOUNT_ID, "2000001190").setUrlMode(URL_MODE_CONTROLL_DOMAIN);
+        builder = this.handleGenericInput(builder, input);
+        TosRequest req = this.factory.build(builder, HttpMethod.DELETE, null);
+
+        return bucketHandler.doRequest(req, HttpStatus.NO_CONTENT, res -> new DeleteQosPolicyOutput(res.RequestInfo()));
+    }
+
+    public GetQosPolicyOutput getQosPolicy(GetQosPolicyInput input) {
+        ParamsChecker.ensureNotNull(input, "GetQosPolicyInput");
+        RequestBuilder builder = this.factory.init("qospolicy", null).withHeader(HEADER_ACCOUNT_ID, "2000001190").setUrlMode(URL_MODE_CONTROLL_DOMAIN);
+        builder = this.handleGenericInput(builder, input);
+        TosRequest req = this.factory.build(builder, HttpMethod.GET, null);
+
+        return bucketHandler.doRequest(req, HttpStatus.OK, res -> PayloadConverter.parsePayload(res.getInputStream(),
+                new TypeReference<GetQosPolicyOutput>() {
+                }).setRequestInfo(res.RequestInfo()));
     }
 }
