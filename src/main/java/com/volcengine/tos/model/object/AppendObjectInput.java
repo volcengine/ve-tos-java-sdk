@@ -1,10 +1,14 @@
 package com.volcengine.tos.model.object;
 
+import com.volcengine.tos.comm.TosHeader;
 import com.volcengine.tos.comm.event.DataTransferListener;
 import com.volcengine.tos.comm.ratelimit.RateLimiter;
+import com.volcengine.tos.internal.util.TosUtils;
 import com.volcengine.tos.model.GenericInput;
 
 import java.io.InputStream;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
@@ -22,14 +26,19 @@ public class AppendObjectInput extends GenericInput {
 
     private String preHashCrc64ecma;
 
-    /** 客户端限速，单位 Byte/s **/
+    /**
+     * 客户端限速，单位 Byte/s
+     **/
     private RateLimiter rateLimiter;
 
     private String ifMatch;
     private long objectExpires = -1;
+    private String notificationCustomParameters;
 
     public Map<String, String> getAllSettedHeaders() {
-        return Objects.isNull(options) ? null : options.headers();
+        Map<String, String> allHeaders = new HashMap<>(options == null ? Collections.emptyMap() : options.headers());
+        TosUtils.withHeader(allHeaders, TosHeader.HEADER_NOTIFICATION_CUSTOM_PARAMETERS, notificationCustomParameters);
+        return allHeaders;
     }
 
     public String getBucket() {
@@ -131,6 +140,15 @@ public class AppendObjectInput extends GenericInput {
         return this;
     }
 
+    public String getNotificationCustomParameters() {
+        return notificationCustomParameters;
+    }
+
+    public AppendObjectInput setNotificationCustomParameters(String notificationCustomParameters) {
+        this.notificationCustomParameters = notificationCustomParameters;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "AppendObjectInput{" +
@@ -145,6 +163,7 @@ public class AppendObjectInput extends GenericInput {
                 ", rateLimiter=" + rateLimiter +
                 ", ifMatch='" + ifMatch + '\'' +
                 ", objectExpires=" + objectExpires +
+                ", notificationCustomParameters='" + notificationCustomParameters + '\'' +
                 '}';
     }
 
@@ -164,6 +183,7 @@ public class AppendObjectInput extends GenericInput {
         private RateLimiter rateLimiter;
         private String ifMatch;
         private long objectExpires = -1;
+        private String notificationCustomParameters;
 
         private AppendObjectInputBuilder() {
         }
@@ -223,6 +243,11 @@ public class AppendObjectInput extends GenericInput {
             return this;
         }
 
+        public AppendObjectInputBuilder notificationCustomParameters(String notificationCustomParameters) {
+            this.notificationCustomParameters = notificationCustomParameters;
+            return this;
+        }
+
         public AppendObjectInput build() {
             AppendObjectInput appendObjectInput = new AppendObjectInput();
             appendObjectInput.key = this.key;
@@ -236,6 +261,7 @@ public class AppendObjectInput extends GenericInput {
             appendObjectInput.options = this.options;
             appendObjectInput.ifMatch = this.ifMatch;
             appendObjectInput.objectExpires = this.objectExpires;
+            appendObjectInput.setNotificationCustomParameters(this.notificationCustomParameters);
             return appendObjectInput;
         }
     }
