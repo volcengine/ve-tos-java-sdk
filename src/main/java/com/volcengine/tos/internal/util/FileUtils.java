@@ -8,6 +8,9 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
+
 
 public class FileUtils {
     public static InputStream getFileContent(FileInputStream fileInputStream, File file, String filePath) {
@@ -93,9 +96,7 @@ public class FileUtils {
             }
 
             // if not exists aa/bb, create parent dir which is aa
-            if (!file.getParentFile().exists() && !file.getParentFile().mkdirs()) {
-                throw new TosClientException("tos: can not create directory in: " + file.getParentFile().getPath(), null);
-            }
+            FileUtils.ensureDirectoryExists(file.getParentFile());
         }
         return filePath;
     }
@@ -104,16 +105,51 @@ public class FileUtils {
         String split = File.separator;
         if (filePath.endsWith(File.separator)) {
             // create parent dir
-            new File(filePath).mkdirs();
+            FileUtils.ensureDirectoryExists(new File(filePath));
             split = "";
         }
         String newPath = filePath + split + key;
         if (StringUtils.isNotEmpty(newPath) && newPath.endsWith(File.separator)) {
-            if (!(new File(newPath).mkdirs())) {
-                throw new TosClientException("tos: can not create directory in: " + newPath, null);
-            }
+            FileUtils.ensureDirectoryExists(new File(newPath));
             return "";
         }
         return newPath;
+    }
+
+    private static void ensureDirectoryExists(File dir) {
+        if (!dir.exists()) {
+            dir.mkdirs();
+            // 二次检查：可能是另一个线程已经创建了
+            if (!dir.exists()) {
+                throw new TosClientException("tos: can not create directory in: " + dir.getPath(), null);
+            }
+        }
+    }
+
+    public static boolean renameTo(File src, File dest, boolean overwrite) {
+        if (src == null || dest == null) {
+            return false;
+        }
+        if (!src.exists()) {
+            return false;
+        }
+
+        try {
+            if (overwrite) {
+                try {
+                    Files.move(src.toPath(), dest.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+                } catch (IOException e) {
+                    Files.move(src.toPath(), dest.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                }
+            } else {
+                if (dest.exists()) {
+                    return false;
+                }
+                Files.move(src.toPath(), dest.toPath());
+            }
+            return true;
+        } catch (IOException e) {
+            return false;
+        }
     }
 }
