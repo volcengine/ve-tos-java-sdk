@@ -9,6 +9,7 @@ public class DeleteObjectInput extends GenericInput {
     private String versionID;
     private boolean recursive;
     private boolean recursiveByServer;
+    private boolean skipTrash;
     private DeleteObjectRecursiveOption recursiveOption;
 
     public String getBucket() {
@@ -47,6 +48,15 @@ public class DeleteObjectInput extends GenericInput {
         return this;
     }
 
+    public boolean isSkipTrash() {
+        return skipTrash;
+    }
+
+    public DeleteObjectInput setSkipTrash(boolean skipTrash) {
+        this.skipTrash = skipTrash;
+        return this;
+    }
+
     public DeleteObjectRecursiveOption getRecursiveOption() {
         return recursiveOption;
     }
@@ -63,7 +73,9 @@ public class DeleteObjectInput extends GenericInput {
                 ", key='" + key + '\'' +
                 ", versionID='" + versionID + '\'' +
                 ", recursive=" + recursive +
+                ", skipTrash=" + skipTrash +
                 ", recursiveOption=" + recursiveOption +
+                ", skipTrash=" + skipTrash +
                 '}';
     }
 
@@ -76,6 +88,7 @@ public class DeleteObjectInput extends GenericInput {
         private String key;
         private String versionID;
         private boolean recursive;
+        private boolean skipTrash;
         private DeleteObjectRecursiveOption recursiveOption;
 
         private Builder() {
@@ -101,11 +114,15 @@ public class DeleteObjectInput extends GenericInput {
             return this;
         }
 
+        public Builder skipTrash(boolean skipTrash) {
+            this.skipTrash = skipTrash;
+            return this;
+        }
+
         public Builder RecursiveOption(DeleteObjectRecursiveOption recursiveOption) {
             this.recursiveOption = recursiveOption;
             return this;
         }
-
 
         public DeleteObjectInput build() {
             DeleteObjectInput deleteObjectInput = new DeleteObjectInput();
@@ -113,6 +130,7 @@ public class DeleteObjectInput extends GenericInput {
             deleteObjectInput.versionID = this.versionID;
             deleteObjectInput.key = this.key;
             deleteObjectInput.recursive = this.recursive;
+            deleteObjectInput.skipTrash = this.skipTrash;
             deleteObjectInput.recursiveOption = this.recursiveOption;
             return deleteObjectInput;
         }

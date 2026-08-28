@@ -22,6 +22,8 @@ public class PutBucketInventoryInput extends GenericInput {
     private InventoryIncludedObjType includedObjectVersions;
     @JsonProperty("OptionalFields")
     private BucketInventoryConfiguration.InventoryOptionalFields optionalFields;
+    @JsonProperty("IsUnCompressed")
+    private boolean isUnCompressed;
 
     public String getBucket() {
         return bucket;
@@ -96,6 +98,15 @@ public class PutBucketInventoryInput extends GenericInput {
         return this;
     }
 
+    public boolean isUnCompressed() {
+        return isUnCompressed;
+    }
+
+    public PutBucketInventoryInput setUnCompressed(boolean unCompressed) {
+        isUnCompressed = unCompressed;
+        return this;
+    }
+
     @Override
     public String toString() {
         return "PutBucketInventoryInput{" +
@@ -107,6 +118,7 @@ public class PutBucketInventoryInput extends GenericInput {
                 ", schedule=" + schedule +
                 ", includedObjectVersions=" + includedObjectVersions +
                 ", optionalFields=" + optionalFields +
+                ", isUnCompressed=" + isUnCompressed +
                 '}';
     }
 }

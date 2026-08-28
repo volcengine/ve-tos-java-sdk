@@ -58,6 +58,10 @@ public class HeadObjectV2Output {
         return headObjectBasicOutput.getLastModifiedInDate();
     }
 
+    public Date getLastModifyTimestamp() {
+        return headObjectBasicOutput.getLastModifyTimestamp();
+    }
+
     public boolean isDeleteMarker() {
         return headObjectBasicOutput.isDeleteMarker();
     }

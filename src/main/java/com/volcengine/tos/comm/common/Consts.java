@@ -19,6 +19,7 @@ public interface Consts {
     String ACL_BUCKET_OWNER_FULL_CONTROL = "bucket-owner-full-control";
     String ACL_LOG_DELIVERY_WRITE = "log-delivery-write";
     String ACL_BUCKET_OWNER_ENTRUSTED = "bucket-owner-entrusted";
+    String ACL_DEFAULT = "default";
 
     String PERMISSION_TYPE_READ = "READ";
     String PERMISSION_TYPE_WRITE = "WRITE";
@@ -41,4 +42,9 @@ public interface Consts {
 
     String GRANTEE_GROUP = "Group";
     String GRANTEE_USER = "CanonicalUser";
+
+    long BUCKET_TYPE_CACHE_MIN_TIME = 10 * 60 * 1_000_000_000L;
+    long BUCKET_TYPE_CACHE_MAX_TIME = 15 * 60 * 1_000_000_000L;
+
+
 }

@@ -211,6 +211,38 @@ public class RequestTransport implements Transport, Closeable {
                         }
                     }
                 }
+                // TO DO:暂时不重试，直接把报错ClientException返回。原因：数据格式解析可能出错、重定向可能反复请求TOS。
+                else if (response.code() >= HttpStatus.MULTIPLE_CHOICE
+                        && response.code() < HttpStatus.BAD_REQUEST
+                        && (StringUtils.equals(tosRequest.getMethod(), HttpMethod.GET) || StringUtils.equals(tosRequest.getMethod(), HttpMethod.HEAD))) {
+                    for (int j = 0; j < tosRequest.geFollowRedirectTimes(); j++) {
+                        String redirectUrl = response.header("Location");
+                        if (StringUtils.isEmpty(redirectUrl)) {
+                            break;
+                        }
+
+                        if (StringUtils.isNotEmpty(redirectUrl)) {
+                            response.close();
+                            Request.Builder newRequestBuilder = new Request.Builder()
+                                    .url(redirectUrl)
+                                    .method(tosRequest.getMethod(), null);
+                            Headers originalHeaders = lastRequest.headers();
+                            for (int k = 0; k < originalHeaders.size(); k++) {
+                                String name = originalHeaders.name(k);
+                                String value = originalHeaders.value(k);
+                                newRequestBuilder.header(name, value);
+                            }
+                            lastRequest = newRequestBuilder.build();
+                            response = client.newCall(lastRequest).execute();
+                            if (response.code() == HttpStatus.OK) {
+                                break;
+                            }
+                            if (!(response.code() >= HttpStatus.MULTIPLE_CHOICE && response.code() < HttpStatus.BAD_REQUEST)) {
+                                throw new TosClientException("Redirect error",null);
+                            }
+                        }
+                    }
+                }
                 break;
             } catch (InterruptedException e) {
                 response.close();
